@@ -8,6 +8,9 @@ let
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
   modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + "/${name}")]) [] moduleDirs;
 in {
+  # DO NOT MODIFY
+  system.stateVersion = "24.05";
+
   # Load all sub-modules
   imports = modulePaths;
 

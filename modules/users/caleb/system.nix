@@ -18,15 +18,19 @@ in {
       createHome = true;
       shell = pkgs.zsh;
       extraGroups = config.modules.users.admin_groups ++ config.modules.users.base_groups;
+      initialPassword = "password";
     };
 
     # Enable NixOS-managed Home Manager
-    home-manager.users.${username} = lib.mkIf cfg.enableHomeManager (stew.mkHomeManagerUser username);
+    home-manager.users.${username} = lib.mkIf cfg.enableHomeManager (import ./home.nix);
 
     # Allow nix management as caleb
     nix.settings.trusted-users = [username];
 
     # Set the flake path to the git repo for this user
     programs.nh.flake = "/home/${username}/git/nix";
+
+    # Enable zsh for our shell
+    programs.zsh.enable = true;
   };
 }
