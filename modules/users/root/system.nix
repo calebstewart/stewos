@@ -3,9 +3,9 @@ let
   username = "root";
   fullname = "System Administrator";
 
-  cfg = config.modules.users.${username};
+  cfg = config.stewos.users.${username};
 in {
-  options.modules.users.${username} = {
+  options.stewos.users.${username} = {
     enable = lib.mkEnableOption username;
     enableHomeManager = lib.mkEnableOption "home-manager";
   };

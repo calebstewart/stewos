@@ -1,8 +1,8 @@
 {lib, config, pkgs, ...}:
 let
-  cfg = config.modules.containers;
+  cfg = config.stewos.containers;
 in {
-  options.modules.containers = {
+  options.stewos.containers = {
     enable = lib.mkEnableOption "containers";
     enableCompose = lib.mkEnableOption "compose";
     enableDockerCompatability = lib.mkEnableOption "docker compatability";
@@ -14,9 +14,9 @@ in {
       dockerCompat = cfg.enableDockerCompatability;
       dockerSocket.enable = cfg.enableDockerCompatability;
       
-      extraPackages = lib.lists.optional cfg.enableCompose (with pkgs; [
+      extraPackages = with pkgs; [
         podman-compose
-      ]);
+      ];
 
       autoPrune = {
         enable = true;
@@ -27,10 +27,10 @@ in {
     virtualisation.containers = {
       enable = true;
 
-      containersConf.cniPlugins = lib.lists.optional cfg.enableCompose (with pkgs; [
+      containersConf.cniPlugins = with pkgs; [
         cni-plugins
         dnsname-cni
-      ]);
+      ];
     };
   };
 }

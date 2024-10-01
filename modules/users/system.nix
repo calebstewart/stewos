@@ -10,7 +10,7 @@ let
 in {
   imports = userConfigs;
 
-  options.modules.users = {
+  options.stewos.users = {
     admin_groups = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [];

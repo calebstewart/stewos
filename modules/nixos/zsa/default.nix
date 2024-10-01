@@ -1,13 +1,13 @@
 {pkgs, lib, config, ...}:
 let
-  cfg = config.modules.zsa;
+  cfg = config.stewos.zsa;
   zsa-rules = pkgs.writeTextFile {
     name = "zsa-udev-rules";
     text = ./zsa.rules;
     destination = "/etc/udev/rules.d/50-zsa.rules";
   };
 in {
-  options.modules.zsa.enable = lib.mkEnableOption "zsa";
+  options.stewos.zsa.enable = lib.mkEnableOption "zsa";
 
   config = lib.mkIf cfg.enable {
     # Install udev rules for ZSA keyboards 

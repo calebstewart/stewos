@@ -1,8 +1,8 @@
 {pkgs, lib, config, ...}:
 let
-  cfg = config.modules.greeter;
+  cfg = config.stewos.greeter;
 in {
-  options.modules.greeter = {
+  options.stewos.greeter = {
     enable = lib.mkEnableOption "greeter";
   };
 

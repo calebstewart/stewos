@@ -3,9 +3,9 @@ let
   username = "caleb";
   fullname = "Caleb Stewart";
 
-  cfg = config.modules.users.${username};
+  cfg = config.stewos.users.${username};
 in {
-  options.modules.users.${username} = {
+  options.stewos.users.${username} = {
     enable = lib.mkEnableOption username;
   };
 
@@ -16,7 +16,7 @@ in {
       isNormalUser = true;
       createHome = true;
       shell = pkgs.zsh;
-      extraGroups = config.modules.users.admin_groups ++ config.modules.users.base_groups;
+      extraGroups = config.stewos.users.admin_groups ++ config.stewos.users.base_groups;
       initialPassword = "password";
     };
 

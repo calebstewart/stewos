@@ -1,8 +1,8 @@
 {pkgs, lib, config, ...}:
 let
-  cfg = config.modules.autologin;
+  cfg = config.stewos.autologin;
 in {
-  options.modules.autologin = {
+  options.stewos.autologin = {
     enable = lib.mkEnableOption "autologin";
     
     username = lib.mkOption {
@@ -15,7 +15,7 @@ in {
   config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = !config.modules.greeter.enable;
+        assertion = !config.stewos.greeter.enable;
         message = "one of greeter and autologin modules can be enabled at a time";
       }
       {
