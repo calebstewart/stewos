@@ -1,4 +1,4 @@
-{pkgs, lib, config, ...}:
+{inputs, pkgs, lib, stewos, osConfig, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;

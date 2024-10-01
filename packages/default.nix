@@ -1,4 +1,4 @@
-{inputs, system, pkgs, ...}:
+{inputs, pkgs, ...}:
 let
   lib = inputs.nixpkgs.lib;
   mapAttrs = lib.mapAttrs;
@@ -8,5 +8,5 @@ let
   packageFilter = name: type: type == "directory";
   packageDirs = filterAttrs packageFilter (readDir ./.);
 in (mapAttrs (name: _type: (import (./. + "/${name}") {
-  inherit inputs system pkgs;
+  inherit inputs pkgs;
 })) packageDirs)

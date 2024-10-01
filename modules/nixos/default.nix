@@ -1,4 +1,4 @@
-{pkgs, lib, config, ...}:
+{pkgs, lib, stewos, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -14,8 +14,17 @@ in {
   # Load all sub-modules
   imports = modulePaths;
 
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs = {
+    # Allow unfree packages
+    config.allowUnfree = true;
+
+    # Include the StewOS packages under nixpkgs.stewos
+    overlays = [
+      (final: prev: {
+        stewos = stewos.packages.${pkgs.system};
+      })
+    ];
+  };
 
   # Setup Nix configuration
   nix = {

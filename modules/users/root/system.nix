@@ -19,5 +19,8 @@ in {
 
     # Allow nix management as caleb
     nix.settings.trusted-users = [username];
+
+    # Required to set shell to zsh
+    programs.zsh.enable = true;
   };
 }

@@ -1,4 +1,4 @@
-{pkgs, lib, config, stew, ...}:
+{pkgs, lib, config, ...}:
 let
   username = "caleb";
   fullname = "Caleb Stewart";
@@ -7,7 +7,6 @@ let
 in {
   options.modules.users.${username} = {
     enable = lib.mkEnableOption username;
-    enableHomeManager = lib.mkEnableOption "home-manager";
   };
 
   config = lib.mkIf cfg.enable {
@@ -22,7 +21,7 @@ in {
     };
 
     # Enable NixOS-managed Home Manager
-    home-manager.users.${username} = lib.mkIf cfg.enableHomeManager (import ./home.nix);
+    home-manager.users.${username} = import ./home.nix;
 
     # Allow nix management as caleb
     nix.settings.trusted-users = [username];

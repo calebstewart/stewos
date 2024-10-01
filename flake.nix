@@ -51,33 +51,33 @@
   };
 
   outputs = {self, ...}@inputs: inputs.nixpkgs.lib.attrsets.recursiveUpdate ({
-    # Home Manager User Configurations
-    homeConfigurations = import ./modules/users/home.nix {
+    lib = import ./lib/default.nix {
       inherit inputs;
-    };
-
-    # Nixpkgs overlays
-    overlays = import ./overlays/individual.nix {
-      inherit inputs;
+      stewos = self;
     };
 
     nixosModules = import ./modules/nixos/individual.nix {
       inherit inputs;
+      stewos = self;
     };
 
     homeModules = import ./modules/home-manager/individual.nix {
       inherit inputs;
+      stewos = self;
     };
 
     darwinModules = import ./modules/nix-darwin/individual.nix {
       inherit inputs;
+      stewos = self;
     };
   } // (inputs.flake-utils.lib.eachDefaultSystem (system: {
     packages = import ./packages {
-      inherit system inputs;
+      inherit inputs;
       pkgs = inputs.nixpkgs.legacyPackages.${system};
+      stewos = self;
     };
   }))) (import ./systems {
     inherit inputs;
+    stewos = self;
   });
 }

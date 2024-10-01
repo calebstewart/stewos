@@ -1,6 +1,3 @@
 {...}: {
-  modules.users.caleb = {
-    enable = true;
-    enableHomeManager = true;
-  };
+  modules.users.caleb.enable = true;
 }

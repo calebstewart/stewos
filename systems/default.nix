@@ -1,4 +1,4 @@
-{inputs, ...}:
+{inputs, stewos, ...}:
 let
   # Shortcuts for library functions
   lib = inputs.nixpkgs.lib;
@@ -34,7 +34,7 @@ let
     modules = nixosModules hostname;
 
     specialArgs = {
-      inherit inputs system;
+      inherit inputs system stewos;
     };
   };
 
@@ -44,7 +44,7 @@ let
     modules = nixosModules hostname;
 
     specialArgs = {
-      inherit inputs system;
+      inherit inputs system stewos;
     };
   };
 
@@ -59,7 +59,7 @@ let
     ];
 
     specialArgs = {
-      inherit inputs system;
+      inherit inputs system stewos;
     };
   };
 
