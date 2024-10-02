@@ -1,8 +1,8 @@
-{lib, config, pkgs, inputs}:
+{lib, config, pkgs, vfio-hooks, ...}:
 let
   cfg = config.stewos.virtualisation;
 in {
-  options.stewos.virtualisation.enabe = lib.mkEnableOption "virtualisation";
+  options.stewos.virtualisation.enable = lib.mkEnableOption "virtualisation";
 
   config = lib.mkIf cfg.enable {
     virtualisation.libvirtd = {
@@ -24,7 +24,7 @@ in {
 
     # Install vfio-hooks
     environment.etc."libvirt/hooks/qemu" = {
-      source = "${inputs.vfio-hooks}/libvirt_hooks/qemu";
+      source = "${vfio-hooks}/libvirt_hooks/qemu";
     };
 
     # Allow communication from VM to host over common ephemeral ports

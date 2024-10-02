@@ -1,7 +1,11 @@
-{...}: {
+{...}: rec {
   stewos = {
+    audio.enable = true;
+    desktop-services.enable = true;
     greeter.enable = true;
     zsa.enable = true;
+    virtualisation.enable = true;
+    sshd.enable = true;
 
     containers = {
       enable = true;
@@ -14,7 +18,6 @@
 
       kvmfr = {
         enable = true;
-        owner = "caleb";
         sizeMB = 128;
       };
 
@@ -30,6 +33,12 @@
       };
     };
 
-    users.caleb.enable = true;
+    user = {
+      username = "caleb";
+      fullname = "Caleb Stewart";
+    };
   };
+
+  # Enable embedded home-manager
+  home-manager.users.${stewos.user.username} = import ./home.nix;
 }

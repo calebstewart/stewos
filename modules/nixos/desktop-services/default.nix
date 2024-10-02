@@ -8,5 +8,8 @@ in {
     # Most things expect this to be around
     services.gnome.gnome-keyring.enable = true;
     services.dbus.packages = [pkgs.gcr];
+
+    # Allow hyprlock to unlock the system
+    security.pam.services.hyprlock = {};
   };
 }

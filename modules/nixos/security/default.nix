@@ -15,19 +15,9 @@ in {
     security.sudo.enable = false;
 
     # Configure doas to allow the administrators
-    security.doas = {
-      enable = true;
-
-      extraRules = [
-        {
-          users = cfg.administrators;
-          keepEnv = true;
-          persist = true;
-        }
-      ];
-    };
+    security.doas.enable = true;
 
     # Allow hyprlock to unlock the system
-    pam.services.hyprlock = {};
+    security.pam.services.hyprlock = {};
   };
 }

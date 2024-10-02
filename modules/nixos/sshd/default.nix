@@ -14,11 +14,6 @@ in {
       type = lib.types.int;
       default = 22;
     };
-
-    users = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -34,7 +29,6 @@ in {
         PermitRootLogin = "no";
         PasswordAuthentication = false;
         KbdInteractiveAuthentication = false;
-        AllowUsers = cfg.users;
       };
     };
   };

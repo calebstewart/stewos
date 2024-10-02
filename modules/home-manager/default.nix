@@ -1,4 +1,4 @@
-{inputs, pkgs, lib, stewos, osConfig, ...}:
+{inputs, pkgs, lib, stewos, osConfig, nix-colors, nur, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -12,5 +12,8 @@ in {
   home.stateVersion = "24.05";
 
   # Load all sub-modules
-  imports = modulePaths;
+  imports = modulePaths ++ [
+    nix-colors.homeManagerModules.default
+    nur.hmModules.nur
+  ];
 }

@@ -45,7 +45,7 @@ in {
 
       owner = lib.mkOption {
         description = "Owner of the kvmfr device file(s)";
-        default = "kvm";
+        default = config.stewos.user.username;
         type = lib.types.str;
       };
 
