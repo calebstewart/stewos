@@ -32,6 +32,28 @@ in {
     settings.experimental-features = ["nix-command" "flakes"];
   };
 
+  boot = {
+    # Clean tmpfs during system boot
+    tmp.cleanOnBoot = true;
+
+    # Use systemd-boot
+    loader = {
+      systemd-boot.enable = true;
+      efi.canTouchEfiVariables = true;
+    };
+
+    # Use a pretty spinner animation for the boot process
+    plymouth = {
+      enable = true;
+      theme = "spin";
+      themePackages = [
+        (pkgs.adi1090x-plymouth-themes.override {
+          selected_themes = ["spin"];
+        })
+      ];
+    };
+  };
+
   # Setup Nix Helper for easy building
   programs.nh = {
     enable = true;
@@ -39,8 +61,6 @@ in {
     clean.extraArgs = "--keep-since 7d --keep 5";
   };
 
-  # Clean tmpfs during system boot
-  boot.tmp.cleanOnBoot = true;
 
   # Enable mandb and nix documentation
   documentation = {
