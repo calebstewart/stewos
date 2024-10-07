@@ -8,7 +8,7 @@ in {
     programs.firefox = {
       enable = true;
 
-      profiles.${config.stewos.user.username} = {
+      profiles.${config.home.username} = {
         isDefault = true;
         containersForce = true;
 
@@ -18,7 +18,7 @@ in {
           "ui.systemUsesDarkTheme" = 1;
         };
 
-        extensions = with pkgs.nur.repos.rycee.firefox-addons; [
+        extensions = with config.nur.repos.rycee.firefox-addons; [
           lastpass-password-manager
           ublock-origin
           cookie-quick-manager

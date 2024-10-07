@@ -9,7 +9,22 @@ in {
     services.gnome.gnome-keyring.enable = true;
     services.dbus.packages = [pkgs.gcr];
 
-    # Allow hyprlock to unlock the system
+    # Configure existence of PAM services
     security.pam.services.hyprlock = {};
+    security.pam.services.swaylock = {};
+    security.pam.services.gdm = {};
+
+    # Setup OpenGL acceleration support
+    hardware.graphics = {
+      enable = true;
+
+      extraPackages = with pkgs; [
+        vaapiVdpau
+        libvdpau-va-gl
+      ];
+    };
+
+    # Enable Wayland Support across NixOS
+    environment.sessionVariables.NIXOS_OZONE_WL = "1";
   };
 }

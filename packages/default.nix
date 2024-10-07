@@ -1,4 +1,4 @@
-{inputs, pkgs, ...}:
+{inputs, pkgs, stewos, ...}:
 let
   lib = inputs.nixpkgs.lib;
   mapAttrs = lib.mapAttrs;
@@ -7,6 +7,10 @@ let
 
   packageFilter = name: type: type == "directory";
   packageDirs = filterAttrs packageFilter (readDir ./.);
-in (mapAttrs (name: _type: (import (./. + "/${name}") {
-  inherit inputs pkgs;
-})) packageDirs)
+
+  callPackage = pkgs.lib.callPackageWith overlayedPkgs;
+  newPackages = (mapAttrs (name: _type: (callPackage (./. + "/${name}") {})) packageDirs);
+  overlayedPkgs = pkgs.lib.recursiveUpdate pkgs (newPackages // {
+    inherit inputs stewos callPackage;
+  });
+in newPackages

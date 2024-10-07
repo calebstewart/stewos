@@ -1,4 +1,4 @@
-{inputs, pkgs, lib, stewos, osConfig, nix-colors, nur, ...}:
+{lib, nix-colors, nur, config, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -6,14 +6,42 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + name)]) [] moduleDirs;
+  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + "/${name}")]) [] moduleDirs;
 in {
-  # DO NOT MODIFY
-  home.stateVersion = "24.05";
-
   # Load all sub-modules
   imports = modulePaths ++ [
     nix-colors.homeManagerModules.default
     nur.hmModules.nur
   ];
+
+  options.stewos.user = {
+    fullName = lib.mkOption {
+      type = lib.types.str;
+    };
+
+    email = lib.mkOption {
+      type = lib.types.str;
+    };
+
+    aliases = lib.mkOption {
+      default = {};
+      type = lib.types.attrsOf (lib.types.submodule {
+        options = {
+          fullName = lib.mkOption {
+            type = lib.types.str;
+            default = config.stewos.user.fullName;
+          };
+
+          email = lib.mkOption {
+            type = lib.types.str;
+            default = config.stewos.user.email;
+          };
+        };
+      });
+    };
+  };
+
+  config = {
+    home.stateVersion = "24.05";
+  };
 }

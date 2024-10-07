@@ -1,15 +1,24 @@
 {inputs, stewos, ...}:
 let
-
+  lib = inputs.nixpkgs.lib;
 in rec {
+  hypr = import ./hypr.nix {
+    inherit inputs stewos lib;
+  };
+
+  rasi = import ./rasi/default.nix {
+    inherit inputs stewos lib;
+  };
+
   # Create a nixpkgs instance with stewos package overlays already
   # applied.
   mkNixpkgs = system: import inputs.nixpkgs {
     inherit system;
 
     overlays = [
-      (final: prev: {
-        stewos = stewos.packages.${system};
+      (final: prev: import ../packages/default.nix {
+        inherit inputs stewos;
+        pkgs = final;
       })
     ];
   };
@@ -23,7 +32,7 @@ in rec {
       inputs.home-manager.nixosModules.default
       ({...}: {
         home-manager.extraSpecialArgs = inputs // {
-          inherit stewos;
+          inherit stewos inputs;
         };
       })
       (./. + "/../systems/${hostname}/hardware-configuration.nix")
@@ -31,7 +40,7 @@ in rec {
     ];
 
     specialArgs = inputs // {
-      inherit stewos;
+      inherit stewos inputs;
     };
   };
 
@@ -49,7 +58,7 @@ in rec {
       inputs.home-manager.nixosModules.default
       ({...}: {
         home-manager.extraSpecialArgs = inputs // {
-          inherit stewos;
+          inherit stewos inputs;
         };
       })
       (./. + "/../systems/${hostname}/hardware-configuration.nix")
@@ -57,7 +66,7 @@ in rec {
     ];
 
     specialArgs = inputs // {
-      inherit stewos;
+      inherit stewos inputs;
     };
   };
 
@@ -70,14 +79,14 @@ in rec {
       inputs.home-manager.darwinModules.default
       ({...}: {
         home-manager.extraSpecialArgs = inputs // {
-          inherit stewos;
+          inherit stewos inputs;
         };
       })
       (./. + "/../systems/${hostname}/configuration.nix")
     ];
 
     specialArgs = inputs // {
-      inherit stewos;
+      inherit stewos inputs;
     };
   };
 
@@ -92,7 +101,7 @@ in rec {
     ];
 
     extraSpecialArgs = inputs // {
-      inherit stewos;
+      inherit stewos inputs;
     };
   };
 }

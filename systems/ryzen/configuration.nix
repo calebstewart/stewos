@@ -2,7 +2,7 @@
   stewos = {
     audio.enable = true;
     desktop-services.enable = true;
-    greeter.enable = true;
+    greeter.enable = false;
     zsa.enable = true;
     virtualisation.enable = true;
     sshd.enable = true;

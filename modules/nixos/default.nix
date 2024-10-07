@@ -1,4 +1,4 @@
-{pkgs, lib, stewos, home-manager, nur, ...}:
+{pkgs, lib, stewos, home-manager, nur, inputs, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -23,8 +23,9 @@ in {
 
     # Include the StewOS packages under nixpkgs.stewos
     overlays = [
-      (final: prev: {
-        stewos = stewos.packages.${pkgs.system};
+      (final: prev: import ../../packages/default.nix {
+        inherit inputs stewos;
+        pkgs = final;
       })
     ];
   };
