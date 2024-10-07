@@ -2,7 +2,6 @@
   lib,
   writeTextFile,
   stewos,
-  inputs,
   callPackage,
 }:
 let
@@ -23,14 +22,12 @@ let
     destination = "/share/rofi/themes/${args.name}";
     text = lib.strings.concatStringsSep "\n" ([settingsContent] ++ importLines);
   });
-
-  stewosFn = import ./stewos.nix;
 in {
   # Expose a function to create new rofi themes
   inherit mkRofiTheme;
 
   # Expose default stewos theme which uses the default color scheme
-  stewos = callPackage stewosFn {
+  stewos = callPackage ./stewos.nix {
     inherit mkRofiTheme;
   };
 }
