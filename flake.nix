@@ -31,45 +31,25 @@
     };
   };
 
-  outputs = {self, ...}@inputs:
+  outputs = {self, ...}@externalInputs:
   let
+    inputs = externalInputs // { stewos = self; };
+
     # Base outputs which don't need any fancieness
     baseOutputs = {
-      lib = import ./lib/default.nix {
-        inherit inputs;
-        stewos = self;
-      };
-
-      nixosModules = import ./modules/nixos/individual.nix {
-        inherit inputs;
-        stewos = self;
-      };
-
-      homeModules = import ./modules/home-manager/individual.nix {
-        inherit inputs;
-        stewos = self;
-      };
-
-      darwinModules = import ./modules/nix-darwin/individual.nix {
-        inherit inputs;
-        stewos = self;
-      };
+      lib = import ./lib/default.nix inputs;
+      nixosModules = import ./modules/nixos/individual.nix inputs;
+      homeModules = import ./modules/home-manager/individual.nix inputs;
+      darwinModules = import ./modules/nix-darwin/individual.nix inputs;
     };
 
     # Packages which must use the flake-utils helper
     packageOutputs = inputs.flake-utils.lib.eachDefaultSystem (system: {
-      packages = import ./packages {
-        inherit inputs;
-        pkgs = inputs.nixpkgs.legacyPackages.${system};
-        stewos = self;
-      };
+      packages = import ./packages system inputs;
     });
 
     # System outputs which may also provide overlapping output keys, and must
     # be recursively merged with the above two attrsets.
-    systemOutputs = import ./systems {
-      inherit inputs;
-      stewos = self;
-    };
+    systemOutputs = import ./systems inputs;
   in inputs.nixpkgs.lib.attrsets.recursiveUpdate (baseOutputs // packageOutputs) systemOutputs;
 }

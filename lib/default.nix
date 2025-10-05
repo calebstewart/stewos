@@ -1,25 +1,25 @@
-{inputs, stewos, ...}:
+{stewos, home-manager, ...}@inputs:
 let
-  lib = inputs.nixpkgs.lib;
-in rec {
-  hypr = import ./hypr.nix {
-    inherit inputs stewos lib;
-  };
+  hardwareConfigurationFor = hostname: (
+    import (./. + "/../systems/${hostname}/hardware-configuration.nix") inputs
+  );
 
-  rasi = import ./rasi/default.nix {
-    inherit inputs stewos lib;
-  };
+  configurationFor = hostname: (
+    import (./. + "/../systems/${hostname}/configuration.nix") inputs
+  );
+in rec {
+  hypr = import ./hypr.nix inputs;
+  rasi = import ./rasi/default.nix inputs;
 
   # Create a nixpkgs instance with stewos package overlays already
   # applied.
   mkNixpkgs = system: import inputs.nixpkgs {
     inherit system;
 
+    config.allowUnfree = true;
+
     overlays = [
-      (final: prev: import ../packages/default.nix {
-        inherit inputs stewos;
-        pkgs = final;
-      })
+      (final: prev: import ../packages/default.nix system inputs)
     ];
   };
 
@@ -27,21 +27,14 @@ in rec {
   mkNixOSSystem = {system, hostname}: inputs.nixpkgs.lib.nixosSystem {
     inherit system;
 
+    pkgs = mkNixpkgs system;
+
     modules = [
       stewos.nixosModules.default
-      inputs.home-manager.nixosModules.default
-      ({...}: {
-        home-manager.extraSpecialArgs = inputs // {
-          inherit stewos inputs;
-        };
-      })
-      (./. + "/../systems/${hostname}/hardware-configuration.nix")
-      (./. + "/../systems/${hostname}/configuration.nix")
+      home-manager.nixosModules.default
+      (hardwareConfigurationFor hostname)
+      (configurationFor hostname)
     ];
-
-    specialArgs = inputs // {
-      inherit stewos inputs;
-    };
   };
 
   mkNixOSVirtualMachineApp = nixosConfiguration: {
@@ -56,19 +49,10 @@ in rec {
 
     modules = [
       stewos.nixosModules.default
-      inputs.home-manager.nixosModules.default
-      ({...}: {
-        home-manager.extraSpecialArgs = inputs // {
-          inherit stewos inputs;
-        };
-      })
-      (./. + "/../systems/${hostname}/hardware-configuration.nix")
-      (./. + "/../systems/${hostname}/configuration.nix")
+      home-manager.nixosModules.default
+      (hardwareConfigurationFor hostname)
+      (configurationFor hostname)
     ];
-
-    specialArgs = inputs // {
-      inherit stewos inputs;
-    };
   };
 
   # Create a new Nix-Darwin System
@@ -77,18 +61,9 @@ in rec {
 
     modules = [
       stewos.darwinModules.default
-      inputs.home-manager.darwinModules.default
-      ({...}: {
-        home-manager.extraSpecialArgs = inputs // {
-          inherit stewos inputs;
-        };
-      })
-      (./. + "/../systems/${hostname}/configuration.nix")
+      home-manager.darwinModules.default
+      (configurationFor hostname)
     ];
-
-    specialArgs = inputs // {
-      inherit stewos inputs;
-    };
   };
 
   # Create a standalone home manager configuration using the StewOS default modules
@@ -98,11 +73,7 @@ in rec {
 
     modules = [
       stewos.homeModules.default
-      modulePath
+      (import modulePath inputs)
     ];
-
-    extraSpecialArgs = inputs // {
-      inherit stewos inputs;
-    };
   };
 }

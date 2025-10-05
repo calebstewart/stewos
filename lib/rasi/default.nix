@@ -1,5 +1,6 @@
-{lib, ...}:
+{nixpkgs, ...}:
 let
+  lib = nixpkgs.lib;
 in rec {
   # Check if the given value is a rasi literal
   isLiteral = v: (lib.isAttrs v) && ((lib.attrsets.attrByPath ["asRasiLiteral"] null v) != null);

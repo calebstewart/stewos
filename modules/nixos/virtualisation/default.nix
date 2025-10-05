@@ -1,4 +1,5 @@
-{lib, config, pkgs, vfio-hooks, ...}:
+{vfio-hooks, ...}:
+{lib, config, pkgs, ...}:
 let
   cfg = config.stewos.virtualisation;
 in {

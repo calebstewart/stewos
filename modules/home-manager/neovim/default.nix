@@ -1,4 +1,5 @@
-{lib, config, nixvim, ...}:
+{nixvim, ...}:
+{lib, config, ...}:
 let
   cfg = config.stewos.neovim;
 in {

@@ -1,3 +1,4 @@
+{...}:
 {lib, config, ...}:
 let
   cfg = config.stewos.sshd;

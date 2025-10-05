@@ -1,4 +1,5 @@
-{pkgs, lib, stewos, ...}:
+{stewos, home-manager, nur, ...}@inputs:
+{pkgs, lib, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -6,10 +7,13 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + name)]) [] moduleDirs;
+  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
 in {
   # Load all sub-modules
-  imports = modulePaths;
+  imports = modulePaths ++ [
+    home-manager.darwinModules.default
+    nur.modules.darwin.default
+  ];
 
   nixpkgs = {
     # Allow unfree packages

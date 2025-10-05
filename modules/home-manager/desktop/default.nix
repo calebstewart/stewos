@@ -1,12 +1,15 @@
+{...}@inputs:
 {pkgs, lib, config, ...}:
 let
   cfg = config.stewos.desktop;
+  hyprland = import ./hyprland.nix inputs;
 in {
   imports = [
+    hyprland
+
     ./fonts.nix
     ./gtk.nix
     ./hypridle.nix
-    ./hyprland.nix
     ./hyprlock.nix
     ./hyprpaper.nix
     ./polkit.nix

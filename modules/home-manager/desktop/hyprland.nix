@@ -1,4 +1,5 @@
-{pkgs, config, lib, stewos, ...}:
+{stewos, ...}:
+{pkgs, config, lib, ...}:
 let
   cfg = config.stewos.desktop;
 

@@ -1,4 +1,5 @@
-{pkgs, lib, config, ...}:
+{...}:
+{lib, config, ...}:
 let
   cfg = config.stewos.autologin;
 in {

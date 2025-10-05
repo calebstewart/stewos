@@ -1,6 +1,8 @@
+{nur, ...}:
 {lib, config, pkgs, ...}:
 let
   cfg = config.stewos.firefox;
+  addonPkgs = pkgs.nur.repos.rycee.firefox-addons;
 in {
   options.stewos.firefox.enable = lib.mkEnableOption "firefox";
 
@@ -18,7 +20,7 @@ in {
           "ui.systemUsesDarkTheme" = 1;
         };
 
-        extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
+        extensions.packages = with addonPkgs; [
           lastpass-password-manager
           ublock-origin
           cookie-quick-manager

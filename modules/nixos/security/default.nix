@@ -1,4 +1,5 @@
-{lib, config, user, ...}:
+{...}:
+{lib, config, ...}:
 let
   cfg = config.stewos.security;
 in {

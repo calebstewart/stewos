@@ -1,4 +1,5 @@
-{pkgs, lib, stewos, home-manager, nur, inputs, ...}:
+{stewos, home-manager, nur, ...}@inputs:
+{pkgs, lib, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -6,7 +7,7 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + "/${name}")]) [] moduleDirs;
+  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
 in {
   # DO NOT MODIFY
   system.stateVersion = "24.05";
@@ -16,19 +17,6 @@ in {
     home-manager.nixosModules.default
     nur.modules.nixos.default
   ];
-
-  nixpkgs = {
-    # Allow unfree packages
-    config.allowUnfree = true;
-
-    # Include the StewOS packages under nixpkgs.stewos
-    overlays = [
-      (final: prev: import ../../packages/default.nix {
-        inherit inputs stewos;
-        pkgs = final;
-      })
-    ];
-  };
 
   # Setup Nix configuration
   nix = {

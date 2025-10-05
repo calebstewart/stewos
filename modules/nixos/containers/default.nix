@@ -1,3 +1,4 @@
+{...}:
 {lib, config, pkgs, ...}:
 let
   cfg = config.stewos.containers;

@@ -1,4 +1,5 @@
-{lib, nix-colors, nur, config, ...}:
+{nix-colors, nur, ...}@inputs:
+{lib, config, ...}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -6,12 +7,11 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(./. + "/${name}")]) [] moduleDirs;
+  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
 in {
   # Load all sub-modules
   imports = modulePaths ++ [
     nix-colors.homeManagerModules.default
-    nur.modules.homeManager.default
   ];
 
   options.stewos.user = {

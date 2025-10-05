@@ -1,6 +1,7 @@
-{inputs, pkgs, stewos, ...}:
+system: {nixpkgs, stewos, ...}@inputs:
 let
-  lib = inputs.nixpkgs.lib;
+  lib = nixpkgs.lib;
+  pkgs = nixpkgs.legacyPackages.${system};
   mapAttrs = lib.mapAttrs;
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;

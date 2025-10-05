@@ -1,6 +1,7 @@
-{inputs, ...}: rec {
+{nixos-hardware, ...}@inputs:
+{...}: rec {
   imports = [
-    inputs.nixos-hardware.nixosModules.framework-16-7040-amd
+    nixos-hardware.nixosModules.framework-16-7040-amd
   ];
 
   stewos = {
@@ -25,6 +26,6 @@
   };
 
   # Enable embedded home-manager
-  home-manager.users.${stewos.user.username} = import ./home.nix;
+  home-manager.users.${stewos.user.username} = import ./home.nix inputs;
 }
 

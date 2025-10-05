@@ -1,3 +1,4 @@
+{...}:
 {config, pkgs, lib, ...}: 
 let
   cfg = config.stewos.looking-glass;

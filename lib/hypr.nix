@@ -1,6 +1,6 @@
-{inputs, ...}: 
+{nixpkgs, ...}: 
 let
-  lib = inputs.nixpkgs.lib;
+  lib = nixpkgs.lib;
 in rec {
   # Create a position string from attrs with ".x" and ".y". The result is a string
   # like "100x150" for input { x = 100; y = 150 }.

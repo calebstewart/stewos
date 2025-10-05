@@ -1,4 +1,5 @@
-{pkgs, lib, config, nix-std, ...}:
+{nix-std, ...}:
+{pkgs, lib, config, ...}:
 let
   cfg = config.stewos.zsh;
 in {

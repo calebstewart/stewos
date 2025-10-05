@@ -1,3 +1,4 @@
+{...}:
 {pkgs, lib, config, ...}:
 let
   cfg = config.stewos.rofi;
