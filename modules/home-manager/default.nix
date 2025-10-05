@@ -1,4 +1,4 @@
-{nix-colors, nur, ...}@inputs:
+{nix-colors, ...}@inputs:
 {lib, config, ...}:
 let
   filterAttrs = lib.filterAttrs;
