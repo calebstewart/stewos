@@ -9,7 +9,7 @@ in {
       enable = true;
       enableZshIntegration = true;
       git = true;
-      icons = true;
+      icons = "auto";
 
       extraOptions = [
         "--group-directories-first"

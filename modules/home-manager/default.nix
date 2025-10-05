@@ -11,7 +11,7 @@ in {
   # Load all sub-modules
   imports = modulePaths ++ [
     nix-colors.homeManagerModules.default
-    nur.hmModules.nur
+    nur.modules.homeManager.default
   ];
 
   options.stewos.user = {

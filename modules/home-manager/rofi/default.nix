@@ -35,7 +35,7 @@ let
 in {
   options.stewos.rofi = {
     enable = lib.mkEnableOption "rofi";
-    package = lib.mkPackageOption pkgs "rofi-wayland" {};
+    package = lib.mkPackageOption pkgs "rofi" {};
 
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;

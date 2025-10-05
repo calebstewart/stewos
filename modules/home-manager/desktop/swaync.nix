@@ -10,13 +10,6 @@ let
   ];
 in {
   config = lib.mkIf cfg.enable {
-    stewos.desktop.bindings.${cfg.modifier}.N = lib.mkDefault {
-      dispatcher = "exec";
-      package = pkgs.swaynotificationcenter;
-      target = "swaync-client";
-      args = ["-t" "-sw"];
-    };
-
     wayland.windowManager.hyprland.settings.windowrulev2 = [
       "animation slide left,initialclass:(SwayNotificationCenterControlCenter)"
     ];

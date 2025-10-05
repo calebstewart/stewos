@@ -46,6 +46,7 @@ in rec {
 
   mkNixOSVirtualMachineApp = nixosConfiguration: {
     type = "app";
+    description = "Execute a virtual machine based on the this NixOS configuration";
     program = "${nixosConfiguration.config.system.build.vm}/bin/run-nixos-vm";
   };
 

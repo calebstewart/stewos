@@ -18,7 +18,7 @@ in {
           "ui.systemUsesDarkTheme" = 1;
         };
 
-        extensions = with config.nur.repos.rycee.firefox-addons; [
+        extensions.packages = with pkgs.nur.repos.rycee.firefox-addons; [
           lastpass-password-manager
           ublock-origin
           cookie-quick-manager
@@ -26,9 +26,9 @@ in {
         ];
 
         search = {
-          default = "Google";
-          order = ["Google" "Nix Packages"];
-          privateDefault = "Google";
+          default = "google";
+          order = ["google" "Nix Packages"];
+          privateDefault = "google";
           force = true;
 
           engines = {
@@ -45,9 +45,9 @@ in {
               definedAliases = [ "@np" ];
             };
 
-            "Bing".metaData.hidden = true;
+            "bing".metaData.hidden = true;
 
-            "Google".metaData.alias = "@g";
+            "google".metaData.alias = "@g";
           };
         };
 

@@ -109,7 +109,7 @@ in {
       };
 
       # Initialize any-nix-shell during zsh startup
-      initExtra = ''
+      initContent = ''
         ${pkgs.any-nix-shell}/bin/any-nix-shell zsh --info-right | source /dev/stdin
 
         # Initialize Oh-My-Posh prompt with above configuration

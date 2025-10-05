@@ -4,7 +4,7 @@ let
 in {
   options.stewos.neovim.enable = lib.mkEnableOption "neovim";
 
-  imports = [nixvim.homeManagerModules.nixvim];
+  imports = [nixvim.homeModules.nixvim];
 
   config = lib.mkIf cfg.enable {
 
@@ -105,7 +105,6 @@ in {
 
       plugins.trouble = {
         enable = true;
-        settings.icons = true;
       };
 
       # Fancy notifications within neovim
@@ -113,7 +112,7 @@ in {
         enable = true;
 
         # NOTE: british spelling :sob:
-        backgroundColour = "#${config.colorScheme.palette.base01}";
+        settings.background_colour = "#${config.colorScheme.palette.base01}";
       };
 
       # Toggle-able terminal emulators within Neovim!
@@ -128,7 +127,7 @@ in {
 
       plugins.lspsaga = {
         enable = true;
-        ui.devicon = true;
+        settings.devicon = true;
       };
 
       # Setup Language Servers
@@ -136,15 +135,15 @@ in {
         enable = true;
 
         servers = {
-          lua-ls.enable = true;
+          lua_ls.enable = true;
           gopls.enable = true;
           nixd.enable = true;
           pyright.enable = true;
           clangd.enable = true;
           terraformls.enable = true;
-          jdt-language-server.enable = true;
+          jdtls.enable = true;
 
-          rust-analyzer = {
+          rust_analyzer = {
             enable = true;
             installRustc = false;
             installCargo = false;

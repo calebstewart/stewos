@@ -31,6 +31,7 @@ in {
       shell = pkgs.zsh;
       createHome = true;
       isNormalUser = true;
+      initialPassword = "password";
     };
 
     # Create the user group

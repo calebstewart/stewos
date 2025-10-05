@@ -14,7 +14,7 @@ in {
   # Load all sub-modules
   imports = modulePaths ++ [
     home-manager.nixosModules.default
-    nur.nixosModules.nur
+    nur.modules.nixos.default
   ];
 
   nixpkgs = {
@@ -64,6 +64,9 @@ in {
     clean.enable = true;
     clean.extraArgs = "--keep-since 7d --keep 5";
   };
+
+  # This is needed or else home-manager fails to start later
+  programs.dconf.enable = true;
 
   # We do not use sudo
   security.sudo.enable = false;
