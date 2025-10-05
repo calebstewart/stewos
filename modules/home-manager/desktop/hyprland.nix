@@ -19,7 +19,7 @@ let
     # Collect all mode names (for custom modes, use lib.getName, otherwise pass through)
     modeNames = lib.forEach modes (mode: if lib.isDerivation mode then (lib.getName mode) else mode);
     modeArgs = ["-show" (lib.concatStringsSep "," modeNames)];
-  in stewos.lib.mkExecBinding {
+  in stewos.lib.hypr.mkExecBinding {
     inherit modifier key;
     package = config.stewos.rofi.package;
     args = modeArgs ++ themeArgs ++ customModesArgs;
@@ -28,7 +28,7 @@ let
   # Generate a single binding string wrapped in an array or an empty
   # array if the given binding config is disabled.
   generateBinding = modifier: key: binding: if binding.enable then [(
-    if binding.dispatcher == "exec" then stewos.lib.mkExecBinding {
+    if binding.dispatcher == "exec" then stewos.lib.hypr.mkExecBinding {
       inherit modifier key;
       inherit (binding) package;
       target = lib.attrByPath ["target"] null binding;
@@ -37,7 +37,7 @@ let
       inherit modifier key;
       inherit (binding) modes;
       theme = lib.attrByPath  ["theme"] null binding;
-    } else stewos.lib.mkBinding {
+    } else stewos.lib.hypr.mkBinding {
       inherit modifier key;
       inherit (binding) dispatcher;
       args = lib.attrByPath ["args"] "" binding;

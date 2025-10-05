@@ -1,6 +1,5 @@
 {nix-colors, lib, ...}: {
   stewos = {
-    # Configure Graphical Desktop Settings
     desktop = {
       enable = true;
       wallpaper = ./../../images/spaceman.jpg;

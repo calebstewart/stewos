@@ -1,4 +1,8 @@
-{...}: rec {
+{inputs, ...}: rec {
+  imports = [
+    inputs.nixos-hardware.nixosModules.framework-16-7040-amd
+  ];
+
   stewos = {
     audio.enable = true;
     desktop-services.enable = true;
