@@ -1,12 +1,8 @@
-{stewos, home-manager, ...}@inputs:
+{stewos, home-manager, nixpkgs, ...}@inputs:
 let
-  hardwareConfigurationFor = hostname: (
-    import (./. + "/../systems/${hostname}/hardware-configuration.nix") inputs
-  );
-
-  configurationFor = hostname: (
-    import (./. + "/../systems/${hostname}/configuration.nix") inputs
-  );
+  lib = nixpkgs.lib;
+  importWithInputs = module: if builtins.isPath module then (import module inputs) else module;
+  importAllWithInputs = modules: lib.lists.imap0 (_: module: importWithInputs module) modules;
 in rec {
   hypr = import ./hypr.nix inputs;
   rasi = import ./rasi/default.nix inputs;
@@ -24,7 +20,7 @@ in rec {
   };
 
   # Create a new NixOS system
-  mkNixOSSystem = {system, hostname}: inputs.nixpkgs.lib.nixosSystem {
+  mkNixOSSystem = {system, modules}: inputs.nixpkgs.lib.nixosSystem {
     inherit system;
 
     pkgs = mkNixpkgs system;
@@ -32,9 +28,7 @@ in rec {
     modules = [
       stewos.nixosModules.default
       home-manager.nixosModules.default
-      (hardwareConfigurationFor hostname)
-      (configurationFor hostname)
-    ];
+    ] ++ (importAllWithInputs modules);
   };
 
   mkNixOSVirtualMachineApp = nixosConfiguration: {
@@ -44,36 +38,32 @@ in rec {
   };
 
   # Create a NixOS image of the given format
-  mkNixOSImageGenerator = {system, hostname, format}: inputs.nixos-generators.nixosGenerate {
+  mkNixOSImageGenerator = {system, modules, format}: inputs.nixos-generators.nixosGenerate {
     inherit system format;
 
     modules = [
       stewos.nixosModules.default
       home-manager.nixosModules.default
-      (hardwareConfigurationFor hostname)
-      (configurationFor hostname)
-    ];
+    ] ++ (importAllWithInputs modules);
   };
 
   # Create a new Nix-Darwin System
-  mkNixDarwinSystem = {system, hostname}: inputs.nix-darwin.lib.darwinSystem {
+  mkNixDarwinSystem = {system, modules}: inputs.nix-darwin.lib.darwinSystem {
     inherit system;
 
     modules = [
       stewos.darwinModules.default
       home-manager.darwinModules.default
-      (configurationFor hostname)
-    ];
+    ] ++ (importAllWithInputs modules);
   };
 
   # Create a standalone home manager configuration using the StewOS default modules
   # and the given Home Manager module path.
-  mkHomeManagerConfig = {system, modulePath}: inputs.home-manager.lib.homeManagerConfiguration {
+  mkHomeManagerConfig = {system, modules}: inputs.home-manager.lib.homeManagerConfiguration {
     pkgs = mkNixpkgs system;
 
     modules = [
       stewos.homeModules.default
-      (import modulePath inputs)
-    ];
+    ] ++ (importAllWithInputs modules);
   };
 }

@@ -1,5 +1,5 @@
 {nix-colors, ...}:
-{lib, ...}: {
+{...}: {
   stewos = {
     desktop = {
       enable = true;
