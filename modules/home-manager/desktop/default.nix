@@ -16,12 +16,14 @@ in {
     ./qt.nix
     ./rofi.nix
     ./swaync.nix
-    ./waybar/default.nix
+    ./stew-shell.nix
+    # ./waybar/default.nix
     ./xdg.nix
   ];
 
   options.stewos.desktop = {
     enable = lib.mkEnableOption "Graphical Desktop";
+    startLocked = lib.mkEnableOption "Start Desktop in Locked State";
     swapEscape = lib.mkEnableOption "Swap Escape and Caps Lock";
     terminal = lib.mkPackageOption pkgs "alacritty" {};
 

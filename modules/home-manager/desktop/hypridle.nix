@@ -7,16 +7,15 @@ in {
       enable = true;
 
       settings = let
-        hyprctl = "${config.wayland.windowManager.hyprland.package}/bin/hyprctl";
-        loginctl = "${pkgs.systemd}/bin/loginctl";
-        hyprlock = "${pkgs.hyprlock}/bin/hyprlock";
-        brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
-        pidof = "${pkgs.procps}/bin/pidof";
+        hyprctl = lib.getExe config.wayland.windowManager.hyprland.package;
+        loginctl = lib.getExe' pkgs.systemd "loginctl";
+        brightnessctl = lib.getExe pkgs.brightnessctl;
+        stew-shell = lib.getExe pkgs.stew-shell;
       in {
         general = {
           after_sleep_cmd = "${hyprctl} dispatch dpms on";
           before_sleep_cmd = "${loginctl} lock-session";
-          lock_cmd = "${pidof} hyprlock || ${hyprlock}";
+          lock_cmd = "${stew-shell} lock";
         };
 
         listener = [

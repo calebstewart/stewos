@@ -13,13 +13,7 @@ in {
         package = pkgs.qemu_kvm;
         runAsRoot = true;
         swtpm.enable = true;
-
-        ovmf = {
-          enable = true;
-          packages = with pkgs; [
-            OVMFFull.fd
-          ];
-        };
+        ovmf.enable = true;
       };
     };
 

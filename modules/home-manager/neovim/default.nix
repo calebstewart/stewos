@@ -1,5 +1,5 @@
 {nixvim, ...}:
-{lib, config, ...}:
+{lib, config, pkgs, ...}:
 let
   cfg = config.stewos.neovim;
 in {
@@ -90,8 +90,8 @@ in {
 
       plugins.treesitter = {
         enable = true;
-
-        # languageRegister.hcl = ["hcl" "tf" "terraform"];
+        settings.highlight.enable = true;
+        languageRegister.hcl = ["hcl" "tf" "terraform"];
       };
 
       plugins.markdown-preview = {
@@ -141,13 +141,20 @@ in {
           nixd.enable = true;
           pyright.enable = true;
           clangd.enable = true;
-          terraformls.enable = true;
           jdtls.enable = true;
+          ts_ls.enable = true;
+          vala_ls.enable = true;
+          mesonlsp.enable = true;
 
           rust_analyzer = {
             enable = true;
             installRustc = false;
             installCargo = false;
+          };
+
+          gh_actions_ls = {
+            enable = true;
+            package = pkgs.gh-actions-language-server;
           };
         };
 

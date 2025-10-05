@@ -1,10 +1,10 @@
 {nixos-hardware, ...}@inputs:
-{pkgs, ...}: rec {
+{pkgs, lib, ...}: rec {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
   ];
 
-  stewos = {
+  stewos = rec {
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
@@ -23,7 +23,16 @@
       username = "caleb";
       fullname = "Caleb Stewart";
     };
+
+    autologin = {
+      enable = true;
+      username = user.username;
+      command = lib.getExe pkgs.hyprland;
+    };
   };
+
+  # Set the system hostname
+  networking.hostName = "framework16";
 
   # Enable embedded home-manager
   home-manager.users.${stewos.user.username} = import ./home.nix inputs;

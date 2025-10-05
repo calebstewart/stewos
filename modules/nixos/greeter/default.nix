@@ -26,5 +26,8 @@ in {
 
     # Enable the greetd service
     services.greetd.enable = true;
+
+    # Enable programs which provide sessions
+    programs.hyprland.enable = true;
   };
 }

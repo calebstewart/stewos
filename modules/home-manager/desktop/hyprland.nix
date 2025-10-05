@@ -120,7 +120,7 @@ in {
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;
-      # plugins = with pkgs.hyprlandPlugins; [hyprsplit];
+      plugins = with pkgs.hyprlandPlugins; [hyprsplit];
 
       settings = {
         monitor = lib.lists.foldl (acc: monitor: acc ++ [(stewos.lib.mkMonitorConfig monitor)]) [",preferred,auto,1"] cfg.monitors;

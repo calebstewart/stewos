@@ -1,4 +1,4 @@
-{stewos, home-manager, nixpkgs, ...}@inputs:
+{stewos, home-manager, nixpkgs, stew-shell, ...}@inputs:
 let
   lib = nixpkgs.lib;
   importWithInputs = module: if builtins.isPath module then (import module inputs) else module;
@@ -16,42 +16,48 @@ in rec {
 
     overlays = [
       (final: prev: import ../packages/default.nix system inputs)
+      (final: prev: {
+        stew-shell = stew-shell.packages.${prev.system}.default;
+      })
     ];
   };
 
   # Create a new NixOS system
-  mkNixOSSystem = {system, modules}: inputs.nixpkgs.lib.nixosSystem {
+  mkNixOSSystem = {hostname, system, modules}: inputs.nixpkgs.lib.nixosSystem {
     inherit system;
 
     pkgs = mkNixpkgs system;
 
     modules = [
+      { networking.hostName = hostname; }
       stewos.nixosModules.default
       home-manager.nixosModules.default
     ] ++ (importAllWithInputs modules);
   };
 
-  mkNixOSVirtualMachineApp = nixosConfiguration: {
+  mkNixOSVirtualMachineApp = hostname: nixosConfiguration: {
     type = "app";
     description = "Execute a virtual machine based on the this NixOS configuration";
-    program = "${nixosConfiguration.config.system.build.vm}/bin/run-nixos-vm";
+    program = "${nixosConfiguration.config.system.build.vm}/bin/run-${hostname}-vm";
   };
 
   # Create a NixOS image of the given format
-  mkNixOSImageGenerator = {system, modules, format}: inputs.nixos-generators.nixosGenerate {
+  mkNixOSImageGenerator = {hostname, system, modules, format}: inputs.nixos-generators.nixosGenerate {
     inherit system format;
 
     modules = [
+      { network.hostName = hostname; }
       stewos.nixosModules.default
       home-manager.nixosModules.default
     ] ++ (importAllWithInputs modules);
   };
 
   # Create a new Nix-Darwin System
-  mkNixDarwinSystem = {system, modules}: inputs.nix-darwin.lib.darwinSystem {
+  mkNixDarwinSystem = {hostname, system, modules}: inputs.nix-darwin.lib.darwinSystem {
     inherit system;
 
     modules = [
+      { networking.hostName = hostname; }
       stewos.darwinModules.default
       home-manager.darwinModules.default
     ] ++ (importAllWithInputs modules);
