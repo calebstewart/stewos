@@ -483,11 +483,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1760160695,
-        "narHash": "sha256-uBClVHEYonVWov0rNX3aKvKzvISmGwMmPWb5tjxnu0E=",
+        "lastModified": 1760223637,
+        "narHash": "sha256-bvUiqpnWTkBlRwiYMuT3tgPlC3sauEvt02FuU/RsKGk=",
         "owner": "calebstewart",
         "repo": "stew-shell",
-        "rev": "805eabb8a8c67c3e4f9057fdadef78e47ed0532f",
+        "rev": "aad7109907060ba9381854f356fdee3cb2989249",
         "type": "github"
       },
       "original": {
