@@ -1,5 +1,5 @@
 {nix-colors, ...}:
-{lib, ...}: {
+{lib, pkgs, ...}: {
   stewos = {
     desktop = {
       enable = true;
@@ -25,14 +25,15 @@
     zsh.enable = true;
     neovim.enable = true;
     zoxide.enable = true;
-
-    git.forceSSH = false;
+    direnv.enable = true;
 
     user = {
       fullName = "Caleb Stewart";
       email = "caleb.stewart94@gmail.com";
     };
   };
+
+  home.packages = [pkgs.discord];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }
