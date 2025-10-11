@@ -39,6 +39,11 @@
       url = "github:lttb/gh-actions-language-server";
       flake = false;
     };
+
+    nh = {
+      url = "github:nix-community/nh";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {self, ...}@externalInputs:

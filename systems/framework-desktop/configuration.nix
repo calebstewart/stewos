@@ -8,7 +8,7 @@
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
-    zsa.enable = true;
+    zsa.enable = false;
     virtualisation.enable = true;
     sshd.enable = true;
     looking-glass.enable = false;

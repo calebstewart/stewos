@@ -13,7 +13,7 @@ in {
         splash_offset = 2.0;
 
         preload = ["${cfg.wallpaper}"];
-        wallpaper = ["${cfg.wallpaper}"];
+        wallpaper = [",${cfg.wallpaper}"];
       };
     };
   };

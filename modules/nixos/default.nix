@@ -1,4 +1,4 @@
-{stewos, home-manager, nur, ...}@inputs:
+{stewos, home-manager, nur, nh, ...}@inputs:
 {pkgs, lib, ...}:
 let
   filterAttrs = lib.filterAttrs;
@@ -49,6 +49,7 @@ in {
   # Setup Nix Helper for easy building
   programs.nh = {
     enable = true;
+    package = nh.packages.${pkgs.system}.default;
     clean.enable = true;
     clean.extraArgs = "--keep-since 7d --keep 5";
   };

@@ -1,10 +1,19 @@
 {nix-colors, ...}:
-{...}: {
+{lib, ...}: {
   stewos = {
     desktop = {
       enable = true;
       wallpaper = ./../../images/spaceman.jpg;
-      modifier = "ALT";
+      modifier = "SUPER";
+
+      monitors = let
+        orderedNames = ["Dell Inc. DELL U2723QE 55L01P3" "Dell Inc. DELL U2723QE HXJ01P3"];
+        resolution = { width = 3840; height = 2160; };
+      in lib.imap0 (i: description: {
+        inherit resolution description;
+        position.x = resolution.width * i;
+        scale = 1.0;
+      }) orderedNames;
     };
 
     git.enable = true;
@@ -16,6 +25,8 @@
     zsh.enable = true;
     neovim.enable = true;
     zoxide.enable = true;
+
+    git.forceSSH = false;
 
     user = {
       fullName = "Caleb Stewart";

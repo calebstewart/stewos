@@ -67,7 +67,8 @@ let
       K = { enable = true; dispatcher = "movefocus"; args = "u"; };
       L = { enable = true; dispatcher = "movefocus"; args = "r"; };
       Q = { enable = true; dispatcher = "killactive"; };
-      D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
+      # D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
+      D = { enable = true; dispatcher = "exec"; package = config.stew-shell.package; args = ["toggle" "launcher"]; };
       V = { enable = true; dispatcher = "togglesplit"; };
       U = { enable = true; dispatcher = "exec"; package = pkgs.wl-gen-uuid; };
       M = { enable = true; dispatcher = "rofi"; modes = [pkgs.rofiScripts.libvirt]; };
@@ -123,7 +124,7 @@ in {
       plugins = with pkgs.hyprlandPlugins; [hyprsplit];
 
       settings = {
-        monitor = lib.lists.foldl (acc: monitor: acc ++ [(stewos.lib.mkMonitorConfig monitor)]) [",preferred,auto,1"] cfg.monitors;
+        monitor = lib.lists.foldl (acc: monitor: acc ++ [(stewos.lib.hypr.mkMonitorConfig monitor)]) [",preferred,auto,1"] cfg.monitors;
 
         # Disable default images
         misc = {

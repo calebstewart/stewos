@@ -45,7 +45,7 @@ in {
     nix.settings.trusted-users = [cfg.username];
 
     # Set the default location for the flake repository
-    programs.nh.flake = lib.mkDefault "${config.users.users.${cfg.username}.home}/git/nix";
+    programs.nh.flake = lib.mkDefault "${config.users.users.${cfg.username}.home}/git/stewos";
 
     # Allow the default user to use 'doas' for privesc
     security.doas.extraRules = [{
