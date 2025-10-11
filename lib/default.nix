@@ -1,4 +1,4 @@
-{stewos, home-manager, nixpkgs, stew-shell, ...}@inputs:
+{stewos, home-manager, nixpkgs, ...}@inputs:
 let
   lib = nixpkgs.lib;
   importWithInputs = module: if builtins.isPath module then (import module inputs) else module;
@@ -16,9 +16,6 @@ in rec {
 
     overlays = [
       (final: prev: import ../packages/default.nix system inputs)
-      (final: prev: {
-        stew-shell = stew-shell.packages.${prev.system}.default;
-      })
     ];
   };
 

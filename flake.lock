@@ -2,18 +2,21 @@
   "nodes": {
     "ags": {
       "inputs": {
-        "astal": "astal",
+        "astal": [
+          "stew-shell",
+          "astal"
+        ],
         "nixpkgs": [
           "stew-shell",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1731966249,
-        "narHash": "sha256-9hDeMy6S2q1wWBFGiJic5yUms19zW8LhAX9MlCtuN6k=",
+        "lastModified": 1759227262,
+        "narHash": "sha256-ibKJckw+KWH6n+pscOA7DWImanr988zKB7R2Z6ZEMLM=",
         "owner": "aylur",
         "repo": "ags",
-        "rev": "12e0bfefd2051c43d7450123fcb095f655b891e8",
+        "rev": "f68a0d03fbb94f4beacedd922ffaa0bf0f10397a",
         "type": "github"
       },
       "original": {
@@ -26,16 +29,15 @@
       "inputs": {
         "nixpkgs": [
           "stew-shell",
-          "ags",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1731952585,
-        "narHash": "sha256-Sh1E7sJd8JJM3PCU1ZOei/QWz97OLCENIi2rTRoaniw=",
+        "lastModified": 1759844034,
+        "narHash": "sha256-Il3gO/g30+yeENQegfQNs+pnrLrVhmpTfgj75ufmoLE=",
         "owner": "aylur",
         "repo": "astal",
-        "rev": "664c7a4ddfcf48c6e8accd3c33bb94424b0e8609",
+        "rev": "511bae14cc52f8175888bfb0fd0d5afc54b20de9",
         "type": "github"
       },
       "original": {
@@ -454,16 +456,17 @@
     "stew-shell": {
       "inputs": {
         "ags": "ags",
+        "astal": "astal",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1738425600,
-        "narHash": "sha256-JDtwamd/zOltIbp4s79F5pqeK55nDT98LbPJvhenHFw=",
+        "lastModified": 1760123410,
+        "narHash": "sha256-qla0rAFu94YA0eMnONja/DyF2fAv0rCmAILU6f8JJ94=",
         "owner": "calebstewart",
         "repo": "stew-shell",
-        "rev": "a97b09fe49d7e7c4c15a5ae6b78056ea53ff2b9b",
+        "rev": "142cc56fb945e89f141cc845e510dc7fc0fe124b",
         "type": "github"
       },
       "original": {

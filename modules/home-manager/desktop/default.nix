@@ -1,4 +1,4 @@
-{...}@inputs:
+{stew-shell, ...}@inputs:
 {pkgs, lib, config, ...}:
 let
   cfg = config.stewos.desktop;
@@ -6,6 +6,7 @@ let
 in {
   imports = [
     hyprland
+    stew-shell.homeModules.default
 
     ./fonts.nix
     ./gtk.nix
@@ -16,7 +17,6 @@ in {
     ./qt.nix
     ./rofi.nix
     ./swaync.nix
-    ./stew-shell.nix
     # ./waybar/default.nix
     ./xdg.nix
   ];
@@ -154,6 +154,8 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    stew-shell.enable = true;
+
     home.packages = with pkgs; [
       pwvucontrol
     ];

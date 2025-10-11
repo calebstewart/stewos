@@ -10,12 +10,13 @@ in {
         hyprctl = lib.getExe config.wayland.windowManager.hyprland.package;
         loginctl = lib.getExe' pkgs.systemd "loginctl";
         brightnessctl = lib.getExe pkgs.brightnessctl;
-        stew-shell = lib.getExe pkgs.stew-shell;
+        hyprlock = lib.getExe pkgs.hyprlock;
+        pidof = lib.getExe' pkgs.procps "pidof";
       in {
         general = {
           after_sleep_cmd = "${hyprctl} dispatch dpms on";
           before_sleep_cmd = "${loginctl} lock-session";
-          lock_cmd = "${stew-shell} lock";
+          lock_cmd = "${pidof} hyprlock || ${hyprlock}";
         };
 
         listener = [
