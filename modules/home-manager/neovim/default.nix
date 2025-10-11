@@ -175,6 +175,11 @@ in {
             options.desc = "Restart LSP Server";
           }
           {
+            key = "<leader>ll";
+            action = "<CMD>Lspsaga show_line_diagnostics<Enter>";
+            options.desc = "Show Line Diagnostics";
+          }
+          {
             key = "<leader>gd";
             action = "<cmd>Telescope lsp_definitions<CR>";
             options.desc = "Go to Definition";
