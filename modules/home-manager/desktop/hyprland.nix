@@ -178,8 +178,8 @@ in {
             "borderangle, 1, 8, default"
             "fade, 1, 7, default"
             "workspaces, 1, 6, default"
-            "layers, 1, 7, default, slide"
-            "specialWorkspace, 1, 6, default, slidefadevert -20%"
+            # "layers, 1, 7, default, slide"
+            # "specialWorkspace, 1, 6, default, slidefadevert -20%"
           ];
         };
 
