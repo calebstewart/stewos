@@ -30,6 +30,13 @@
     aws-vault
     colima
     docker
+
+    # On linux, these are part of the desktop module, but that isn't used
+    # on Darwin. We should probably make them their own module...
+    jetbrains-mono
+    roboto
+    openmoji-color
+    nerd-fonts.jetbrains-mono
   ] ++ (with stewos.packages.${pkgs.system}; [
     # hunt-cli
   ]);
