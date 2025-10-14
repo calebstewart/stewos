@@ -1,4 +1,4 @@
-{stewos, home-manager, nur, ...}@inputs:
+{stewos, home-manager, nur, nh, ...}@inputs:
 {pkgs, lib, ...}:
 let
   filterAttrs = lib.filterAttrs;
@@ -15,31 +15,30 @@ in {
     nur.modules.darwin.default
   ];
 
-  nixpkgs = {
-    # Allow unfree packages
-    config.allowUnfree = true;
-
-    # Include the StewOS packages under nixpkgs.stewos
-    overlays = [
-      (final: prev: {
-        stewos = stewos.packages.${pkgs.system};
-      })
-    ];
-  };
-
   # Setup Nix configuration
   nix = {
-    settings.auto-optimise-store = true;
+    optimise.automatic = true;
     settings.experimental-features = ["nix-command" "flakes"];
+  };
+
+  # Setup Nix Helper for easy building
+  programs.nh = {
+    enable = true;
+    clean.enable = true;
+    clean.extraArgs = "--keep-since 7d --keep 5";
   };
 
   # Enable mandb and nix documentation
   documentation = {
     enable = true;
+    man.enable = true;
+  };
 
-    man = {
-      enable = true;
-      generateCaches = true;
-    };
+  # Setup embedded home manager
+  home-manager = {
+    useUserPackages = true;
+    useGlobalPkgs = true;
+
+    sharedModules = [stewos.homeModules.default];
   };
 }
