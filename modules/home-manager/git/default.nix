@@ -22,6 +22,8 @@ in {
         init.defaultBranch = "main";
         push.autoSetupRemote = true;
         gpg.format = "ssh";
+        commit.gpgsign = true;
+        user.signingkey = "${config.home.homeDirectory}/.ssh/id_ed25519";
 
         url = lib.mkIf cfg.forceSSH {
           "git@github.com:" = {
