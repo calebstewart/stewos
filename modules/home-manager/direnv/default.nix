@@ -43,6 +43,12 @@ in {
             export POETRY_ACTIVE=1  # or VENV_ACTIVE=1
             export VIRTUAL_ENV
           }
+
+          use_ruby() {
+            local ruby_dir=$HOME/.rubies/ruby-$1
+            load_prefix $ruby_dir
+            layout ruby
+          }
       '';
     };
   };

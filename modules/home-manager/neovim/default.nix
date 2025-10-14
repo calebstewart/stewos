@@ -12,7 +12,8 @@ in {
     programs.nixvim = {
       enable = true;
       defaultEditor = true;
-      
+      withRuby = false; 
+
       globals = {
         # The global leader is " ", which behaves similarly to emacs shortcuts
         mapleader = " ";
@@ -145,6 +146,11 @@ in {
           ts_ls.enable = true;
           vala_ls.enable = true;
           mesonlsp.enable = true;
+
+          ruby_lsp = {
+            enable = true;
+            packageFallback = true;
+          };
 
           rust_analyzer = {
             enable = true;
