@@ -17,8 +17,10 @@ in {
     ./qt.nix
     ./rofi.nix
     ./swaync.nix
-    # ./waybar/default.nix
     ./xdg.nix
+    ./aerospace.nix
+    ./raycast.nix
+    ./autoraise.nix
   ];
 
   options.stewos.desktop = {
@@ -86,7 +88,7 @@ in {
     notifications = {
       enableSound = lib.mkOption {
         description = "Enable a sound for each notification";
-        default = true;
+        default = pkgs.stdenv.isLinux;
         type = lib.types.bool;
       };
 
@@ -154,10 +156,32 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
-    stew-shell.enable = true;
-
-    home.packages = with pkgs; [
-      pwvucontrol
+    assertions = [
+      {
+        assertion = cfg.monitors == [] || !pkgs.stdenv.isDarwin;
+        message = "Monitor layouts cannot be configured for MacOS";
+      }
+      {
+        assertion = !cfg.notifications.enableSound || !pkgs.stdenv.isDarwin;
+        message = "Notification sounds cannot be configured in home-manager for MacOS";
+      }
+      {
+        assertion = cfg.bindings == {} || !pkgs.stdenv.isDarwin;
+        message = "Bindings are not supported for MacOS";
+      }
     ];
+
+    # Stew-Shell is only valid for Linux hosts
+    stew-shell.enable = pkgs.stdenv.isLinux;
+
+    # Setup a volume control application for Linux
+    home.packages = lib.mkIf pkgs.stdenv.isLinux (with pkgs; [
+      pwvucontrol
+    ]);
+
+    # Set the wallpaper for darwin systems
+    home.activation.setDarwinWallpaper = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter ["writeBoundary"] ''
+      /usr/bin/osascript -e "tell application \"Finder\" to set desktop picture to POSIX file \"${cfg.wallpaper}\""
+    '');
   };
 }

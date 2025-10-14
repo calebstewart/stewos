@@ -2,7 +2,7 @@
 let
   cfg = config.stewos.desktop;
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Automatically Start the Gnome Polkit Authentication Agent
     systemd.user.services.polkit-gnome-authentication-agent-1 = {
       Unit.Description = "Polkit Gnome Authentication Agent";

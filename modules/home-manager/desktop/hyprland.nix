@@ -117,7 +117,7 @@ let
     };
   };
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;

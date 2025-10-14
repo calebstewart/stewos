@@ -1,8 +1,8 @@
-{lib, config, ...}:
+{pkgs, lib, config, ...}:
 let
   cfg = config.stewos.desktop;
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Configure Locker
     programs.hyprlock = {
       enable = true;

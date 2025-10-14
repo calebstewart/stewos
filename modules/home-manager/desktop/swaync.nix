@@ -9,7 +9,7 @@ let
     "${cfg.notifications.soundTheme}/share/sounds/freedesktop/stereo/${name}.oga"
   ];
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     wayland.windowManager.hyprland.settings.windowrulev2 = [
       "animation slide left,initialclass:(SwayNotificationCenterControlCenter)"
     ];

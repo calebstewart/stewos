@@ -8,10 +8,16 @@
       aliases.huntress.email = "caleb.stewart@huntresslabs.com";
     };
 
+    # Setup our desktop
+    desktop = {
+      enable = true;
+      wallpaper = ./../../images/spaceman.jpg;
+      modifier = "ALT";
+    };
+
     # Graphical User Interface (GUI)
     firefox.enable = false;
     alacritty.enable = true;
-    aerospace.enable = true;
 
     # Command Line Interface (CLI)
     neovim.enable = true;
@@ -30,13 +36,6 @@
     aws-vault
     colima
     docker
-
-    # On linux, these are part of the desktop module, but that isn't used
-    # on Darwin. We should probably make them their own module...
-    jetbrains-mono
-    roboto
-    openmoji-color
-    nerd-fonts.jetbrains-mono
   ] ++ (with stewos.packages.${pkgs.system}; [
     # hunt-cli
   ]);

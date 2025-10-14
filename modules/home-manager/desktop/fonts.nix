@@ -10,7 +10,7 @@ in {
       nerd-fonts.jetbrains-mono
     ];
     
-    fonts.fontconfig = {
+    fonts.fontconfig = lib.mkIf pkgs.stdenv.isLinux {
       enable = true;
       defaultFonts.emoji = ["OpenMoji Color"];
     };

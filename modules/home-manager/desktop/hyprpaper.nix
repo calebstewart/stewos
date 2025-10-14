@@ -1,8 +1,8 @@
-{lib, config, ...}:
+{lib, config, pkgs, ...}:
 let
   cfg = config.stewos.desktop;
 in {
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Configure Wallpaper Manager
     services.hyprpaper = {
       enable = true;
