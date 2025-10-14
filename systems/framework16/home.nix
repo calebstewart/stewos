@@ -3,7 +3,6 @@
   stewos = {
     desktop = {
       enable = true;
-      wallpaper = ./../../images/spaceman.jpg;
       modifier = "ALT";
     };
 

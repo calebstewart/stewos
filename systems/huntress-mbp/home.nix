@@ -11,8 +11,12 @@
     # Setup our desktop
     desktop = {
       enable = true;
-      wallpaper = ./../../images/spaceman.jpg;
       modifier = "ALT";
+
+      wallpaper = pkgs.fetchurl {
+        url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
+        sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
+      };
     };
 
     # Graphical User Interface (GUI)

@@ -3,6 +3,10 @@
 let
   cfg = config.stewos.desktop;
   hyprland = import ./hyprland.nix inputs;
+  defaultWallpaper = pkgs.fetchurl {
+    url = "https://image3.uhdpaper.com/wallpaper/astronaut-jellyfish-space-digital-art-uhdpaper.com-4K-107.jpg";
+    sha256 = "sha256-AkAkdfSf/+SBYgVPdWoOuOzEd08+uA0e0JLNtAzwrSM=";
+  };
 in {
   imports = [
     hyprland
@@ -104,6 +108,7 @@ in {
     wallpaper = lib.mkOption {
       description = "Path to a wallpaper.";
       type = lib.types.path;
+      default = defaultWallpaper;
     };
 
     bindings = lib.mkOption {
@@ -180,8 +185,21 @@ in {
     ]);
 
     # Set the wallpaper for darwin systems
-    home.activation.setDarwinWallpaper = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter ["writeBoundary"] ''
-      /usr/bin/osascript -e "tell application \"Finder\" to set desktop picture to POSIX file \"${cfg.wallpaper}\""
-    '');
+    home.activation.setDarwinWallpaper = lib.mkIf pkgs.stdenv.isDarwin (let
+      osascript = "/usr/bin/osascript";
+      scriptFile = pkgs.writeTextFile {
+        name = "set-wallpaper.osa";
+        text = ''
+          tell application "System Events"
+            tell every desktop
+              set picture to "${cfg.wallpaper}"
+            end tell
+          end tell
+        '';
+      };
+    in lib.hm.dag.entryAfter ["writeBoundary"] (lib.strings.escapeShellArgs [
+      osascript
+      scriptFile
+    ]));
   };
 }
