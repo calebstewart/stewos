@@ -37,7 +37,8 @@ darwinConfigurations.${hostname} = stewos.lib.mkNixDarwinSystem {
 };
 ```
 
-You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes app output.
+You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes app output which will
+build and execute a virtual machine of the given NixOS configuration.
 
 ```nix
 apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp hostname nixosConfigurations.${hostname}
