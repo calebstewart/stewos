@@ -17,14 +17,13 @@ in {
 
   # Setup Nix configuration
   nix = {
-    settings.auto-optimise-store = true;
+    optimise.automatic = true;
     settings.experimental-features = ["nix-command" "flakes"];
   };
 
   # Setup Nix Helper for easy building
   programs.nh = {
     enable = true;
-    package = nh.packages.${pkgs.system}.default;
     clean.enable = true;
     clean.extraArgs = "--keep-since 7d --keep 5";
   };
@@ -32,10 +31,14 @@ in {
   # Enable mandb and nix documentation
   documentation = {
     enable = true;
+    man.enable = true;
+  };
 
-    man = {
-      enable = true;
-      generateCaches = true;
-    };
+  # Setup embedded home manager
+  home-manager = {
+    useUserPackages = true;
+    useGlobalPkgs = true;
+
+    sharedModules = [stewos.homeModules.default];
   };
 }

@@ -68,7 +68,7 @@ in {
 
       # Enable cliboard support with the default register
       clipboard = {
-        providers.wl-copy.enable = true;
+        providers.wl-copy.enable = pkgs.stdenv.isLinux;
         register = "unnamedplus";
       };
 

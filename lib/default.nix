@@ -1,4 +1,4 @@
-{stewos, home-manager, nixpkgs, ...}@inputs:
+{stewos, home-manager, nixpkgs, nixpkgs-darwin, ...}@inputs:
 let
   lib = nixpkgs.lib;
   importWithInputs = module: if builtins.isPath module then (import module inputs) else module;
@@ -9,7 +9,7 @@ in rec {
 
   # Create a nixpkgs instance with stewos package overlays already
   # applied.
-  mkNixpkgs = system: import inputs.nixpkgs {
+  mkNixpkgs = system: nixpkgs: import nixpkgs {
     inherit system;
 
     config.allowUnfree = true;
@@ -23,7 +23,7 @@ in rec {
   mkNixOSSystem = {hostname, system, modules}: inputs.nixpkgs.lib.nixosSystem {
     inherit system;
 
-    pkgs = mkNixpkgs system;
+    pkgs = mkNixpkgs system nixpkgs;
 
     modules = [
       { networking.hostName = hostname; }
@@ -53,6 +53,8 @@ in rec {
   mkNixDarwinSystem = {hostname, system, modules}: inputs.nix-darwin.lib.darwinSystem {
     inherit system;
 
+    pkgs = mkNixpkgs system nixpkgs-darwin;
+
     modules = [
       { networking.hostName = hostname; }
       stewos.darwinModules.default
@@ -63,7 +65,7 @@ in rec {
   # Create a standalone home manager configuration using the StewOS default modules
   # and the given Home Manager module path.
   mkHomeManagerConfig = {system, modules}: inputs.home-manager.lib.homeManagerConfiguration {
-    pkgs = mkNixpkgs system;
+    pkgs = mkNixpkgs system nixpkgs;
 
     modules = [
       stewos.homeModules.default

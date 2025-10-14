@@ -1,5 +1,7 @@
-{...}:
-{...}: {
+{...}@inputs:
+{...}: rec {
+  system.stateVersion = 6;
+
   # Host-specific nix-darwin configuration
   system.primaryUser = "caleb";
   system.keyboard.enableKeyMapping = true;
@@ -8,6 +10,9 @@
   # system.keyboard.swapLeftCtrlAndFn = true;
   system.startup.chime = false;
 
+  # Maintain legacy UIDs
+  ids.gids.nixbld = 30000;
+
   homebrew = {
     enable = true;
 
@@ -15,4 +20,7 @@
     brews = ["ruby-install" "ubuntu/microk8s/microk8s"];
     casks = [];
   };
+
+  users.users.caleb.home = "/Users/caleb";
+  home-manager.users.caleb = import ./home.nix inputs;
 }

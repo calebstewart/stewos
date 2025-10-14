@@ -1,5 +1,5 @@
 {...}:
-{pkgs, lib, config}: let
+{pkgs, lib, config, ...}: let
   cfg = config.programs.nh;
 in {
   options.programs.nh = {

@@ -1,9 +1,12 @@
-{buildGoModule, fetchgit, lib}: buildGoModule rec {
+{buildGoModule, fetchFromGitHub, lib}: buildGoModule rec {
   pname = "hunt-cli";
   version = "1.19.12";
 
-  src = fetchgit {
-    url = "git@github.com:huntresslabs/${pname}#refs/tags/v${version}";
+  src = fetchFromGitHub {
+    owner = "huntresslabs";
+    repo = pname;
+    rev = "v${version}";
+    fetchSubmodules = true;
     hash = lib.fakeHash;
   };
 

@@ -1,4 +1,4 @@
-{stewos, ...}:
+{nix-colors, stewos, ...}:
 {pkgs, lib, ...}: {
   stewos = {
     # Setup user properties
@@ -20,16 +20,22 @@
     zoxide.enable = true;
     bat.enable = true;
     eza.enable = true;
+    direnv.enable = true;
   };
 
   home.packages = with pkgs; [
     discord
     github-cli
+    awscli2
+    aws-vault
+    colima
+    docker
   ] ++ (with stewos.packages.${pkgs.system}; [
-    hunt-cli
+    # hunt-cli
   ]);
 
   programs.ssh.enable = true;
-  programs.ssh.enableDefaultConfig = false;
   programs.rbenv.enable = true;
+
+  colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }
