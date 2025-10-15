@@ -1,5 +1,5 @@
 {...}@inputs:
-{...}: rec {
+{config, ...}: rec {
   system.stateVersion = 6;
 
   # Host-specific nix-darwin configuration
@@ -21,6 +21,7 @@
     casks = [];
   };
 
+  programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";
   users.users.caleb.home = "/Users/caleb";
   home-manager.users.caleb = import ./home.nix inputs;
 }
