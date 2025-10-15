@@ -18,6 +18,11 @@ in {
       userName = config.stewos.user.fullName;
       userEmail = config.stewos.user.email;
 
+      ignores = [
+        ".envrc"
+        ".direnv"
+      ];
+
       extraConfig = {
         init.defaultBranch = "main";
         push.autoSetupRemote = true;
