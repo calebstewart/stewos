@@ -4,8 +4,8 @@ let
   cfg = config.stewos.desktop;
   hyprland = import ./hyprland.nix inputs;
   defaultWallpaper = pkgs.fetchurl {
-    url = "https://image3.uhdpaper.com/wallpaper/astronaut-jellyfish-space-digital-art-uhdpaper.com-4K-107.jpg";
-    sha256 = "sha256-AkAkdfSf/+SBYgVPdWoOuOzEd08+uA0e0JLNtAzwrSM=";
+    url = "https://i.redd.it/187ouknqbs051.jpg";
+    sha256 = "sha256-3x0pvEWWM2SqxzR16Hv7+xGxMqkEPQE5kcUY84kEIrw=";
   };
 in {
   imports = [
