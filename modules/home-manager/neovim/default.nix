@@ -264,20 +264,18 @@ in {
       # Setup neotree for a file browser bar
       plugins.neo-tree = {
         enable = true;
-        enableDiagnostics = true;
-        enableGitStatus = true;
-        enableModifiedMarkers = true;
-        enableRefreshOnWrite = true;
-        closeIfLastWindow = true;
-        popupBorderStyle = "rounded";
 
-        window = {
-          mappings = {
-            "<space>" = "none";
-          };
+        settings = {
+          enable_diagnostics = true;
+          enable_git_status = true;
+          enable_modified_markers = true;
+          enable_refresh_on_write = true;
+          close_if_last_window = true;
+          popup_border_style = "rounded";
+          window.mappings."<space>" = "none";
+          filesystem.filtered_items.always_show = [".github" ".circleci"];
         };
 
-        filesystem.filteredItems.alwaysShow = [".github" ".circleci"];
       };
 
       plugins.which-key = {
