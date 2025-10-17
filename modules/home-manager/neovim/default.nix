@@ -82,11 +82,15 @@ in {
         oil.enable = true;
         cmp-nvim-lsp-signature-help.enable = true;
         transparent.enable = true;
-        noice.enable = true;
         neogit.enable = true;
         vim-bbye.enable = true;
         illuminate.enable = true;
         web-devicons.enable = true;
+      };
+
+      plugins.noice = {
+        enable = true;
+        settings.presets.bottom_search = true;
       };
 
       plugins.treesitter = {
@@ -402,6 +406,31 @@ in {
           options.desc = "Toggle Between Recent Buffers";
         }
 
+        {
+          key = "<leader>wsh";
+          action = "<cmd>split<CR>";
+          options.desc = "Split Window - Horizontal";
+        }
+        {
+          key = "<leader>wsv";
+          action = "<cmd>vsplit<CR>";
+          options.desc = "Split Window - Vertically";
+        }
+        {
+          key = "<leader>wd";
+          action = "<cmd>close<CR>";
+          options.desc = "Close Window";
+        }
+        {
+          key = "<leader>wx";
+          action = "<cmd>only<CR>";
+          options.desc = "Close ALL OTHER Windows";
+        }
+        {
+          key = "<leader>ww";
+          action = "<C-w>w";
+          options.desc = "Switch Windows";
+        }
         {
           key = "<leader>wh";
           action = "<cmd>wincmd h<CR>";
