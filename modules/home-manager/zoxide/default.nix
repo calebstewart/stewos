@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.zoxide;
-in {
+in
+{
   options.stewos.zoxide.enable = lib.mkEnableOption "zoxide";
 
   config = lib.mkIf cfg.enable {
@@ -11,9 +12,9 @@ in {
       enableZshIntegration = true;
 
       options = [
-        "--cmd" "cd"
+        "--cmd"
+        "cd"
       ];
     };
   };
 }
-

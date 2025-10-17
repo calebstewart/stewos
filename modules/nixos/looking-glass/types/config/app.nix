@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     renderer = lib.mkOption {
       description = "Specify the renderer to use";

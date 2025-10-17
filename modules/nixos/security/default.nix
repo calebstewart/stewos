@@ -1,5 +1,6 @@
-{...}:
-{...}: {
+{ ... }:
+{ ... }:
+{
   config = {
     # We do not use sudo
     security.sudo.enable = false;
@@ -8,6 +9,6 @@
     security.doas.enable = true;
 
     # Allow hyprlock to unlock the system
-    security.pam.services.hyprlock = {};
+    security.pam.services.hyprlock = { };
   };
 }

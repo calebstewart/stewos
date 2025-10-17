@@ -1,9 +1,17 @@
-{nix-std, ...}:
-{pkgs, lib, config, ...}:
+{ nix-std, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.zsh;
-in {
-  options.stewos.zsh = {enable = lib.mkEnableOption "zsh";};
+in
+{
+  options.stewos.zsh = {
+    enable = lib.mkEnableOption "zsh";
+  };
 
   config = lib.mkIf cfg.enable {
 
@@ -30,7 +38,12 @@ in {
                 max_depth = 3;
                 folder_icon = "";
                 home_icon = "󰜥";
-                cycle = ["blue" "lightBlue" "magenta" "lightMagenta"];
+                cycle = [
+                  "blue"
+                  "lightBlue"
+                  "magenta"
+                  "lightMagenta"
+                ];
               };
             }
             {
@@ -121,8 +134,7 @@ in {
         fi
       '';
 
-      plugins = [];
+      plugins = [ ];
     };
   };
 }
-

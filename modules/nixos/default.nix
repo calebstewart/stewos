@@ -1,5 +1,11 @@
-{stewos, home-manager, nur, nh, ...}@inputs:
-{pkgs, lib, ...}:
+{
+  stewos,
+  home-manager,
+  nur,
+  nh,
+  ...
+}@inputs:
+{ pkgs, lib, ... }:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -7,8 +13,12 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
-in {
+  modulePaths = foldlAttrs (
+    acc: name: _type:
+    acc ++ [ (import (./. + "/${name}") inputs) ]
+  ) [ ] moduleDirs;
+in
+{
   # DO NOT MODIFY
   system.stateVersion = "24.05";
 
@@ -21,7 +31,10 @@ in {
   # Setup Nix configuration
   nix = {
     settings.auto-optimise-store = true;
-    settings.experimental-features = ["nix-command" "flakes"];
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
   };
 
   boot = {
@@ -40,7 +53,7 @@ in {
       theme = "spin";
       themePackages = [
         (pkgs.adi1090x-plymouth-themes.override {
-          selected_themes = ["spin"];
+          selected_themes = [ "spin" ];
         })
       ];
     };
@@ -79,6 +92,6 @@ in {
     useGlobalPkgs = true;
 
     # Add our home-manager modules to all configured users
-    sharedModules = [stewos.homeModules.default];
+    sharedModules = [ stewos.homeModules.default ];
   };
 }

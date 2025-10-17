@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.greeter;
-in {
+in
+{
   options.stewos.greeter = {
     enable = lib.mkEnableOption "greeter";
   };
@@ -18,8 +19,14 @@ in {
         };
 
         commands = {
-          reboot = ["systemctl" "reboot"];
-          poweroff = ["systemctl" "poweroff"];
+          reboot = [
+            "systemctl"
+            "reboot"
+          ];
+          poweroff = [
+            "systemctl"
+            "poweroff"
+          ];
         };
       };
     };

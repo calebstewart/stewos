@@ -1,130 +1,360 @@
-{stewos, ...}:
-{pkgs, config, lib, ...}:
+{ stewos, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
 
   # Create an exec binding which runs rofi with the given theme, mode, and custom mode list.
-  mkRofiBinding = {modifier, key, theme ? null, modes}:
-  let
-    # Collect all custom modes into a list of modeName:scriptModePath strings
-    customModes = lib.foldl (acc: mode: acc ++ (if lib.isDerivation mode then [
-      "${lib.getName mode}:${lib.getExe mode}"
-    ] else [])) [] modes;
-    customModesArgs = if customModes != [] then [
-      "-modes" (lib.concatStringsSep "," customModes)
-    ] else [];
+  mkRofiBinding =
+    {
+      modifier,
+      key,
+      theme ? null,
+      modes,
+    }:
+    let
+      # Collect all custom modes into a list of modeName:scriptModePath strings
+      customModes = lib.foldl (
+        acc: mode:
+        acc
+        ++ (
+          if lib.isDerivation mode then
+            [
+              "${lib.getName mode}:${lib.getExe mode}"
+            ]
+          else
+            [ ]
+        )
+      ) [ ] modes;
+      customModesArgs =
+        if customModes != [ ] then
+          [
+            "-modes"
+            (lib.concatStringsSep "," customModes)
+          ]
+        else
+          [ ];
 
-    # Only pass a "-theme" argument if a theme was provided
-    themeArgs = if theme != null then ["-theme" theme] else [];
+      # Only pass a "-theme" argument if a theme was provided
+      themeArgs =
+        if theme != null then
+          [
+            "-theme"
+            theme
+          ]
+        else
+          [ ];
 
-    # Collect all mode names (for custom modes, use lib.getName, otherwise pass through)
-    modeNames = lib.forEach modes (mode: if lib.isDerivation mode then (lib.getName mode) else mode);
-    modeArgs = ["-show" (lib.concatStringsSep "," modeNames)];
-  in stewos.lib.hypr.mkExecBinding {
-    inherit modifier key;
-    package = config.stewos.rofi.package;
-    args = modeArgs ++ themeArgs ++ customModesArgs;
-  };
+      # Collect all mode names (for custom modes, use lib.getName, otherwise pass through)
+      modeNames = lib.forEach modes (mode: if lib.isDerivation mode then (lib.getName mode) else mode);
+      modeArgs = [
+        "-show"
+        (lib.concatStringsSep "," modeNames)
+      ];
+    in
+    stewos.lib.hypr.mkExecBinding {
+      inherit modifier key;
+      package = config.stewos.rofi.package;
+      args = modeArgs ++ themeArgs ++ customModesArgs;
+    };
 
   # Generate a single binding string wrapped in an array or an empty
   # array if the given binding config is disabled.
-  generateBinding = modifier: key: binding: if binding.enable then [(
-    if binding.dispatcher == "exec" then stewos.lib.hypr.mkExecBinding {
-      inherit modifier key;
-      inherit (binding) package;
-      target = lib.attrByPath ["target"] null binding;
-      args = lib.attrByPath ["args"] [] binding;
-    } else if binding.dispatcher == "rofi" then mkRofiBinding {
-      inherit modifier key;
-      inherit (binding) modes;
-      theme = lib.attrByPath  ["theme"] null binding;
-    } else stewos.lib.hypr.mkBinding {
-      inherit modifier key;
-      inherit (binding) dispatcher;
-      args = lib.attrByPath ["args"] "" binding;
-    }
-  )] else [];
+  generateBinding =
+    modifier: key: binding:
+    if binding.enable then
+      [
+        (
+          if binding.dispatcher == "exec" then
+            stewos.lib.hypr.mkExecBinding {
+              inherit modifier key;
+              inherit (binding) package;
+              target = lib.attrByPath [ "target" ] null binding;
+              args = lib.attrByPath [ "args" ] [ ] binding;
+            }
+          else if binding.dispatcher == "rofi" then
+            mkRofiBinding {
+              inherit modifier key;
+              inherit (binding) modes;
+              theme = lib.attrByPath [ "theme" ] null binding;
+            }
+          else
+            stewos.lib.hypr.mkBinding {
+              inherit modifier key;
+              inherit (binding) dispatcher;
+              args = lib.attrByPath [ "args" ] "" binding;
+            }
+        )
+      ]
+    else
+      [ ];
 
   # Generate a list of bindings from a binding configuration
-  foldlKeys = modifier: keys: lib.foldlAttrs (acc: key: binding: acc ++ (generateBinding modifier key binding)) [] keys;
-  generateBindings = bindings: lib.foldlAttrs (acc: modifier: keys: acc ++ (foldlKeys modifier keys)) [] bindings;
+  foldlKeys =
+    modifier: keys:
+    lib.foldlAttrs (
+      acc: key: binding:
+      acc ++ (generateBinding modifier key binding)
+    ) [ ] keys;
+  generateBindings =
+    bindings:
+    lib.foldlAttrs (
+      acc: modifier: keys:
+      acc ++ (foldlKeys modifier keys)
+    ) [ ] bindings;
 
   defaultBindings = {
     "${cfg.modifier}" = {
-      "1" = { enable = true; dispatcher = "split:workspace"; args = "1"; };
-      "2" = { enable = true; dispatcher = "split:workspace"; args = "2"; };
-      "3" = { enable = true; dispatcher = "split:workspace"; args = "3"; };
-      "4" = { enable = true; dispatcher = "split:workspace"; args = "4"; };
-      "5" = { enable = true; dispatcher = "split:workspace"; args = "5"; };
-      "6" = { enable = true; dispatcher = "split:workspace"; args = "6"; };
-      "7" = { enable = true; dispatcher = "split:workspace"; args = "7"; };
-      "8" = { enable = true; dispatcher = "split:workspace"; args = "8"; };
-      "9" = { enable = true; dispatcher = "split:workspace"; args = "9"; };
-      "0" = { enable = true; dispatcher = "split:workspace"; args = "10"; };
+      "1" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "1";
+      };
+      "2" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "2";
+      };
+      "3" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "3";
+      };
+      "4" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "4";
+      };
+      "5" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "5";
+      };
+      "6" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "6";
+      };
+      "7" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "7";
+      };
+      "8" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "8";
+      };
+      "9" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "9";
+      };
+      "0" = {
+        enable = true;
+        dispatcher = "split:workspace";
+        args = "10";
+      };
 
-      H = { enable = true; dispatcher = "movefocus"; args = "l"; };
-      J = { enable = true; dispatcher = "movefocus"; args = "d"; };
-      K = { enable = true; dispatcher = "movefocus"; args = "u"; };
-      L = { enable = true; dispatcher = "movefocus"; args = "r"; };
-      Q = { enable = true; dispatcher = "killactive"; };
+      H = {
+        enable = true;
+        dispatcher = "movefocus";
+        args = "l";
+      };
+      J = {
+        enable = true;
+        dispatcher = "movefocus";
+        args = "d";
+      };
+      K = {
+        enable = true;
+        dispatcher = "movefocus";
+        args = "u";
+      };
+      L = {
+        enable = true;
+        dispatcher = "movefocus";
+        args = "r";
+      };
+      Q = {
+        enable = true;
+        dispatcher = "killactive";
+      };
       # D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
-      D = { enable = true; dispatcher = "exec"; package = config.stew-shell.package; args = ["popup" "launcher"]; };
-      V = { enable = true; dispatcher = "togglesplit"; };
-      U = { enable = true; dispatcher = "exec"; package = pkgs.wl-gen-uuid; };
-      M = { enable = true; dispatcher = "rofi"; modes = [pkgs.rofiScripts.libvirt]; };
+      D = {
+        enable = true;
+        dispatcher = "exec";
+        package = config.stew-shell.package;
+        args = [
+          "popup"
+          "launcher"
+        ];
+      };
+      V = {
+        enable = true;
+        dispatcher = "togglesplit";
+      };
+      U = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.wl-gen-uuid;
+      };
+      M = {
+        enable = true;
+        dispatcher = "rofi";
+        modes = [ pkgs.rofiScripts.libvirt ];
+      };
 
       N = {
         enable = true;
         dispatcher = "exec";
         package = pkgs.swaynotificationcenter;
         target = "swaync-client";
-        args = ["-t" "-sw"];
+        args = [
+          "-t"
+          "-sw"
+        ];
       };
-      
-      Return = { enable = true; dispatcher = "exec"; package = cfg.terminal; };
+
+      Return = {
+        enable = true;
+        dispatcher = "exec";
+        package = cfg.terminal;
+      };
 
       Backspace = {
         enable = true;
         dispatcher = "exec";
         package = pkgs.systemd;
         target = "loginctl";
-        args = ["lock-session"];
+        args = [ "lock-session" ];
       };
     };
 
     "${cfg.modifier} SHIFT" = {
-      "1" = { enable = true; dispatcher = "split:movetoworkspace"; args = "1"; };
-      "2" = { enable = true; dispatcher = "split:movetoworkspace"; args = "2"; };
-      "3" = { enable = true; dispatcher = "split:movetoworkspace"; args = "3"; };
-      "4" = { enable = true; dispatcher = "split:movetoworkspace"; args = "4"; };
-      "5" = { enable = true; dispatcher = "split:movetoworkspace"; args = "5"; };
-      "6" = { enable = true; dispatcher = "split:movetoworkspace"; args = "6"; };
-      "7" = { enable = true; dispatcher = "split:movetoworkspace"; args = "7"; };
-      "8" = { enable = true; dispatcher = "split:movetoworkspace"; args = "8"; };
-      "9" = { enable = true; dispatcher = "split:movetoworkspace"; args = "9"; };
-      "0" = { enable = true; dispatcher = "split:movetoworkspace"; args = "10"; };
+      "1" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "1";
+      };
+      "2" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "2";
+      };
+      "3" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "3";
+      };
+      "4" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "4";
+      };
+      "5" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "5";
+      };
+      "6" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "6";
+      };
+      "7" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "7";
+      };
+      "8" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "8";
+      };
+      "9" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "9";
+      };
+      "0" = {
+        enable = true;
+        dispatcher = "split:movetoworkspace";
+        args = "10";
+      };
 
-      H = { enable = true; dispatcher = "movewindow"; args = "l"; };
-      J = { enable = true; dispatcher = "movewindow"; args = "d"; };
-      K = { enable = true; dispatcher = "movewindow"; args = "u"; };
-      L = { enable = true; dispatcher = "movewindow"; args = "r"; };
-      E = { enable = true; dispatcher = "rofi"; modes = [pkgs.rofiScripts.hyprpower]; };
-      R = { enable = true; dispatcher = "exec"; package = pkgs.grimblast; args = ["copy" "area" "--notify"]; };
-      P = { enable = true; dispatcher = "exec"; package = pkgs.grimblast; args = ["copy" "output" "--notify"]; };
-      F = { enable = true; dispatcher = "fullscreen"; };
-      
-      Space = { enable = true; dispatcher = "togglefloating"; };
+      H = {
+        enable = true;
+        dispatcher = "movewindow";
+        args = "l";
+      };
+      J = {
+        enable = true;
+        dispatcher = "movewindow";
+        args = "d";
+      };
+      K = {
+        enable = true;
+        dispatcher = "movewindow";
+        args = "u";
+      };
+      L = {
+        enable = true;
+        dispatcher = "movewindow";
+        args = "r";
+      };
+      E = {
+        enable = true;
+        dispatcher = "rofi";
+        modes = [ pkgs.rofiScripts.hyprpower ];
+      };
+      R = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.grimblast;
+        args = [
+          "copy"
+          "area"
+          "--notify"
+        ];
+      };
+      P = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.grimblast;
+        args = [
+          "copy"
+          "output"
+          "--notify"
+        ];
+      };
+      F = {
+        enable = true;
+        dispatcher = "fullscreen";
+      };
+
+      Space = {
+        enable = true;
+        dispatcher = "togglefloating";
+      };
     };
   };
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;
-      plugins = with pkgs.hyprlandPlugins; [hyprsplit];
+      plugins = with pkgs.hyprlandPlugins; [ hyprsplit ];
 
       settings = {
-        monitor = lib.lists.foldl (acc: monitor: acc ++ [(stewos.lib.hypr.mkMonitorConfig monitor)]) [",preferred,auto,1"] cfg.monitors;
+        monitor = lib.lists.foldl (acc: monitor: acc ++ [ (stewos.lib.hypr.mkMonitorConfig monitor) ]) [
+          ",preferred,auto,1"
+        ] cfg.monitors;
 
         # Disable default images
         misc = {

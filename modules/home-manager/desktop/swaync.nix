@@ -1,19 +1,29 @@
-{pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
 
-  playSound = name: let
-  in lib.escapeShellArgs [
-    "${pkgs.sox}/bin/play"
-    "--volume" (toString cfg.notifications.volume)
-    "${cfg.notifications.soundTheme}/share/sounds/freedesktop/stereo/${name}.oga"
-  ];
-in {
+  playSound =
+    name:
+    let
+    in
+    lib.escapeShellArgs [
+      "${pkgs.sox}/bin/play"
+      "--volume"
+      (toString cfg.notifications.volume)
+      "${cfg.notifications.soundTheme}/share/sounds/freedesktop/stereo/${name}.oga"
+    ];
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     wayland.windowManager.hyprland.settings.windowrulev2 = [
       "animation slide left,initialclass:(SwayNotificationCenterControlCenter)"
     ];
-  
+
     services.swaync = {
       enable = true;
 

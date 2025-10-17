@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     title = lib.mkOption {
       description = "Window Title";
@@ -65,7 +66,7 @@
       default = false;
       type = lib.types.bool;
     };
-    
+
     fullScreen = lib.mkOption {
       description = "Launch in fullscreen borderless mode";
       default = false;

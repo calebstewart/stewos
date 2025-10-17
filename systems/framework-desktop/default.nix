@@ -1,4 +1,4 @@
-{hostname, stewos, ...}:
+{ hostname, stewos, ... }:
 let
   system = "x86_64-linux";
 
@@ -10,7 +10,8 @@ let
       ./configuration.nix
     ];
   };
-in {
+in
+{
   nixosConfigurations.${hostname} = config;
   apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp hostname config;
 }

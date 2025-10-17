@@ -1,8 +1,14 @@
-{...}:
-{lib, config, pkgs, ...}:
+{ ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.bat;
-in {
+in
+{
   options.stewos.bat.enable = lib.mkEnableOption "bat";
 
   config = lib.mkIf cfg.enable {
@@ -25,4 +31,3 @@ in {
     };
   };
 }
-

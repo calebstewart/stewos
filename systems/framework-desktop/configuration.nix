@@ -1,5 +1,11 @@
-{nixos-hardware, lanzaboote, ...}@inputs:
-{pkgs, lib, config, ...}: rec {
+{ nixos-hardware, lanzaboote, ... }@inputs:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+rec {
   imports = [
     nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
     lanzaboote.nixosModules.lanzaboote
@@ -46,20 +52,26 @@
     kernelPackages = pkgs.linuxPackages_latest;
 
     # Silent boot stuff
-    kernelParams = ["quiet" "splash" "loglevel=3" "systemd.show_status=auto" "rd.udev.log_level=3" "udev.log_level=3"];
+    kernelParams = [
+      "quiet"
+      "splash"
+      "loglevel=3"
+      "systemd.show_status=auto"
+      "rd.udev.log_level=3"
+      "udev.log_level=3"
+    ];
 
     # Disable logging
     consoleLogLevel = 0;
     initrd.verbose = false;
   };
 
-
   # Set the system hostname
   networking.hostName = "framework-desktop";
 
   # Enable embedded home-manager
   home-manager.users.${stewos.user.username} = import ./home.nix inputs;
-  
+
   # I thought this was needed, but it seems that the config is already set by default
   # boot.kernelPatches = lib.singleton {
   #   name = "enable_fbcon_deferred_takeover";
@@ -80,6 +92,7 @@
   '';
 
   # Install extra packages
-  environment.systemPackages = [pkgs.sbctl];
-}
+  environment.systemPackages = [ pkgs.sbctl ];
 
+  time.timeZone = "America/Chicago";
+}

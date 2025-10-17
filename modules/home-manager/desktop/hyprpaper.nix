@@ -1,7 +1,13 @@
-{lib, config, pkgs, ...}:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Configure Wallpaper Manager
     services.hyprpaper = {
@@ -12,8 +18,8 @@ in {
         splash = false;
         splash_offset = 2.0;
 
-        preload = ["${cfg.wallpaper}"];
-        wallpaper = [",${cfg.wallpaper}"];
+        preload = [ "${cfg.wallpaper}" ];
+        wallpaper = [ ",${cfg.wallpaper}" ];
       };
     };
   };

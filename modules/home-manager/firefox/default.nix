@@ -1,9 +1,15 @@
-{nur, ...}:
-{lib, config, pkgs, ...}:
+{ nur, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.firefox;
   addonPkgs = pkgs.nur.repos.rycee.firefox-addons;
-in {
+in
+{
   options.stewos.firefox.enable = lib.mkEnableOption "firefox";
 
   config = lib.mkIf cfg.enable {
@@ -29,19 +35,30 @@ in {
 
         search = {
           default = "google";
-          order = ["google" "Nix Packages"];
+          order = [
+            "google"
+            "Nix Packages"
+          ];
           privateDefault = "google";
           force = true;
 
           engines = {
             "Nix Packages" = {
-              urls = [{
-                template = "https://search.nixos.org/packages";
-                params = [
-                  { name = "type"; value = "packages"; }
-                  { name = "query"; value = "{searchTerms}"; }
-                ];
-              }];
+              urls = [
+                {
+                  template = "https://search.nixos.org/packages";
+                  params = [
+                    {
+                      name = "type";
+                      value = "packages";
+                    }
+                    {
+                      name = "query";
+                      value = "{searchTerms}";
+                    }
+                  ];
+                }
+              ];
 
               icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
               definedAliases = [ "@np" ];
@@ -71,4 +88,3 @@ in {
   };
 
 }
-

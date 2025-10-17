@@ -6,7 +6,8 @@
 }:
 let
   palette = colorScheme.palette;
-in mkRofiTheme {
+in
+mkRofiTheme {
   name = "stewos.rasi";
 
   settings = with stewos.lib.rasi; {
@@ -46,7 +47,10 @@ in mkRofiTheme {
       border-radius = pixels 0;
       border-color = var "selected";
       background-color = transparent;
-      children = ["inputbar" "listview"];
+      children = [
+        "inputbar"
+        "listview"
+      ];
     };
 
     inputbar = {
@@ -59,7 +63,10 @@ in mkRofiTheme {
       border-color = var "selected";
       background-color = var "background-alt";
       text-color = var "foreground";
-      children = ["prompt" "entry"];
+      children = [
+        "prompt"
+        "entry"
+      ];
     };
 
     prompt = {

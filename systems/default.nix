@@ -1,4 +1,4 @@
-{nixpkgs, ...}@inputs:
+{ nixpkgs, ... }@inputs:
 let
   # Shortcuts for library functions
   lib = nixpkgs.lib;
@@ -12,6 +12,12 @@ let
   systemDirs = filterAttrs (name: type: type == "directory") (readDir ./.);
 
   # Build all the outputs for each system
-  systemOutputs = mapAttrs (name: _type: import (./. + "/${name}/default.nix") (inputs // { hostname = name; })) systemDirs;
+  systemOutputs = mapAttrs (
+    name: _type: import (./. + "/${name}/default.nix") (inputs // { hostname = name; })
+  ) systemDirs;
 
-in foldlAttrs (acc: _name: outputs: recursiveUpdate acc outputs) {} systemOutputs
+in
+foldlAttrs (
+  acc: _name: outputs:
+  recursiveUpdate acc outputs
+) { } systemOutputs

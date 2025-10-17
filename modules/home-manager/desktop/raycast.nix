@@ -1,8 +1,14 @@
-{lib, config, pkgs, ...}:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
-    home.packages = [pkgs.raycast];
+    home.packages = [ pkgs.raycast ];
   };
 }

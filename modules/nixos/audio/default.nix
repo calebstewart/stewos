@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.audio;
-in {
+in
+{
   options.stewos.audio.enable = lib.mkEnableOption "audio";
 
   config = lib.mkIf cfg.enable {

@@ -1,4 +1,5 @@
-{lib, ...}: lib.types.enum [
+{ lib, ... }:
+lib.types.enum [
   "KEY_RESERVED"
   "KEY_ESC"
   "KEY_1"

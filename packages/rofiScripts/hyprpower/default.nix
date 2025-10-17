@@ -2,9 +2,14 @@
   jq,
   hyprland,
   systemd,
-  mkRofiScript
-}: mkRofiScript {
+  mkRofiScript,
+}:
+mkRofiScript {
   name = "hyprpower";
-  runtimeInputs = [jq hyprland systemd];
+  runtimeInputs = [
+    jq
+    hyprland
+    systemd
+  ];
   text = builtins.readFile ./hyprpower.sh;
 }

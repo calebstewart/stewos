@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.eza;
-in {
+in
+{
   options.stewos.eza.enable = lib.mkEnableOption "eza";
 
   config = lib.mkIf cfg.enable {
@@ -16,10 +17,9 @@ in {
         "--group-directories-first"
       ];
     };
-    
+
     home.shellAliases = {
       "tree" = "ls -T";
     };
   };
 }
-

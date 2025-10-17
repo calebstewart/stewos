@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     enable = lib.mkOption {
       description = "Enable the built-in SPICE client for input and/or clipboard support";

@@ -1,7 +1,13 @@
-{pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf cfg.enable {
     home.packages = with pkgs; [
       jetbrains-mono
@@ -9,10 +15,10 @@ in {
       openmoji-color
       nerd-fonts.jetbrains-mono
     ];
-    
+
     fonts.fontconfig = lib.mkIf pkgs.stdenv.isLinux {
       enable = true;
-      defaultFonts.emoji = ["OpenMoji Color"];
+      defaultFonts.emoji = [ "OpenMoji Color" ];
     };
   };
 }

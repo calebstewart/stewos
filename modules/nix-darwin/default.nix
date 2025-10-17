@@ -1,5 +1,11 @@
-{stewos, home-manager, nur, nh, ...}@inputs:
-{pkgs, lib, ...}:
+{
+  stewos,
+  home-manager,
+  nur,
+  nh,
+  ...
+}@inputs:
+{ pkgs, lib, ... }:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -7,8 +13,12 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
-in {
+  modulePaths = foldlAttrs (
+    acc: name: _type:
+    acc ++ [ (import (./. + "/${name}") inputs) ]
+  ) [ ] moduleDirs;
+in
+{
   # Load all sub-modules
   imports = modulePaths ++ [
     home-manager.darwinModules.default
@@ -18,7 +28,10 @@ in {
   # Setup Nix configuration
   nix = {
     optimise.automatic = true;
-    settings.experimental-features = ["nix-command" "flakes"];
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
   };
 
   # Setup Nix Helper for easy building
@@ -39,6 +52,6 @@ in {
     useUserPackages = true;
     useGlobalPkgs = true;
 
-    sharedModules = [stewos.homeModules.default];
+    sharedModules = [ stewos.homeModules.default ];
   };
 }

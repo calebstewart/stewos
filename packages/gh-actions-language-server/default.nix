@@ -1,4 +1,10 @@
-{inputs, lib, buildNpmPackage, bun}: buildNpmPackage {
+{
+  inputs,
+  lib,
+  buildNpmPackage,
+  bun,
+}:
+buildNpmPackage {
   pname = "gh-actions-language-server";
   version = "0.3.13";
   src = inputs.gh-actions-language-server;

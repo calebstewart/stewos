@@ -1,5 +1,6 @@
-{...}:
-{lib, ...}: {
+{ ... }:
+{ lib, ... }:
+{
   networking = {
     # Enable NetworkManager for manaing network connections
     networkmanager.enable = lib.mkDefault true;

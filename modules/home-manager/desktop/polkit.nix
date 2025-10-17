@@ -1,7 +1,13 @@
-{pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     # Automatically Start the Gnome Polkit Authentication Agent
     systemd.user.services.polkit-gnome-authentication-agent-1 = {
@@ -15,8 +21,7 @@ in {
         TimeoutStopSec = 10;
       };
 
-      Install.WantedBy = ["graphical-session.target"];
+      Install.WantedBy = [ "graphical-session.target" ];
     };
   };
 }
-

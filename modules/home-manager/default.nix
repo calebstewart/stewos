@@ -1,5 +1,5 @@
-{nix-colors, ...}@inputs:
-{lib, config, ...}:
+{ nix-colors, ... }@inputs:
+{ lib, config, ... }:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -7,8 +7,12 @@ let
 
   moduleFilter = name: type: type == "directory";
   moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (acc: name: _type: acc ++ [(import (./. + "/${name}") inputs)]) [] moduleDirs;
-in {
+  modulePaths = foldlAttrs (
+    acc: name: _type:
+    acc ++ [ (import (./. + "/${name}") inputs) ]
+  ) [ ] moduleDirs;
+in
+{
   # Load all sub-modules
   imports = modulePaths ++ [
     nix-colors.homeManagerModules.default
@@ -24,20 +28,22 @@ in {
     };
 
     aliases = lib.mkOption {
-      default = {};
-      type = lib.types.attrsOf (lib.types.submodule {
-        options = {
-          fullName = lib.mkOption {
-            type = lib.types.str;
-            default = config.stewos.user.fullName;
-          };
+      default = { };
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            fullName = lib.mkOption {
+              type = lib.types.str;
+              default = config.stewos.user.fullName;
+            };
 
-          email = lib.mkOption {
-            type = lib.types.str;
-            default = config.stewos.user.email;
+            email = lib.mkOption {
+              type = lib.types.str;
+              default = config.stewos.user.email;
+            };
           };
-        };
-      });
+        }
+      );
     };
   };
 

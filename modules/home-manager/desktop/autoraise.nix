@@ -1,7 +1,13 @@
-{lib, config, pkgs, ...}:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
     launchd.agents.autoraise = {
       enable = true;
@@ -9,12 +15,18 @@ in {
       config = {
         ProgramArguments = [
           (lib.getExe pkgs.autoraise)
-          "-pollMillis" "50"
-          "-delay" "1"
-          "-focusDelay" "0"
-          "-scale" "1.0"
-          "-altTaskSwitcher" "true"
-          "-ignoreSpaceChanged" "false"
+          "-pollMillis"
+          "50"
+          "-delay"
+          "1"
+          "-focusDelay"
+          "0"
+          "-scale"
+          "1.0"
+          "-altTaskSwitcher"
+          "true"
+          "-ignoreSpaceChanged"
+          "false"
         ];
 
         KeepAlive = true;

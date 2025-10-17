@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     grabKeyboard = lib.mkOption {
       description = "Grab the keybaord in capture mode";

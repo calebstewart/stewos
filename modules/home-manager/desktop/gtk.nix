@@ -1,7 +1,13 @@
-{pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     gtk = {
       enable = true;
@@ -15,10 +21,10 @@ in {
         name = "catppuccin-mocha-blue-standard";
         package = pkgs.catppuccin-gtk.override {
           variant = "mocha";
-          accents = ["blue"];
+          accents = [ "blue" ];
         };
       };
-      
+
       iconTheme = {
         name = "Papirus";
         package = pkgs.catppuccin-papirus-folders.override {
@@ -40,6 +46,6 @@ in {
       "org/gnome/desktop/interface" = {
         color-scheme = "prefer-dark";
       };
-    }; 
+    };
   };
 }
