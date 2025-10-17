@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     warpSupport = lib.mkOption {
       description = "Enable cursor warping";

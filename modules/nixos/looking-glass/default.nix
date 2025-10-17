@@ -1,19 +1,31 @@
-{...}:
-{config, pkgs, lib, ...}: 
+{ ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   cfg = config.stewos.looking-glass;
 
   # Generate the looking-glass-client configuration where boolean values
   # are encoded as "yes" or "no".
-  generateConfig = settings: lib.generators.toINI {
-    mkKeyValue = lib.generators.mkKeyValueDefault {
-      mkValueString = v:
-        if (true == v) then "yes"
-        else if (false == v) then "no"
-        else (lib.generators.mkValueStringDefault {} v);
-    } "=";
-  } settings;
-in {
+  generateConfig =
+    settings:
+    lib.generators.toINI {
+      mkKeyValue = lib.generators.mkKeyValueDefault {
+        mkValueString =
+          v:
+          if (true == v) then
+            "yes"
+          else if (false == v) then
+            "no"
+          else
+            (lib.generators.mkValueStringDefault { } v);
+      } "=";
+    } settings;
+in
+{
   options.stewos.looking-glass = {
     enable = lib.mkEnableOption "looking-glass";
 
@@ -36,7 +48,7 @@ in {
           fetchSubmodules = true;
         };
 
-        patches = [./patches/0001-client-wayland-Let-viewporter-use-full-wl_buffer.patch];
+        patches = [ ./patches/0001-client-wayland-Let-viewporter-use-full-wl_buffer.patch ];
       };
     };
 
@@ -101,14 +113,14 @@ in {
     # Client configuration (written to /etc/looking-glass-client.ini)
     settings = lib.mkOption {
       description = "Looking Glass client configuration";
-      default = {};
+      default = { };
       type = lib.types.submodule ./types/config;
     };
   };
 
   config = lib.mkIf cfg.enable {
     # Install looking glass
-    environment.systemPackages = [cfg.package];
+    environment.systemPackages = [ cfg.package ];
 
     # Optionally install the kvmfr kernel module
     boot.extraModulePackages = lib.lists.optional cfg.kvmfr.enable config.boot.kernelPackages.kvmfr;
@@ -137,13 +149,15 @@ in {
     };
 
     # Automatically apply permissions to the kvmfr device as requested
-    services.udev.packages = lib.lists.optional cfg.kvmfr.enable (pkgs.writeTextFile {
-      name = "99-kvmfr.rules";
-      destination = "/etc/udev/rules.d/99-kvmfr.rules";
-      text = ''
-        SUBSYSTEM=="kvmfr", OWNER="${cfg.kvmfr.owner}", GROUP="${cfg.kvmfr.group}", MODE="0660"
-      '';
-    });
+    services.udev.packages = lib.lists.optional cfg.kvmfr.enable (
+      pkgs.writeTextFile {
+        name = "99-kvmfr.rules";
+        destination = "/etc/udev/rules.d/99-kvmfr.rules";
+        text = ''
+          SUBSYSTEM=="kvmfr", OWNER="${cfg.kvmfr.owner}", GROUP="${cfg.kvmfr.group}", MODE="0660"
+        '';
+      }
+    );
 
     # Create the /dev/shm file if requested
     systemd.tmpfiles.rules = lib.lists.optional cfg.shm.enable ''
@@ -151,24 +165,30 @@ in {
     '';
 
     # Allow access to the kvmfr device from the libvirt cgroups
-    virtualisation.libvirtd.qemu.verbatimConfig = lib.strings.optionalString (cfg.kvmfr.enable && cfg.kvmfr.configureLibvirtCgroupACLs) ''
-      cgroup_device_acl = [
-        "/dev/null", "/dev/full", "/dev/zero",
-        "/dev/random", "/dev/urandom",
-        "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
-        "/dev/rtc","/dev/hpet", "/dev/vfio/vfio",
-        "/dev/kvmfr0"
-      ]
-    '';
+    virtualisation.libvirtd.qemu.verbatimConfig =
+      lib.strings.optionalString (cfg.kvmfr.enable && cfg.kvmfr.configureLibvirtCgroupACLs)
+        ''
+          cgroup_device_acl = [
+            "/dev/null", "/dev/full", "/dev/zero",
+            "/dev/random", "/dev/urandom",
+            "/dev/ptmx", "/dev/kvm", "/dev/kqemu",
+            "/dev/rtc","/dev/hpet", "/dev/vfio/vfio",
+            "/dev/kvmfr0"
+          ]
+        '';
 
     # Add libvirt-qemu apparmor policy allowing rw access to kvmfr device
-    security.apparmor.packages = lib.lists.optional (cfg.kvmfr.enable && config.security.apparmor.enable) (pkgs.writeTextFile {
-      name = "libvirt-qemu-apparmor";
-      destination = "/etc/apparmor.d/local/abstractions/libvirt-qemu";
-      text = ''
-        # Looking Glass
-        /dev/kvmfr0 rw,
-      '';
-    });
+    security.apparmor.packages =
+      lib.lists.optional (cfg.kvmfr.enable && config.security.apparmor.enable)
+        (
+          pkgs.writeTextFile {
+            name = "libvirt-qemu-apparmor";
+            destination = "/etc/apparmor.d/local/abstractions/libvirt-qemu";
+            text = ''
+              # Looking Glass
+              /dev/kvmfr0 rw,
+            '';
+          }
+        );
   };
 }

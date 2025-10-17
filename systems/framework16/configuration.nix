@@ -1,5 +1,6 @@
-{nixos-hardware, ...}@inputs:
-{pkgs, lib, ...}: rec {
+{ nixos-hardware, ... }@inputs:
+{ pkgs, lib, ... }:
+rec {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
   ];
@@ -50,4 +51,3 @@
     AllowHibernate=yes
   '';
 }
-

@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.alacritty;
-in {
+in
+{
   options.stewos.alacritty.enable = lib.mkEnableOption "alacritty";
 
   config = lib.mkIf cfg.enable {

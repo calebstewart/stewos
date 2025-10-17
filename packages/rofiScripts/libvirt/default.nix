@@ -5,7 +5,8 @@
   virt-viewer,
   gnugrep,
   mkRofiScript,
-}: mkRofiScript {
+}:
+mkRofiScript {
   name = "libvirt";
 
   runtimeInputs = [

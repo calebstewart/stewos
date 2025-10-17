@@ -1,18 +1,24 @@
-{nixvim, ...}:
-{lib, config, pkgs, ...}:
+{ nixvim, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.neovim;
-in {
+in
+{
   options.stewos.neovim.enable = lib.mkEnableOption "neovim";
 
-  imports = [nixvim.homeModules.nixvim];
+  imports = [ nixvim.homeModules.nixvim ];
 
   config = lib.mkIf cfg.enable {
 
     programs.nixvim = {
       enable = true;
       defaultEditor = true;
-      withRuby = false; 
+      withRuby = false;
 
       globals = {
         # The global leader is " ", which behaves similarly to emacs shortcuts
@@ -96,7 +102,11 @@ in {
       plugins.treesitter = {
         enable = true;
         settings.highlight.enable = true;
-        languageRegister.hcl = ["hcl" "tf" "terraform"];
+        languageRegister.hcl = [
+          "hcl"
+          "tf"
+          "terraform"
+        ];
       };
 
       plugins.markdown-preview = {
@@ -244,9 +254,9 @@ in {
         autoEnableSources = true;
 
         settings.sources = [
-          {name = "nvim_lsp";}
-          {name = "path";}
-          {name = "buffer";}
+          { name = "nvim_lsp"; }
+          { name = "path"; }
+          { name = "buffer"; }
         ];
       };
 
@@ -254,6 +264,11 @@ in {
       plugins.none-ls = {
         enable = true;
         enableLspFormat = true;
+
+        sources.formatting = {
+          nixfmt.enable = true;
+          nixfmt.package = pkgs.nixfmt-rfc-style;
+        };
       };
 
       # Install telescope because it's pretty :)
@@ -268,35 +283,46 @@ in {
       # Setup neotree for a file browser bar
       plugins.neo-tree = {
         enable = true;
-        enableDiagnostics = true;
-        enableGitStatus = true;
-        enableModifiedMarkers = true;
-        enableRefreshOnWrite = true;
-        closeIfLastWindow = true;
-        popupBorderStyle = "rounded";
 
-        window = {
-          mappings = {
-            "<space>" = "none";
-          };
+        settings = {
+          enable_diagnostics = true;
+          enable_git_status = true;
+          enable_modified_markers = true;
+          enable_refresh_on_write = true;
+          close_if_last_window = true;
+          popup_border_style = "rounded";
+          window.mappings."<space>" = "none";
+          filesystem.filtered_items.always_show = [
+            ".github"
+            ".circleci"
+          ];
         };
 
-        filesystem.filteredItems.alwaysShow = [".github" ".circleci"];
       };
 
       plugins.which-key = {
         enable = true;
 
-        settings.spec = lib.foldlAttrs (acc: key: desc: acc ++ [{
-          inherit desc;
-          __unkeyed-1 = key;
-        }]) [] {
-          "<leader>w" = "Windows...";
-          "<leader>b" = "Buffers...";
-          "<leader>o" = "Open Tools...";
-          "<leader>g" = "Go to...";
-          "<leader>f" = "Find...";
-        };
+        settings.spec =
+          lib.foldlAttrs
+            (
+              acc: key: desc:
+              acc
+              ++ [
+                {
+                  inherit desc;
+                  __unkeyed-1 = key;
+                }
+              ]
+            )
+            [ ]
+            {
+              "<leader>w" = "Windows...";
+              "<leader>b" = "Buffers...";
+              "<leader>o" = "Open Tools...";
+              "<leader>g" = "Go to...";
+              "<leader>f" = "Find...";
+            };
       };
 
       extraConfigVim = ''
@@ -318,7 +344,10 @@ in {
 
       autoCmd = [
         {
-          event = ["BufEnter" "BufWinEnter"];
+          event = [
+            "BufEnter"
+            "BufWinEnter"
+          ];
           pattern = "*.md";
           desc = "Setup Markdown-Specific Keymaps";
           callback.__raw = ''
@@ -330,7 +359,7 @@ in {
           '';
         }
         {
-          event = ["VimEnter"];
+          event = [ "VimEnter" ];
           pattern = "*";
           desc = "Open current directory if no argument is given";
           command = ''
@@ -458,4 +487,3 @@ in {
     };
   };
 }
-

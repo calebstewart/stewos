@@ -1,5 +1,6 @@
-{...}@inputs:
-{config, ...}: rec {
+{ ... }@inputs:
+{ config, ... }:
+rec {
   system.stateVersion = 6;
 
   # Host-specific nix-darwin configuration
@@ -16,9 +17,12 @@
   homebrew = {
     enable = true;
 
-    taps = ["ubuntu/microk8s"];
-    brews = ["ruby-install" "ubuntu/microk8s/microk8s"];
-    casks = [];
+    taps = [ "ubuntu/microk8s" ];
+    brews = [
+      "ruby-install"
+      "ubuntu/microk8s/microk8s"
+    ];
+    casks = [ ];
   };
 
   programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";

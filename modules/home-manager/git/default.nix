@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.git;
-in {
+in
+{
   options.stewos.git = {
     enable = lib.mkEnableOption "git";
     forceSSH = lib.mkOption {
@@ -40,8 +41,8 @@ in {
       includes = lib.attrsets.mapAttrsToList (name: alias: {
         condition = "gitdir:~/git/${name}";
         contents.user = {
-          email = lib.attrsets.attrByPath ["email"] config.stewos.user.email alias;
-          name = lib.attrsets.attrByPath ["fullName"] config.stewos.user.fullName alias;
+          email = lib.attrsets.attrByPath [ "email" ] config.stewos.user.email alias;
+          name = lib.attrsets.attrByPath [ "fullName" ] config.stewos.user.fullName alias;
         };
       }) config.stewos.user.aliases;
     };

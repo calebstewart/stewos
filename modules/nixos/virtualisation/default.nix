@@ -1,8 +1,14 @@
-{vfio-hooks, ...}:
-{lib, config, pkgs, ...}:
+{ vfio-hooks, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.virtualisation;
-in {
+in
+{
   options.stewos.virtualisation.enable = lib.mkEnableOption "virtualisation";
 
   config = lib.mkIf cfg.enable {
@@ -25,7 +31,10 @@ in {
     # Allow communication from VM to host over common ephemeral ports
     # This is normally things like updog for transferring files.
     networking.firewall.interfaces."virbr0".allowedTCPPortRanges = [
-      { from = 8000; to = 10000; }
+      {
+        from = 8000;
+        to = 10000;
+      }
     ];
   };
 }

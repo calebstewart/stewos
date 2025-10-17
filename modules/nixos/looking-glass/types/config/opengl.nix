@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     mipmap = lib.mkOption {
       description = "Enable mipmapping";

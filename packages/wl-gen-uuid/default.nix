@@ -2,8 +2,12 @@
   libuuid,
   wl-clipboard,
   writeShellApplication,
-}: writeShellApplication {
+}:
+writeShellApplication {
   name = "wl-gen-uuid";
-  runtimeInputs = [libuuid wl-clipboard];
+  runtimeInputs = [
+    libuuid
+    wl-clipboard
+  ];
   text = "uuidgen | wl-copy";
 }

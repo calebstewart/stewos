@@ -52,25 +52,29 @@
     };
   };
 
-  outputs = {self, ...}@externalInputs:
-  let
-    inputs = externalInputs // { stewos = self; };
+  outputs =
+    { self, ... }@externalInputs:
+    let
+      inputs = externalInputs // {
+        stewos = self;
+      };
 
-    # Base outputs which don't need any fancieness
-    baseOutputs = {
-      lib = import ./lib/default.nix inputs;
-      nixosModules = import ./modules/nixos/individual.nix inputs;
-      homeModules = import ./modules/home-manager/individual.nix inputs;
-      darwinModules = import ./modules/nix-darwin/individual.nix inputs;
-    };
+      # Base outputs which don't need any fancieness
+      baseOutputs = {
+        lib = import ./lib/default.nix inputs;
+        nixosModules = import ./modules/nixos/individual.nix inputs;
+        homeModules = import ./modules/home-manager/individual.nix inputs;
+        darwinModules = import ./modules/nix-darwin/individual.nix inputs;
+      };
 
-    # Packages which must use the flake-utils helper
-    packageOutputs = inputs.flake-utils.lib.eachDefaultSystem (system: {
-      packages = import ./packages system inputs;
-    });
+      # Packages which must use the flake-utils helper
+      packageOutputs = inputs.flake-utils.lib.eachDefaultSystem (system: {
+        packages = import ./packages system inputs;
+      });
 
-    # System outputs which may also provide overlapping output keys, and must
-    # be recursively merged with the above two attrsets.
-    systemOutputs = import ./systems inputs;
-  in inputs.nixpkgs.lib.attrsets.recursiveUpdate (baseOutputs // packageOutputs) systemOutputs;
+      # System outputs which may also provide overlapping output keys, and must
+      # be recursively merged with the above two attrsets.
+      systemOutputs = import ./systems inputs;
+    in
+    inputs.nixpkgs.lib.attrsets.recursiveUpdate (baseOutputs // packageOutputs) systemOutputs;
 }

@@ -1,41 +1,49 @@
-{pkgs, lib, config, ...}:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
-in {
+in
+{
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     services.hypridle = {
       enable = true;
 
-      settings = let
-        hyprctl = lib.getExe config.wayland.windowManager.hyprland.package;
-        loginctl = lib.getExe' pkgs.systemd "loginctl";
-        brightnessctl = lib.getExe pkgs.brightnessctl;
-        hyprlock = lib.getExe pkgs.hyprlock;
-        pidof = lib.getExe' pkgs.procps "pidof";
-      in {
-        general = {
-          after_sleep_cmd = "${hyprctl} dispatch dpms on";
-          before_sleep_cmd = "${loginctl} lock-session";
-          lock_cmd = "${pidof} hyprlock || ${hyprlock}";
-        };
+      settings =
+        let
+          hyprctl = lib.getExe config.wayland.windowManager.hyprland.package;
+          loginctl = lib.getExe' pkgs.systemd "loginctl";
+          brightnessctl = lib.getExe pkgs.brightnessctl;
+          hyprlock = lib.getExe pkgs.hyprlock;
+          pidof = lib.getExe' pkgs.procps "pidof";
+        in
+        {
+          general = {
+            after_sleep_cmd = "${hyprctl} dispatch dpms on";
+            before_sleep_cmd = "${loginctl} lock-session";
+            lock_cmd = "${pidof} hyprlock || ${hyprlock}";
+          };
 
-        listener = [
-          {
-            timeout = cfg.idle.dimSeconds;
-            on-timeout = "${brightnessctl} --save set 10";
-            on-resume = "${brightnessctl} --restore";
-          }
-          {
-            timeout = cfg.idle.lockSeconds;
-            on-timeout = "${loginctl} lock-session";
-          }
-          {
-            timeout = cfg.idle.sleepSeconds;
-            on-timeout = "${hyprctl} dispatch dpms off";
-            on-resume = "${hyprctl} dispatch dpms on";
-          }
-        ];
-      };
+          listener = [
+            {
+              timeout = cfg.idle.dimSeconds;
+              on-timeout = "${brightnessctl} --save set 10";
+              on-resume = "${brightnessctl} --restore";
+            }
+            {
+              timeout = cfg.idle.lockSeconds;
+              on-timeout = "${loginctl} lock-session";
+            }
+            {
+              timeout = cfg.idle.sleepSeconds;
+              on-timeout = "${hyprctl} dispatch dpms off";
+              on-resume = "${hyprctl} dispatch dpms on";
+            }
+          ];
+        };
     };
   };
 }

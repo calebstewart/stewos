@@ -1,18 +1,32 @@
-{nix-colors, ...}:
-{lib, pkgs, config, ...}: {
+{ nix-colors, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  ...
+}:
+{
   stewos = {
     desktop = {
       enable = true;
       modifier = "SUPER";
 
-      monitors = let
-        orderedNames = ["Dell Inc. DELL U2723QE 55L01P3" "Dell Inc. DELL U2723QE HXJ01P3"];
-        resolution = { width = 3840; height = 2160; };
-      in lib.imap0 (i: description: {
-        inherit resolution description;
-        position.x = resolution.width * i;
-        scale = 1.0;
-      }) orderedNames;
+      monitors =
+        let
+          orderedNames = [
+            "Dell Inc. DELL U2723QE 55L01P3"
+            "Dell Inc. DELL U2723QE HXJ01P3"
+          ];
+          resolution = {
+            width = 3840;
+            height = 2160;
+          };
+        in
+        lib.imap0 (i: description: {
+          inherit resolution description;
+          position.x = resolution.width * i;
+          scale = 1.0;
+        }) orderedNames;
     };
 
     git.enable = true;
@@ -44,7 +58,7 @@
     exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
   '';
 
-  home.packages = [pkgs.discord];
+  home.packages = [ pkgs.discord ];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }

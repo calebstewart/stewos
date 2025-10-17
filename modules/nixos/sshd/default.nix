@@ -1,8 +1,9 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.sshd;
-in {
+in
+{
   options.stewos.sshd = {
     enable = lib.mkEnableOption "sshd";
 
@@ -20,10 +21,15 @@ in {
   config = lib.mkIf cfg.enable {
     services.openssh = {
       enable = true;
-      ports = [cfg.port];
+      ports = [ cfg.port ];
       startWhenNeeded = true;
       openFirewall = true;
-      listenAddresses = [{addr = cfg.address; port = cfg.port;}];
+      listenAddresses = [
+        {
+          addr = cfg.address;
+          port = cfg.port;
+        }
+      ];
 
       settings = {
         UsePAM = false;

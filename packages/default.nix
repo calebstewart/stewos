@@ -1,4 +1,5 @@
-system: {nixpkgs, stewos, ...}@inputs:
+system:
+{ nixpkgs, stewos, ... }@inputs:
 let
   lib = nixpkgs.lib;
   pkgs = nixpkgs.legacyPackages.${system};
@@ -10,8 +11,12 @@ let
   packageDirs = filterAttrs packageFilter (readDir ./.);
 
   callPackage = pkgs.lib.callPackageWith overlayedPkgs;
-  newPackages = (mapAttrs (name: _type: (callPackage (./. + "/${name}") {})) packageDirs);
-  overlayedPkgs = pkgs.lib.recursiveUpdate pkgs (newPackages // {
-    inherit inputs stewos callPackage;
-  });
-in newPackages
+  newPackages = (mapAttrs (name: _type: (callPackage (./. + "/${name}") { })) packageDirs);
+  overlayedPkgs = pkgs.lib.recursiveUpdate pkgs (
+    newPackages
+    // {
+      inherit inputs stewos callPackage;
+    }
+  );
+in
+newPackages

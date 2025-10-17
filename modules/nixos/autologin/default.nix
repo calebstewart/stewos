@@ -1,11 +1,12 @@
-{...}:
-{lib, config, ...}:
+{ ... }:
+{ lib, config, ... }:
 let
   cfg = config.stewos.autologin;
-in {
+in
+{
   options.stewos.autologin = {
     enable = lib.mkEnableOption "autologin";
-    
+
     username = lib.mkOption {
       type = lib.types.str;
       default = null;
@@ -45,8 +46,14 @@ in {
         };
 
         commands = {
-          reboot = ["systemctl" "reboot"];
-          poweroff = ["systemctl" "poweroff"];
+          reboot = [
+            "systemctl"
+            "reboot"
+          ];
+          poweroff = [
+            "systemctl"
+            "poweroff"
+          ];
         };
       };
     };

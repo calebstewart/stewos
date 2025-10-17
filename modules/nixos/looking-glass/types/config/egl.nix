@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     vsync = lib.mkOption {
       description = "Enable vsync";

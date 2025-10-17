@@ -1,8 +1,14 @@
-{...}:
-{lib, config, pkgs, ...}:
+{ ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.containers;
-in {
+in
+{
   options.stewos.containers = {
     enable = lib.mkEnableOption "containers";
     enableCompose = lib.mkEnableOption "compose";
@@ -14,7 +20,7 @@ in {
       enable = true;
       dockerCompat = cfg.enableDockerCompatability;
       dockerSocket.enable = cfg.enableDockerCompatability;
-      
+
       extraPackages = with pkgs; [
         podman-compose
       ];

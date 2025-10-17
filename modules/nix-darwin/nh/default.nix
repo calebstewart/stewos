@@ -1,7 +1,14 @@
-{...}:
-{pkgs, lib, config, ...}: let
+{ ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+let
   cfg = config.programs.nh;
-in {
+in
+{
   options.programs.nh = {
     enable = lib.mkEnableOption "nh, yet another Nix CLI helper";
 
@@ -31,7 +38,9 @@ in {
 
       dates = lib.mkOption {
         type = lib.types.attrs;
-        default = { Weekday = 0; };
+        default = {
+          Weekday = 0;
+        };
         description = ''
           How often cleanup is performed. Passed to launchd. The format is described
           in the nix-darwin option 'launchd.daemons.<name>.serviceConfig.StartCalendarInterval'.

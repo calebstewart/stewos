@@ -1,4 +1,5 @@
-{lib, ...}: {
+{ lib, ... }:
+{
   options = {
     periodSize = lib.mkOption {
       description = "Requested audio device period size in samples";
@@ -15,7 +16,11 @@
     micDefault = lib.mkOption {
       description = "Default action when an application opens the microphone";
       default = "prompt";
-      type = lib.types.enum ["prompt" "allow" "deny"];
+      type = lib.types.enum [
+        "prompt"
+        "allow"
+        "deny"
+      ];
     };
 
     micShowIndicator = lib.mkOption {

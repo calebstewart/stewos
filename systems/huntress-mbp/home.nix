@@ -1,5 +1,6 @@
-{nix-colors, stewos, ...}:
-{pkgs, lib, ...}: {
+{ nix-colors, stewos, ... }:
+{ pkgs, lib, ... }:
+{
   stewos = {
     # Setup user properties
     user = {
@@ -33,16 +34,19 @@
     direnv.enable = true;
   };
 
-  home.packages = with pkgs; [
-    discord
-    github-cli
-    awscli2
-    aws-vault
-    colima
-    docker
-  ] ++ (with stewos.packages.${pkgs.system}; [
-    # hunt-cli
-  ]);
+  home.packages =
+    with pkgs;
+    [
+      discord
+      github-cli
+      awscli2
+      aws-vault
+      colima
+      docker
+    ]
+    ++ (with stewos.packages.${pkgs.system}; [
+      # hunt-cli
+    ]);
 
   programs.ssh.enable = true;
   programs.rbenv.enable = true;

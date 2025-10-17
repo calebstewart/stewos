@@ -1,5 +1,10 @@
-{...}:
-{pkgs, lib, config, ...}:
+{ ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 let
   cfg = config.stewos.rofi;
 
@@ -25,7 +30,7 @@ let
   # $XDG_DATA_HOME/rofi and $XDG_CONFIG_HOME/rofi as appropriate.
   extraPackages = pkgs.symlinkJoin {
     name = "rofi-config-bundle";
-    paths = cfg.extraPackages ++ [defaultRofiConfig];
+    paths = cfg.extraPackages ++ [ defaultRofiConfig ];
 
     postBuild = ''
       echo "Linking Rofi Scripts to /etc/rofi/scripts"
@@ -33,26 +38,27 @@ let
       ln -s $out/bin $out/etc/rofi/scripts
     '';
   };
-in {
+in
+{
   options.stewos.rofi = {
     enable = lib.mkEnableOption "rofi";
-    package = lib.mkPackageOption pkgs "rofi" {};
+    package = lib.mkPackageOption pkgs "rofi" { };
 
     extraPackages = lib.mkOption {
       type = lib.types.listOf lib.types.package;
-      default = [];
+      default = [ ];
       description = "Extra packages containing Rofi configurations, themes or scripts to be installed.";
     };
 
     settings = lib.mkOption {
       type = lib.types.attrs;
-      default = {};
+      default = { };
       description = "Configuration in Nix attrset form (written to config.rasi)";
     };
 
     imports = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
     };
 
     theme = lib.mkOption {
@@ -64,7 +70,7 @@ in {
 
   config = lib.mkIf cfg.enable {
     # Install the selected rofi package
-    home.packages = [cfg.package];
+    home.packages = [ cfg.package ];
 
     # Write rofi data files
     xdg.dataFile."rofi" = {
