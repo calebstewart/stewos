@@ -20,6 +20,7 @@ in
   homeConfigurations."caleb@${hostname}" = stewos.lib.mkHomeManagerConfig {
     inherit system;
 
+    isDarwin = true;
     username = "caleb";
     homeDirectory = "/Users/caleb";
     modules = [ (import ./home.nix inputs) ];

@@ -101,9 +101,13 @@ rec {
       modules,
       username,
       homeDirectory,
+      isDarwin ? false,
     }:
+    let
+      nixpkgs-repo = if isDarwin then nixpkgs-darwin else nixpkgs;
+    in
     inputs.home-manager.lib.homeManagerConfiguration {
-      pkgs = mkNixpkgs system nixpkgs;
+      pkgs = mkNixpkgs system nixpkgs-repo;
 
       modules = [
         stewos.homeModules.default
