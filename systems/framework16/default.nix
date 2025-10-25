@@ -6,18 +6,22 @@
 }@inputs:
 let
   system = "x86_64-linux";
-
-  config = stewos.lib.mkNixOSSystem {
+in
+{
+  nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
     inherit hostname system;
 
     modules = [
-      home-manager.nixosModules.default
       ./hardware-configuration.nix
       (import ./configuration.nix inputs)
     ];
   };
-in
-{
-  nixosConfigurations.${hostname} = config;
-  apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp hostname config;
+
+  homeConfigurations."caleb@${hostname}" = stewos.lib.mkHomeManagerConfig {
+    inherit system;
+
+    username = "caleb";
+    homeDirectory = "/home/caleb";
+    modules = [ (import ./home.nix inputs) ];
+  };
 }
