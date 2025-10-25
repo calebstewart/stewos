@@ -11,6 +11,11 @@
       enable = true;
       modifier = "SUPER";
 
+      wallpaper = pkgs.fetchurl {
+        url = "https://lh3.googleusercontent.com/pw/AP1GczMFuTffAIDMFEND7odg-nmIPaEgPIPhGwv94oxhpFFe5CN4QunlA77wz4raxgTZ68Uje2SPmBhR1A5iluCevPDUSsueXyViocCrZUDVPYKAeazOJGgTYoGgH-6CqRohmh42vi7giZoUiAep4XHn8BjULg=w3591-h2020-s-no";
+        hash = "sha256-gAAV3OkG66ZonBjV0brY/Br6vsxIbws+lQRqyUN35Mg=";
+      };
+
       monitors =
         let
           orderedNames = [
@@ -58,7 +63,11 @@
     exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
   '';
 
-  home.packages = [ pkgs.discord ];
+  home.packages = [
+    pkgs.discord
+    pkgs.gimp
+    pkgs.signal-desktop
+  ];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }

@@ -95,4 +95,21 @@ rec {
   environment.systemPackages = [ pkgs.sbctl ];
 
   time.timeZone = "America/Chicago";
+
+  # Enable printing
+  services.printing = {
+    enable = true;
+
+    drivers = with pkgs; [
+      cups-filters
+      cups-browsed
+    ];
+  };
+
+  # Enable network printer discovery
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
 }
