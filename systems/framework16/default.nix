@@ -1,4 +1,9 @@
-{ hostname, stewos, ... }:
+{
+  hostname,
+  stewos,
+  home-manager,
+  ...
+}@inputs:
 let
   system = "x86_64-linux";
 
@@ -6,8 +11,9 @@ let
     inherit hostname system;
 
     modules = [
+      home-manager.nixosModules.default
       ./hardware-configuration.nix
-      ./configuration.nix
+      (import ./configuration.nix inputs)
     ];
   };
 in

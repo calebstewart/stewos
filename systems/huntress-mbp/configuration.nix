@@ -1,4 +1,4 @@
-{ ... }@inputs:
+{ stewos, ... }@inputs:
 { config, ... }:
 rec {
   system.stateVersion = 6;
@@ -27,5 +27,4 @@ rec {
 
   programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";
   users.users.caleb.home = "/Users/caleb";
-  home-manager.users.caleb = import ./home.nix inputs;
 }

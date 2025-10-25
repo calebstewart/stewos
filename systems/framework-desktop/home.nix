@@ -6,6 +6,12 @@
   ...
 }:
 {
+  home.packages = [
+    pkgs.discord
+    pkgs.gimp
+    pkgs.signal-desktop
+  ];
+
   stewos = {
     desktop = {
       enable = true;
@@ -62,12 +68,6 @@
   xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
     exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
   '';
-
-  home.packages = [
-    pkgs.discord
-    pkgs.gimp
-    pkgs.signal-desktop
-  ];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }
