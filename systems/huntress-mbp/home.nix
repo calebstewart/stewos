@@ -40,6 +40,7 @@
       discord
       github-cli
       awscli2
+      ssm-session-manager-plugin
       aws-vault
       colima
       docker
