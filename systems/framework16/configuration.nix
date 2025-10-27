@@ -1,6 +1,6 @@
-{ nixos-hardware, ... }@inputs:
+{ nixos-hardware, ... }:
 { pkgs, lib, ... }:
-rec {
+{
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
   ];
@@ -34,9 +34,6 @@ rec {
 
   # Set the system hostname
   networking.hostName = "framework16";
-
-  # Enable embedded home-manager
-  home-manager.users.${stewos.user.username} = import ./home.nix inputs;
 
   # Some tweaks for this specific hardware
   boot.kernelPackages = pkgs.linuxPackages_latest;

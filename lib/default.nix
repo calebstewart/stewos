@@ -3,6 +3,7 @@
   home-manager,
   nixpkgs,
   nixpkgs-darwin,
+  nur,
   ...
 }@inputs:
 let
@@ -25,6 +26,7 @@ rec {
 
       overlays = [
         (final: prev: import ../packages/default.nix system inputs)
+        nur.overlays.default
       ];
     };
 
@@ -43,9 +45,8 @@ rec {
       modules = [
         { networking.hostName = hostname; }
         stewos.nixosModules.default
-        home-manager.nixosModules.default
       ]
-      ++ (importAllWithInputs modules);
+      ++ modules;
     };
 
   mkNixOSVirtualMachineApp = hostname: nixosConfiguration: {
@@ -68,9 +69,8 @@ rec {
       modules = [
         { network.hostName = hostname; }
         stewos.nixosModules.default
-        home-manager.nixosModules.default
       ]
-      ++ (importAllWithInputs modules);
+      ++ modules;
     };
 
   # Create a new Nix-Darwin System
@@ -90,19 +90,32 @@ rec {
         stewos.darwinModules.default
         home-manager.darwinModules.default
       ]
-      ++ (importAllWithInputs modules);
+      ++ modules;
     };
 
   # Create a standalone home manager configuration using the StewOS default modules
   # and the given Home Manager module path.
   mkHomeManagerConfig =
-    { system, modules }:
+    {
+      system,
+      modules,
+      username,
+      homeDirectory,
+      isDarwin ? false,
+    }:
+    let
+      nixpkgs-repo = if isDarwin then nixpkgs-darwin else nixpkgs;
+    in
     inputs.home-manager.lib.homeManagerConfiguration {
-      pkgs = mkNixpkgs system nixpkgs;
+      pkgs = mkNixpkgs system nixpkgs-repo;
 
       modules = [
         stewos.homeModules.default
+        {
+          home.username = username;
+          home.homeDirectory = homeDirectory;
+        }
       ]
-      ++ (importAllWithInputs modules);
+      ++ modules;
     };
 }

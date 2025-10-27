@@ -1,9 +1,28 @@
-{ hostname, stewos, ... }:
+{
+  hostname,
+  stewos,
+  home-manager,
+  ...
+}@inputs:
+let
+  system = "aarch64-darwin";
+in
 {
   darwinConfigurations.${hostname} = stewos.lib.mkNixDarwinSystem {
     inherit hostname;
 
     system = "aarch64-darwin";
-    modules = [ ./configuration.nix ];
+    modules = [
+      (import ./configuration.nix inputs)
+    ];
+  };
+
+  homeConfigurations."caleb@${hostname}" = stewos.lib.mkHomeManagerConfig {
+    inherit system;
+
+    isDarwin = true;
+    username = "caleb";
+    homeDirectory = "/Users/caleb";
+    modules = [ (import ./home.nix inputs) ];
   };
 }

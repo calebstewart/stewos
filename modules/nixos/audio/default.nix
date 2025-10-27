@@ -24,5 +24,8 @@ in
 
     # Enable NoiseTorch for noise cancellation
     programs.noisetorch.enable = true;
+
+    # Enable XDG Sound Themes support
+    xdg.sounds.enable = true;
   };
 }

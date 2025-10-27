@@ -1,6 +1,5 @@
 {
   stewos,
-  home-manager,
   nur,
   nh,
   ...
@@ -23,10 +22,7 @@ in
   system.stateVersion = "24.05";
 
   # Load all sub-modules
-  imports = modulePaths ++ [
-    home-manager.nixosModules.default
-    nur.modules.nixos.default
-  ];
+  imports = modulePaths;
 
   # Setup Nix configuration
   nix = {
@@ -84,14 +80,5 @@ in
       enable = true;
       generateCaches = true;
     };
-  };
-
-  # Setup embedded home manager
-  home-manager = {
-    useUserPackages = true;
-    useGlobalPkgs = true;
-
-    # Add our home-manager modules to all configured users
-    sharedModules = [ stewos.homeModules.default ];
   };
 }

@@ -46,12 +46,4 @@ in
     enable = true;
     man.enable = true;
   };
-
-  # Setup embedded home manager
-  home-manager = {
-    useUserPackages = true;
-    useGlobalPkgs = true;
-
-    sharedModules = [ stewos.homeModules.default ];
-  };
 }

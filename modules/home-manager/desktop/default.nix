@@ -26,7 +26,6 @@ in
     ./polkit.nix
     ./qt.nix
     ./rofi.nix
-    ./swaync.nix
     ./xdg.nix
     ./aerospace.nix
     ./raycast.nix
