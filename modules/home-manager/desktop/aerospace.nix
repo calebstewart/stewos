@@ -7,6 +7,42 @@
 let
   cfg = config.stewos.desktop;
   toml = pkgs.formats.toml { };
+
+  switchWorkspacePkg = pkgs.writeShellApplication {
+    name = "aerospace-switch-workspace";
+    runtimeInputs = with pkgs; [ aerospace ];
+
+    text = ''
+      WORKSPACE_INDEX=$1
+      WORKSPACES=$(aerospace list-workspaces --monitor focused)
+      WORKSPACE_COUNT=$(echo "$WORKSPACES" | wc -l)
+
+      if [[ "$WORKSPACE_INDEX" -ge "1" && "$WORKSPACE_INDEX" -le "$WORKSPACE_COUNT" ]]; then
+        aerospace workspace "$(echo "$WORKSPACES" | sed -n "$WORKSPACE_INDEX"'p')"
+      fi
+    '';
+  };
+
+  switchTo =
+    workspace: "exec-and-forget ${lib.getExe switchWorkspacePkg} ${builtins.toString workspace}";
+
+  moveToWorkspacePkg = pkgs.writeShellApplication {
+    name = "aerospace-move-to-workspace";
+    runtimeInputs = with pkgs; [ aerospace ];
+
+    text = ''
+      WORKSPACE_INDEX=$1
+      WORKSPACES=$(aerospace list-workspaces --monitor focused)
+      WORKSPACE_COUNT=$(echo "$WORKSPACES" | wc -l)
+
+      if [[ "$WORKSPACE_INDEX" -ge "1" && "$WORKSPACE_INDEX" -le "$WORKSPACE_COUNT" ]]; then
+        aerospace move-node-to-workspace "$(echo "$WORKSPACES" | sed -n "$WORKSPACE_INDEX"'p')"
+      fi
+    '';
+  };
+
+  moveTo =
+    workspace: "exec-and-forget ${lib.getExe moveToWorkspacePkg} ${builtins.toString workspace}";
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
@@ -57,40 +93,40 @@ in
           "${modifier}-slash" = "layout tiles horizontal vertical";
           "${modifier}-comma" = "layout accordion horizontal vertical";
 
-          "${modifier}-h" = "focus left";
-          "${modifier}-j" = "focus down";
-          "${modifier}-k" = "focus up";
-          "${modifier}-l" = "focus right";
+          "${modifier}-h" = "focus-monitor left";
+          "${modifier}-j" = "focus-monitor down";
+          "${modifier}-k" = "focus-monitor up";
+          "${modifier}-l" = "focus-monitor right";
 
-          "${modifier}-shift-h" = "move left";
-          "${modifier}-shift-j" = "move down";
-          "${modifier}-shift-k" = "move up";
-          "${modifier}-shift-l" = "move right";
+          "${modifier}-shift-h" = "move-node-to-monitor --focus-follows-window left";
+          "${modifier}-shift-j" = "move-node-to-monitor --focus-follows-window down";
+          "${modifier}-shift-k" = "move-node-to-monitor --focus-follows-window up";
+          "${modifier}-shift-l" = "move-node-to-monitor --focus-follows-window right";
 
           "${modifier}-minus" = "resize smart -50";
           "${modifier}-equal" = "resize smart +50";
 
-          "${modifier}-1" = "workspace 1";
-          "${modifier}-2" = "workspace 2";
-          "${modifier}-3" = "workspace 3";
-          "${modifier}-4" = "workspace 4";
-          "${modifier}-5" = "workspace 5";
-          "${modifier}-6" = "workspace 6";
-          "${modifier}-7" = "workspace 7";
-          "${modifier}-8" = "workspace 8";
-          "${modifier}-9" = "workspace 9";
-          "${modifier}-0" = "workspace 10";
+          "${modifier}-1" = switchTo 1;
+          "${modifier}-2" = switchTo 2;
+          "${modifier}-3" = switchTo 3;
+          "${modifier}-4" = switchTo 4;
+          "${modifier}-5" = switchTo 5;
+          "${modifier}-6" = switchTo 6;
+          "${modifier}-7" = switchTo 7;
+          "${modifier}-8" = switchTo 8;
+          "${modifier}-9" = switchTo 9;
+          "${modifier}-0" = switchTo 10;
 
-          "${modifier}-shift-1" = "move-node-to-workspace 1";
-          "${modifier}-shift-2" = "move-node-to-workspace 2";
-          "${modifier}-shift-3" = "move-node-to-workspace 3";
-          "${modifier}-shift-4" = "move-node-to-workspace 4";
-          "${modifier}-shift-5" = "move-node-to-workspace 5";
-          "${modifier}-shift-6" = "move-node-to-workspace 6";
-          "${modifier}-shift-7" = "move-node-to-workspace 7";
-          "${modifier}-shift-8" = "move-node-to-workspace 8";
-          "${modifier}-shift-9" = "move-node-to-workspace 9";
-          "${modifier}-shift-0" = "move-node-to-workspace 10";
+          "${modifier}-shift-1" = moveTo 1;
+          "${modifier}-shift-2" = moveTo 2;
+          "${modifier}-shift-3" = moveTo 3;
+          "${modifier}-shift-4" = moveTo 4;
+          "${modifier}-shift-5" = moveTo 5;
+          "${modifier}-shift-6" = moveTo 6;
+          "${modifier}-shift-7" = moveTo 7;
+          "${modifier}-shift-8" = moveTo 8;
+          "${modifier}-shift-9" = moveTo 9;
+          "${modifier}-shift-0" = moveTo 10;
 
           "${modifier}-tab" = "workspace-back-and-forth";
           "${modifier}-shift-tab" = "move-workspace-to-monitor --wrap-around next";
