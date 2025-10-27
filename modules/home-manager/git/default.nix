@@ -1,5 +1,10 @@
 { ... }:
-{ lib, config, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.git;
 in
@@ -13,6 +18,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    home.packages = [ pkgs.ripgrep ];
+
     programs.git = {
       enable = true;
 
