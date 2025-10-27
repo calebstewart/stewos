@@ -52,5 +52,8 @@
   programs.ssh.enable = true;
   programs.rbenv.enable = true;
 
+  # This fails in MacOS
+  programs.nixvim.plugins.lsp.servers.mesonlsp.enable = lib.mkForce false;
+
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }
