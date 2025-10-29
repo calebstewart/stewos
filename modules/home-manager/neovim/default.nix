@@ -371,8 +371,14 @@ in
       keymaps = [
         {
           key = "<leader>ff";
-          action = "<cmd>Telescope git_files<CR>";
+          action = "<cmd>Telescope find_files<CR>";
           options.desc = "Find Project File";
+        }
+
+        {
+          key = "<leader>fs";
+          action = "<cmd>Telescope live_grep<CR>";
+          options.desc = "Search All Files";
         }
 
         {

@@ -40,6 +40,7 @@
       discord
       github-cli
       awscli2
+      ssm-session-manager-plugin
       aws-vault
       colima
       docker
@@ -50,6 +51,9 @@
 
   programs.ssh.enable = true;
   programs.rbenv.enable = true;
+
+  # This fails in MacOS
+  programs.nixvim.plugins.lsp.servers.mesonlsp.enable = lib.mkForce false;
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }
