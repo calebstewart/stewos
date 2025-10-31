@@ -372,7 +372,7 @@ in
 
         general = with config.colorScheme.palette; {
           gaps_in = 5;
-          gaps_out = 5;
+          gaps_out = 1;
           border_size = 1;
           "col.active_border" = "rgba(${base0D}ee) rgba(${base0E}ee) 45deg";
           "col.inactive_border" = "rgba(${base05}aa)";
@@ -419,6 +419,12 @@ in
           # no_gaps_when_only = 1;
         };
 
+        workspace = [
+          "w[t1], gapsout:0, gapsin:0"
+          "w[tg1], gapsout:0, gapsin:0"
+          "f[1], gapsout:0, gapsin:0"
+        ];
+
         windowrulev2 = [
           # Disallow maximization, and inhibit idle when fullscreen
           "suppressevent maximize, class:.*"
@@ -429,6 +435,14 @@ in
           "move 0% 90%,class:(showmethekey-gtk)"
           "noborder,class:(showmethekey-gtk)"
           "animation slide bottom,class:(showmethekey-gtk)"
+
+          # Smart Gaps
+          "bordersize 0, floating:0, onworkspace:w[t1]"
+          "rounding 0, floating:0, onworkspace:w[t1]"
+          "bordersize 0, floating:0, onworkspace:w[tg1]"
+          "rounding 0, floating:0, onworkspace:w[tg1]"
+          "bordersize 0, floating:0, onworkspace:f[1]"
+          "rounding 0, floating:0, onworkspace:f[1]"
 
           # Make the authentication agent prompt *special* o.O
           "float,class:(polkit-gnome-authentication-agent-1)"
