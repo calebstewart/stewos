@@ -1,5 +1,13 @@
-{ nix-colors, ... }@inputs:
-{ lib, config, ... }:
+{
+  nix-colors,
+  stylix,
+  ...
+}@inputs:
+{
+  lib,
+  config,
+  ...
+}:
 let
   filterAttrs = lib.filterAttrs;
   readDir = builtins.readDir;
@@ -16,6 +24,7 @@ in
   # Load all sub-modules
   imports = modulePaths ++ [
     nix-colors.homeManagerModules.default
+    stylix.homeModules.stylix
   ];
 
   options.stewos.user = {

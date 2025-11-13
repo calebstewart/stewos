@@ -2,6 +2,7 @@
   stewos,
   nur,
   nh,
+  stylix,
   ...
 }@inputs:
 { pkgs, lib, ... }:
@@ -22,7 +23,10 @@ in
   system.stateVersion = "24.05";
 
   # Load all sub-modules
-  imports = modulePaths;
+  imports = [
+    stylix.nixosModules.stylix
+  ]
+  ++ modulePaths;
 
   # Setup Nix configuration
   nix = {
@@ -53,6 +57,11 @@ in
         })
       ];
     };
+  };
+
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
   };
 
   # Setup Nix Helper for easy building

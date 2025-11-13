@@ -1,8 +1,7 @@
 {
-  stewos,
   home-manager,
   nur,
-  nh,
+  stylix,
   ...
 }@inputs:
 { pkgs, lib, ... }:
@@ -23,6 +22,7 @@ in
   imports = modulePaths ++ [
     home-manager.darwinModules.default
     nur.modules.darwin.default
+    stylix.darwinModules.stylix
   ];
 
   # Setup Nix configuration
