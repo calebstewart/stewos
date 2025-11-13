@@ -4,6 +4,7 @@
   nixpkgs,
   nixpkgs-darwin,
   nur,
+  mac-app-util,
   ...
 }@inputs:
 let
@@ -105,6 +106,13 @@ rec {
     }:
     let
       nixpkgs-repo = if isDarwin then nixpkgs-darwin else nixpkgs;
+      extraModules =
+        if isDarwin then
+          [
+            mac-app-util.homeManagerModules.default
+          ]
+        else
+          [ ];
     in
     inputs.home-manager.lib.homeManagerConfiguration {
       pkgs = mkNixpkgs system nixpkgs-repo;
@@ -116,6 +124,7 @@ rec {
           home.homeDirectory = homeDirectory;
         }
       ]
+      ++ extraModules
       ++ modules;
     };
 }

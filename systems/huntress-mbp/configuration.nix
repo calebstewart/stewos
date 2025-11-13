@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 {
   system.stateVersion = 6;
 
@@ -29,4 +29,6 @@
 
   programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";
   users.users.caleb.home = "/Users/caleb";
+
+  environment.systemPackages = [ pkgs.raycast ];
 }

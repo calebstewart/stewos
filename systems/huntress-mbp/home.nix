@@ -34,20 +34,18 @@
     direnv.enable = true;
   };
 
-  home.packages =
-    with pkgs;
-    [
-      discord
-      github-cli
-      awscli2
-      ssm-session-manager-plugin
-      aws-vault
-      colima
-      docker
-    ]
-    ++ (with stewos.packages.${pkgs.system}; [
-      # hunt-cli
-    ]);
+  home.packages = with pkgs; [
+    discord
+    github-cli
+    awscli2
+    ssm-session-manager-plugin
+    aws-vault
+    colima
+    docker
+    raycast
+    kubernetes-helm
+    kubectl
+  ];
 
   programs.ssh.enable = true;
   programs.rbenv.enable = true;
