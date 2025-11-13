@@ -10,6 +10,7 @@
     pkgs.discord
     pkgs.gimp
     pkgs.signal-desktop
+    pkgs.spotify
   ];
 
   stewos = {
@@ -45,7 +46,7 @@
           };
 
           # Scale used for all monitors
-          scale = 2.0;
+          scale = 1.5;
         in
         # Configure all monitors in orderedNames and set their X positions
         # appropriately based on their index in the ordered list, the
