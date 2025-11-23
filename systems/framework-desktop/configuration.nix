@@ -26,7 +26,7 @@ in
     containers = {
       enable = true;
       enableCompose = true;
-      enableDockerCompatability = true;
+      enableDockerCompatibility = true;
     };
 
     autologin = {
