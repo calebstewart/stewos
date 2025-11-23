@@ -1,5 +1,5 @@
 { nixos-hardware, ... }:
-{ pkgs, lib, ... }:
+{ pkgs, config, ... }:
 {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
@@ -28,7 +28,7 @@
     autologin = {
       enable = true;
       username = user.username;
-      command = lib.getExe pkgs.hyprland;
+      command = "${config.users.users.${user.username}.home}/.wayland-session";
     };
   };
 

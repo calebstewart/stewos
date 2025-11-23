@@ -488,5 +488,15 @@ in
     # Ensure that the systemd session has access to home-manager session variables.
     # This means that hyprland in turn has access to these variables.
     systemd.user.sessionVariables = config.home.sessionVariables;
+
+    # This is useful when using something like greetd to launch our session
+    # with the correct Hyprland version.
+    home.file.".wayland-session" = {
+      executable = true;
+
+      text = ''
+        exec ${lib.getExe config.wayland.windowManager.hyprland.package} >/dev/null 2>/dev/null
+      '';
+    };
   };
 }
