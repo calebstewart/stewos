@@ -17,11 +17,6 @@
     neovim.enable = true;
     zoxide.enable = true;
     direnv.enable = true;
-
-    user = {
-      fullName = "Caleb Stewart";
-      email = "caleb.stewart94@gmail.com";
-    };
   };
 
   home.packages = with pkgs; [

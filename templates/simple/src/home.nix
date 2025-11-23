@@ -65,13 +65,6 @@
     neovim.enable = true;
     zoxide.enable = true;
     direnv.enable = true;
-
-    # This user information is used in a few places most noteably in
-    # configuring git.
-    user = {
-      fullName = "Your Name";
-      email = "your.email@server.com";
-    };
   };
 
   # Since we have the system config auto-login in configuration.nix, we can use this

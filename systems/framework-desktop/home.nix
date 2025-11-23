@@ -67,11 +67,6 @@
     neovim.enable = true;
     zoxide.enable = true;
     direnv.enable = true;
-
-    user = {
-      fullName = "Caleb Stewart";
-      email = "caleb.stewart94@gmail.com";
-    };
   };
 
   xdg.configFile."hypr/config.d/99-autolock.conf".text = ''

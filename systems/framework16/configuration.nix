@@ -1,11 +1,14 @@
 { nixos-hardware, ... }:
 { pkgs, config, ... }:
+let
+  user = config.stewos.user;
+in
 {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
   ];
 
-  stewos = rec {
+  stewos = {
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
@@ -18,11 +21,6 @@
       enable = true;
       enableCompose = true;
       enableDockerCompatability = true;
-    };
-
-    user = {
-      username = "caleb";
-      fullname = "Caleb Stewart";
     };
 
     autologin = {

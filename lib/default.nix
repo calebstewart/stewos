@@ -15,6 +15,49 @@ rec {
   hypr = import ./hypr.nix inputs;
   rasi = import ./rasi/default.nix inputs;
 
+  # This is used to make a common user options structure for both
+  # NixOS and Home Manager.
+  mkUserOptions =
+    { lib, config }:
+    {
+      username = lib.mkOption {
+        type = lib.types.str;
+      };
+
+      fullname = lib.mkOption {
+        type = lib.types.str;
+      };
+
+      email = lib.mkOption {
+        type = lib.types.str;
+      };
+
+      aliases = lib.mkOption {
+        default = { };
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options = {
+              fullname = lib.mkOption {
+                type = lib.types.str;
+                default = config.stewos.user.fullname;
+              };
+
+              email = lib.mkOption {
+                type = lib.types.str;
+                default = config.stewos.user.email;
+              };
+            };
+          }
+        );
+      };
+
+      groups = lib.mkOption {
+        description = "List of groups that should be applied to the default user";
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+      };
+    };
+
   # Create a nixpkgs instance with stewos package overlays already
   # applied.
   mkNixpkgs =
@@ -36,6 +79,7 @@ rec {
       hostname,
       system,
       modules,
+      user,
     }:
     inputs.nixpkgs.lib.nixosSystem {
       inherit system;
@@ -43,7 +87,10 @@ rec {
       pkgs = mkNixpkgs system nixpkgs;
 
       modules = [
-        { networking.hostName = hostname; }
+        {
+          networking.hostName = hostname;
+          stewos.user = user;
+        }
         stewos.nixosModules.default
       ]
       ++ modules;
@@ -99,7 +146,7 @@ rec {
     {
       system,
       modules,
-      username,
+      user,
       homeDirectory,
       isDarwin ? false,
     }:
@@ -112,8 +159,9 @@ rec {
       modules = [
         stewos.homeModules.default
         {
-          home.username = username;
+          home.username = user.username;
           home.homeDirectory = homeDirectory;
+          stewos.user = user;
         }
       ]
       ++ modules;

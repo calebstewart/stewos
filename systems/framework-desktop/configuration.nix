@@ -5,13 +5,16 @@
   config,
   ...
 }:
-rec {
+let
+  user = config.stewos.user;
+in
+{
   imports = [
     nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
     lanzaboote.nixosModules.lanzaboote
   ];
 
-  stewos = rec {
+  stewos = {
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
@@ -24,11 +27,6 @@ rec {
       enable = true;
       enableCompose = true;
       enableDockerCompatability = true;
-    };
-
-    user = {
-      username = "caleb";
-      fullname = "Caleb Stewart";
     };
 
     autologin = {
@@ -65,18 +63,6 @@ rec {
     consoleLogLevel = 0;
     initrd.verbose = false;
   };
-
-  # Set the system hostname
-  networking.hostName = "framework-desktop";
-
-  # I thought this was needed, but it seems that the config is already set by default
-  # boot.kernelPatches = lib.singleton {
-  #   name = "enable_fbcon_deferred_takeover";
-  #   patch = null;
-  #   extraStructuredConfig = with lib.kernel; {
-  #     FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER = yes;
-  #   };
-  # };
 
   # This prevents hibernation
   security.protectKernelImage = false;

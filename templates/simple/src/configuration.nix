@@ -3,9 +3,12 @@
   config,
   ...
 }:
+let
+  user = config.stewos.user;
+in
 {
   # All stewos-specific configuration is under the top-level `stewos` field
-  stewos = rec {
+  stewos = {
     # Configure system services/packages needed for a graphical desktop
     desktop-services.enable = true;
     audio.enable = true;
@@ -24,12 +27,6 @@
       enable = true;
       enableCompose = true;
       enableDockerCompatibility = true;
-    };
-
-    # Configure a regular user
-    user = {
-      username = "yourname";
-      fullname = "Your Name";
     };
 
     # Automatically login with that user
