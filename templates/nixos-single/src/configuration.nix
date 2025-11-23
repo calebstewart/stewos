@@ -13,9 +13,6 @@ in
     desktop-services.enable = true;
     audio.enable = true;
 
-    # Setup a graphical greeter
-    greeter.enable = true;
-
     # Setup libvirtd
     virtualisation.enable = true;
 
@@ -29,7 +26,10 @@ in
       enableDockerCompatibility = true;
     };
 
-    # Automatically login with that user
+    # Disable the graphical greeter
+    greeter.enable = true;
+
+    # Automatically login the default user
     autologin = {
       enable = true;
       username = user.username;
