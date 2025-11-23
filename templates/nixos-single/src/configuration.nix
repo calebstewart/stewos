@@ -27,7 +27,7 @@ in
     };
 
     # Disable the graphical greeter
-    greeter.enable = true;
+    greeter.enable = false;
 
     # Automatically login the default user
     autologin = {
