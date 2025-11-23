@@ -96,11 +96,17 @@ rec {
       ++ modules;
     };
 
-  mkNixOSVirtualMachineApp = hostname: nixosConfiguration: {
-    type = "app";
-    description = "Execute a virtual machine based on the this NixOS configuration";
-    program = "${nixosConfiguration.config.system.build.vm}/bin/run-${hostname}-vm";
-  };
+  mkNixOSVirtualMachineApp =
+    nixosConfiguration:
+    let
+      vm = nixosConfiguration.config.system.build.vm;
+      hostname = nixosConfiguration.config.network.hostName;
+    in
+    {
+      type = "app";
+      description = "Execute a virtual machine based on the this NixOS configuration";
+      program = "${vm}/bin/run-${hostname}-vm";
+    };
 
   # Create a NixOS image of the given format
   mkNixOSImageGenerator =

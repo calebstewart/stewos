@@ -34,7 +34,7 @@
         aliases.work.email = "your.name@yourjob.tld";
       };
     in
-    {
+    rec {
       nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
         inherit hostname system user;
 
@@ -54,5 +54,9 @@
           (import ./home.nix inputs)
         ];
       };
+
+      # This is a uses an app entrypoint to allow running a VM of this
+      # system with a single command like: nix run .#start
+      apps.${system}.start = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname};
     };
 }
