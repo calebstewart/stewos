@@ -57,6 +57,9 @@
 
       # This is a uses an app entrypoint to allow running a VM of this
       # system with a single command like: nix run .#start
+      #
+      # NOTE: This will only have the NixOS configuration, and not the
+      # home-manager configuration by default.
       apps.${system}.start = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname};
     };
 }
