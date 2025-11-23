@@ -100,7 +100,7 @@ rec {
     nixosConfiguration:
     let
       vm = nixosConfiguration.config.system.build.vm;
-      hostname = nixosConfiguration.config.network.hostName;
+      hostname = nixosConfiguration.config.networking.hostName;
     in
     {
       type = "app";
