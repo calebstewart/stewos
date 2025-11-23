@@ -1,0 +1,46 @@
+{
+  pkgs,
+  config,
+  ...
+}:
+{
+  # All stewos-specific configuration is under the top-level `stewos` field
+  stewos = rec {
+    # Configure system services/packages needed for a graphical desktop
+    desktop-services.enable = true;
+    audio.enable = true;
+
+    # Setup a graphical greeter
+    greeter.enable = true;
+
+    # Setup libvirtd
+    virtualisation.enable = true;
+
+    # Setup an SSH server
+    sshd.enable = true;
+
+    # Setup podman for containers w/ compose support
+    containers = {
+      enable = true;
+      enableCompose = true;
+      enableDockerCompatibility = true;
+    };
+
+    # Configure a regular user
+    user = {
+      username = "yourname";
+      fullname = "Your Name";
+    };
+
+    # Automatically login with that user
+    autologin = {
+      enable = true;
+      username = user.username;
+      command = "${config.users.users.${user.username}.home}/.wayland-session";
+    };
+  };
+
+  # Also, any other system-level configuration you want.
+  # For example, install a package.
+  environment.systemPackages = [ pkgs.python3 ];
+}
