@@ -1,4 +1,4 @@
-{ stew-shell, ... }@inputs:
+{ stew-shell, caelestia-shell, ... }@inputs:
 {
   pkgs,
   lib,
@@ -17,6 +17,7 @@ in
   imports = [
     hyprland
     stew-shell.homeModules.default
+    caelestia-shell.homeManagerModules.default
 
     ./fonts.nix
     ./gtk.nix
@@ -199,7 +200,18 @@ in
     ];
 
     # Stew-Shell is only valid for Linux hosts
-    stew-shell.enable = pkgs.stdenv.isLinux;
+    # stew-shell.enable = pkgs.stdenv.isLinux;
+
+    programs.caelestia = {
+      enable = pkgs.stdenv.isLinux;
+
+      systemd = {
+        enable = true;
+        target = "hyprland-session.target";
+      };
+
+      cli.enable = true;
+    };
 
     # Setup a volume control application for Linux
     home.packages = lib.mkIf pkgs.stdenv.isLinux (

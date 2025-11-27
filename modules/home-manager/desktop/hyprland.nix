@@ -187,13 +187,18 @@ let
       # D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
       D = {
         enable = true;
-        dispatcher = "exec";
-        package = config.stew-shell.package;
-        args = [
-          "popup"
-          "launcher"
-        ];
+        dispatcher = "global";
+        args = "caelestia:launcher";
       };
+      # D = {
+      #   enable = true;
+      #   dispatcher = "exec";
+      #   package = config.stew-shell.package;
+      #   args = [
+      #     "popup"
+      #     "launcher"
+      #   ];
+      # };
       V = {
         enable = true;
         dispatcher = "togglesplit";

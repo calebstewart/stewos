@@ -41,6 +41,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      # inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     vfio-hooks = {
       url = "github:PassthroughPOST/VFIO-Tools";
       flake = false;
