@@ -95,4 +95,7 @@ in
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  # Enable firmware upgrades
+  services.fwupd.enable = true;
 }
