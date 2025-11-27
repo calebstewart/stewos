@@ -1,5 +1,10 @@
 { nix-colors, ... }:
-{ pkgs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 {
   stewos = {
     desktop = {
@@ -29,6 +34,18 @@
     signal-desktop
     btop
   ];
+
+  home.file.".wayland-session" = {
+    text = ''
+      exec ${lib.getExe config.wayland.windowManager.hyprland.package} >/dev/null 2>/dev/null
+    '';
+
+    executable = true;
+  };
+
+  xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
+    exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
+  '';
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }

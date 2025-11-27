@@ -1,8 +1,14 @@
-{ nixos-hardware, ... }:
-{ pkgs, lib, ... }:
+{ nixos-hardware, lanzaboote, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
+    lanzaboote.nixosModules.lanzaboote
   ];
 
   stewos = rec {
@@ -28,15 +34,40 @@
     autologin = {
       enable = true;
       username = user.username;
-      command = lib.getExe pkgs.hyprland;
+      command = "${config.users.users.${user.username}.home}/.wayland-session";
     };
+  };
+
+  boot = {
+    # Disable in favor of Lanzaboote for Secure Boot
+    loader.systemd-boot.enable = lib.mkForce false;
+    loader.systemd-boot.editor = false;
+    loader.timeout = 0;
+
+    # Enable Lanzaboote for Secure Boot support
+    lanzaboote.enable = true;
+    lanzaboote.pkiBundle = "/var/lib/sbctl";
+
+    # Some tweaks for this specific hardware
+    kernelPackages = pkgs.linuxPackages_latest;
+
+    # Silent boot stuff
+    kernelParams = [
+      "quiet"
+      "splash"
+      "loglevel=3"
+      "systemd.show_status=auto"
+      "rd.udev.log_level=3"
+      "udev.log_level=3"
+    ];
+
+    # Disable logging
+    consoleLogLevel = 0;
+    initrd.verbose = false;
   };
 
   # Set the system hostname
   networking.hostName = "framework16";
-
-  # Some tweaks for this specific hardware
-  boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # This prevents hibernation
   security.protectKernelImage = false;
@@ -47,4 +78,7 @@
     AllowSuspend=yes
     AllowHibernate=yes
   '';
+
+  # Install extra packages
+  environment.systemPackages = [ pkgs.sbctl ];
 }
