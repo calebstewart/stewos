@@ -5,13 +5,16 @@
   config,
   ...
 }:
+let
+  user = config.stewos.user;
+in
 {
   imports = [
     nixos-hardware.nixosModules.framework-16-7040-amd
     lanzaboote.nixosModules.lanzaboote
   ];
 
-  stewos = rec {
+  stewos = {
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
@@ -23,12 +26,7 @@
     containers = {
       enable = true;
       enableCompose = true;
-      enableDockerCompatability = true;
-    };
-
-    user = {
-      username = "caleb";
-      fullname = "Caleb Stewart";
+      enableDockerCompatibility = true;
     };
 
     autologin = {

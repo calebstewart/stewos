@@ -23,7 +23,7 @@ in
     programs.git = {
       enable = true;
 
-      userName = config.stewos.user.fullName;
+      userName = config.stewos.user.fullname;
       userEmail = config.stewos.user.email;
 
       ignores = [
@@ -49,7 +49,7 @@ in
         condition = "gitdir:~/git/${name}";
         contents.user = {
           email = lib.attrsets.attrByPath [ "email" ] config.stewos.user.email alias;
-          name = lib.attrsets.attrByPath [ "fullName" ] config.stewos.user.fullName alias;
+          name = lib.attrsets.attrByPath [ "fullname" ] config.stewos.user.fullname alias;
         };
       }) config.stewos.user.aliases;
     };

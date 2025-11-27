@@ -24,6 +24,12 @@ configurations which automatically include the StewOS NixOS, Nix-Darwin and/or H
 nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
   inherit hostname;
 
+  user = {
+    username = "username";
+    fullname = "User Name";
+    email = "user.name@system.tld";
+  };
+
   system = "x86_64-linux";
   modules = [./hardware-configuration.nix ./configuration.nix];
 }
@@ -41,7 +47,7 @@ You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes ap
 build and execute a virtual machine of the given NixOS configuration.
 
 ```nix
-apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp hostname nixosConfigurations.${hostname}
+apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname}
 ```
 
 ## Terminal Configuration

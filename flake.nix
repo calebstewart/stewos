@@ -80,6 +80,11 @@
       # System outputs which may also provide overlapping output keys, and must
       # be recursively merged with the above two attrsets.
       systemOutputs = import ./systems inputs;
+
+      # Templates allow users to generate projects using StewOS from a template
+      templateOutputs = import ./templates inputs;
     in
-    inputs.nixpkgs.lib.attrsets.recursiveUpdate (baseOutputs // packageOutputs) systemOutputs;
+    inputs.nixpkgs.lib.attrsets.recursiveUpdate (
+      baseOutputs // packageOutputs // templateOutputs
+    ) systemOutputs;
 }

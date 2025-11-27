@@ -1,39 +1,37 @@
 { nix-colors, ... }:
 {
-  lib,
   pkgs,
+  lib,
   config,
   ...
 }:
 {
-  home.packages = [
-    pkgs.discord
-    pkgs.gimp
-    pkgs.signal-desktop
-    pkgs.spotify
-  ];
-
+  # As with system configuration, it's all under `stewos`
   stewos = {
+    # Configure the desktop environment (hyprland) and associated services
     desktop = {
       enable = true;
       modifier = "SUPER";
 
+      # Configure your preferred wallpaper.
+      # The default here is a fun rendering of a black hole.
       wallpaper = pkgs.fetchurl {
         url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
         sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
       };
 
-      # wallpaper = pkgs.fetchurl {
-      #   url = "https://lh3.googleusercontent.com/pw/AP1GczM8Zlkuq2_ccOHyjjfHodRhXjmujKWSwpy8_XOEMiOxvBOo2ZYNT4mN_LwiTHBWrvlcuU-db7uTTnhU6zODkIW3f85L2XErIfWNkuBru9Ws5sFyIos5nBPN_JWuFMCX9-j5gDnl6cXsUkBUR2pYdgfEAQ=w3468-h1951-s-no?authuser=0";
-      #   hash = "sha256-uy0TQ+K15h6IMmv3Tbd15+nM3XR/rD/1GYZQxQUoRjQ=";
-      #   # url = "https://lh3.googleusercontent.com/pw/AP1GczMFuTffAIDMFEND7odg-nmIPaEgPIPhGwv94oxhpFFe5CN4QunlA77wz4raxgTZ68Uje2SPmBhR1A5iluCevPDUSsueXyViocCrZUDVPYKAeazOJGgTYoGgH-6CqRohmh42vi7giZoUiAep4XHn8BjULg=w3591-h2020-s-no";
-      #   # hash = "sha256-gAAV3OkG66ZonBjV0brY/Br6vsxIbws+lQRqyUN35Mg=";
-      # };
-
+      # This is optional, but useful. If not specified, Hyprland decides
+      # our monitor layout, and resolutions. This will configure monitors
+      # by their unique names and a consistent resolution and scaling
+      # factor. It will automatically calculate their relative positions
+      # based on the selected resolution, and scaling factor so you don't
+      # have to do math. Just put their names in the `orderedNames` array
+      # in the order you want them arranged (left to right).
       monitors =
         let
           # Unique names of monitors in the horizontal order they are
-          # configured in the real world.
+          # configured in the real world. See `hyprctl monitors` at
+          # runtime to find the unique names of your monitors.
           orderedNames = [
             "Dell Inc. DELL U2723QE 55L01P3"
             "Dell Inc. DELL U2723QE HXJ01P3"
@@ -57,21 +55,26 @@
         }) orderedNames;
     };
 
+    # Configure supported StewOS applications
     git.enable = true;
     alacritty.enable = true;
     bat.enable = true;
     firefox.enable = true;
     eza.enable = true;
-    rofi.enable = true;
     zsh.enable = true;
     neovim.enable = true;
     zoxide.enable = true;
     direnv.enable = true;
   };
 
+  # Since we have the system config auto-login in configuration.nix, we can use this
+  # to automatically lock our session on the first startup of Hyprland. I like
+  # hyprlock better than any locker, and I run a single-user machine, so this works
+  # nicely. This is purely preference.
   xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
     exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
   '';
 
-  colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
+  # This is used for configuring various applications
+  colorScheme = nix-colors.colorSchems.catppuccin-mocha;
 }
