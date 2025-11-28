@@ -38,8 +38,21 @@
     executable = true;
   };
 
-  xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
-    exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
+  # Lock caelestia on start
+  systemd.user.services.caelestia.Service.ExecStartPost = [
+    (lib.escapeShellArgs [
+      (lib.getExe config.programs.caelestia.cli.package)
+      "shell"
+      "lock"
+      "lock"
+    ])
+  ];
+
+  xdg.configFile."hypr/config.d/99-framework-keyboard.conf".text = ''
+    device {
+      name = framework-laptop-16-keyboard-module---ansi-keyboard
+      kb_options = caps:swapescape
+    }
   '';
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;

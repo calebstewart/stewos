@@ -79,4 +79,7 @@ in
 
   # Install extra packages
   environment.systemPackages = [ pkgs.sbctl ];
+
+  # Enable power management so we can see the battery
+  services.upower.enable = true;
 }

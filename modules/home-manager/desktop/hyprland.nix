@@ -184,21 +184,11 @@ let
         enable = true;
         dispatcher = "killactive";
       };
-      # D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
       D = {
         enable = true;
         dispatcher = "global";
         args = "caelestia:launcher";
       };
-      # D = {
-      #   enable = true;
-      #   dispatcher = "exec";
-      #   package = config.stew-shell.package;
-      #   args = [
-      #     "popup"
-      #     "launcher"
-      #   ];
-      # };
       V = {
         enable = true;
         dispatcher = "togglesplit";
@@ -212,17 +202,6 @@ let
         enable = true;
         dispatcher = "rofi";
         modes = [ pkgs.rofiScripts.libvirt ];
-      };
-
-      N = {
-        enable = true;
-        dispatcher = "exec";
-        package = pkgs.swaynotificationcenter;
-        target = "swaync-client";
-        args = [
-          "-t"
-          "-sw"
-        ];
       };
 
       Return = {
@@ -386,7 +365,7 @@ in
         };
 
         decoration = {
-          rounding = 2;
+          rounding = 10;
 
           shadow = {
             enabled = true;

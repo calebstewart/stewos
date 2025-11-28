@@ -16,17 +16,17 @@ in
 {
   imports = [
     hyprland
-    stew-shell.homeModules.default
+    # stew-shell.homeModules.default
     caelestia-shell.homeManagerModules.default
 
     ./fonts.nix
     ./gtk.nix
-    ./hypridle.nix
-    ./hyprlock.nix
-    ./hyprpaper.nix
+    # ./hypridle.nix
+    # ./hyprlock.nix
+    # ./hyprpaper.nix
     ./polkit.nix
     ./qt.nix
-    ./rofi.nix
+    # ./rofi.nix
     ./xdg.nix
     ./aerospace.nix
     ./raycast.nix
@@ -204,13 +204,12 @@ in
 
     programs.caelestia = {
       enable = pkgs.stdenv.isLinux;
-
-      systemd = {
-        enable = true;
-        target = "hyprland-session.target";
-      };
-
+      systemd.enable = true;
       cli.enable = true;
+
+      settings = {
+        paths.wallpaperDir = "~/Pictures/Wallpapers";
+      };
     };
 
     # Setup a volume control application for Linux
@@ -220,6 +219,8 @@ in
         pwvucontrol
       ]
     );
+
+    home.file."Pictures/Wallpapers/wallpaper.jpg".source = cfg.wallpaper;
 
     # Set the wallpaper for darwin systems
     home.activation.setDarwinWallpaper = lib.mkIf pkgs.stdenv.isDarwin (
