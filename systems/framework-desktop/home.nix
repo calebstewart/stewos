@@ -6,11 +6,12 @@
   ...
 }:
 {
-  home.packages = [
-    pkgs.discord
-    pkgs.gimp
-    pkgs.signal-desktop
-    pkgs.spotify
+  home.packages = with pkgs; [
+    discord
+    gimp
+    signal-desktop
+    spotify
+    solaar
   ];
 
   stewos = {
@@ -18,10 +19,10 @@
       enable = true;
       modifier = "SUPER";
 
-      wallpaper = pkgs.fetchurl {
-        url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
-        sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
-      };
+      # wallpaper = pkgs.fetchurl {
+      #   url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
+      #   sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
+      # };
 
       # wallpaper = pkgs.fetchurl {
       #   url = "https://lh3.googleusercontent.com/pw/AP1GczM8Zlkuq2_ccOHyjjfHodRhXjmujKWSwpy8_XOEMiOxvBOo2ZYNT4mN_LwiTHBWrvlcuU-db7uTTnhU6zODkIW3f85L2XErIfWNkuBru9Ws5sFyIos5nBPN_JWuFMCX9-j5gDnl6cXsUkBUR2pYdgfEAQ=w3468-h1951-s-no?authuser=0";
@@ -69,9 +70,37 @@
     direnv.enable = true;
   };
 
-  xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
-    exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
-  '';
+  # Lock caelestia on start
+  systemd.user.services.caelestia.Service.ExecStartPost = [
+    (lib.escapeShellArgs [
+      (lib.getExe config.programs.caelestia.cli.package)
+      "shell"
+      "lock"
+      "lock"
+    ])
+  ];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
+
+  # Setup Chrome
+  programs.chromium = {
+    enable = true;
+    package = pkgs.chromium.override {
+      enableWideVine = true;
+
+      commandLineArgs = [
+        "--ozone-platform-hint=auto"
+        "--enable-features=UseOzonePlatform"
+        "--ozone-platform=wayland"
+      ];
+    };
+
+    extensions =
+      let
+        lastpass.id = "hdokiejnpimakedhajhdlcegeplioahd";
+      in
+      [
+        lastpass
+      ];
+  };
 }

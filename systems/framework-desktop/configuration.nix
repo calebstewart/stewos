@@ -98,4 +98,11 @@ in
 
   # Enable firmware upgrades
   services.fwupd.enable = true;
+
+  # Enable power management daemon
+  services.upower.enable = true;
+
+  hardware.logitech.wireless = {
+    enable = true;
+  };
 }
