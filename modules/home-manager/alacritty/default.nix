@@ -16,6 +16,9 @@ in
           blur = true;
           dynamic_title = true;
           decorations = "None";
+
+          padding.x = 10;
+          padding.y = 10;
         };
 
         font = {

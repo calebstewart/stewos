@@ -365,7 +365,7 @@ in
         };
 
         decoration = {
-          rounding = 10;
+          rounding = 25;
 
           shadow = {
             enabled = true;
@@ -422,11 +422,11 @@ in
 
           # Smart Gaps
           "bordersize 0, floating:0, onworkspace:w[t1]"
-          "rounding 0, floating:0, onworkspace:w[t1]"
+          # "rounding 0, floating:0, onworkspace:w[t1]"
           "bordersize 0, floating:0, onworkspace:w[tg1]"
-          "rounding 0, floating:0, onworkspace:w[tg1]"
+          # "rounding 0, floating:0, onworkspace:w[tg1]"
           "bordersize 0, floating:0, onworkspace:f[1]"
-          "rounding 0, floating:0, onworkspace:f[1]"
+          # "rounding 0, floating:0, onworkspace:f[1]"
 
           # Make the authentication agent prompt *special* o.O
           "float,class:(polkit-gnome-authentication-agent-1)"

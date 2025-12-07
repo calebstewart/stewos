@@ -209,6 +209,15 @@ in
 
       settings = {
         paths.wallpaperDir = "~/Pictures/Wallpapers";
+
+        # Defaults to IP location
+        services.weatherLocation = lib.mkDefault "";
+
+        # We run a single-user system, so logging out is just locking the screen.
+        session.commands.logout = [
+          "loginctl"
+          "lock-session"
+        ];
       };
     };
 
