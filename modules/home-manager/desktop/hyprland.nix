@@ -108,6 +108,44 @@ let
     ) [ ] bindings;
 
   defaultBindings = {
+    "" = {
+      "XF86MonBrightnessUp" = {
+        enable = true;
+        dispatcher = "global";
+        args = "caelestia:brightnessUp";
+      };
+      "XF86MonBrightnessDown" = {
+        enable = true;
+        dispatcher = "global";
+        args = "caelestia:brightnessDown";
+      };
+      "XF86AudioRaiseVolume" = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.wireplumber;
+        target = "wpctl";
+        args = [
+          "set-volume"
+          "-l"
+          "1"
+          "@DEFAULT_AUDIO_SINK@"
+          "5%+"
+        ];
+      };
+      "XF86AudioLowerVolume" = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.wireplumber;
+        target = "wpctl";
+        args = [
+          "set-volume"
+          "-l"
+          "1"
+          "@DEFAULT_AUDIO_SINK@"
+          "5%-"
+        ];
+      };
+    };
     "${cfg.modifier}" = {
       "1" = {
         enable = true;
@@ -340,8 +378,11 @@ in
           ",preferred,auto,1"
         ] cfg.monitors;
 
-        # Disable default images
         misc = {
+          # Focus windows that send "activate" requests
+          focus_on_activate = true;
+
+          # Disable default images
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
         };

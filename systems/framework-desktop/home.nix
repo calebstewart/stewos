@@ -1,4 +1,4 @@
-{ nix-colors, ... }:
+{ nix-colors, embermug-tray, ... }:
 {
   lib,
   pkgs,
@@ -6,18 +6,44 @@
   ...
 }:
 {
+  imports = [ embermug-tray.homeManagerModules.default ];
+
+  # services.embermug-tray.enable = true;
+
   home.packages = with pkgs; [
     discord
     gimp
     signal-desktop
     spotify
     solaar
+    claude-code
+    opencode
+    nixfmt
   ];
+
+  systemd.user.services.embermug-tray = {
+    Unit = {
+      Description = "EmberMug Tray application";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+
+    Service = {
+      Type = "simple";
+      ExecStart = "${embermug-tray.packages.${pkgs.stdenv.system}.default}/bin/embermug-tray";
+      Restart = "on-failure";
+      RestartSec = 5;
+    };
+
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+  };
 
   stewos = {
     desktop = {
       enable = true;
-      modifier = "SUPER";
+      modifier = "ALT";
 
       # wallpaper = pkgs.fetchurl {
       #   url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
