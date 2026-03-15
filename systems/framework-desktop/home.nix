@@ -13,7 +13,9 @@
   home.packages = with pkgs; [
     discord
     gimp
-    signal-desktop
+    (signal-desktop.override {
+      commandLineArgs = "--ozone-platform=wayland";
+    })
     spotify
     solaar
     claude-code
