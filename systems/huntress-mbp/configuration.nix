@@ -4,14 +4,18 @@
 
   # Host-specific nix-darwin configuration
   system.primaryUser = "caleb";
-  system.keyboard.enableKeyMapping = true;
-  system.keyboard.remapCapsLockToEscape = true;
-  system.keyboard.swapLeftCommandAndLeftAlt = true;
-  # system.keyboard.swapLeftCtrlAndFn = true;
+  services.karabiner-elements.enable = true;
   system.startup.chime = false;
 
-  # This fucks with aerospace
-  system.defaults.spaces.spans-displays = false;
+  security.pam.services.sudo_local.touchIdAuth = true;
+
+  system.defaults = {
+    # This fucks with aerospace
+    spaces.spans-displays = false;
+
+    # I hate this "feature"
+    WindowManager.EnableStandardClickToShowDesktop = false;
+  };
 
   # Maintain legacy UIDs
   ids.gids.nixbld = 30000;

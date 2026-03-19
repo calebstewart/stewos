@@ -30,6 +30,7 @@ in
     ./aerospace.nix
     ./raycast.nix
     ./autoraise.nix
+    ./karabiner.nix
   ];
 
   options.stewos.desktop = {
