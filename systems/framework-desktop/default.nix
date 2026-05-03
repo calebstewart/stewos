@@ -10,6 +10,7 @@ let
     username = "caleb";
     fullname = "Caleb Stewart";
     email = "caleb.stewart94@gmail.com";
+    groups = ["nordvpn"];
   };
 in
 {

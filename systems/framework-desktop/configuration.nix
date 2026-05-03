@@ -1,4 +1,10 @@
-{ nixos-hardware, lanzaboote, ... }@inputs:
+{
+  nixos-hardware,
+  lanzaboote,
+  nixpkgs-unstable,
+  nur,
+  ...
+}@inputs:
 {
   pkgs,
   lib,
@@ -7,12 +13,21 @@
 }:
 let
   user = config.stewos.user;
+  pkgs-unstable = nixpkgs-unstable.legacyPackages.${pkgs.system};
 in
 {
   imports = [
+    nur.modules.nixos.default
+    nur.legacyPackages.x86_64-linux.repos.wingej0.modules.nordvpn
     nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
     lanzaboote.nixosModules.lanzaboote
   ];
+
+  # nixpkgs.overlays = [
+  #   (final: prev: {
+  #     nordvpn = prev.nur.repos.wingej0.nordvpn;
+  #   })
+  # ];
 
   stewos = {
     audio.enable = true;
@@ -57,6 +72,8 @@ in
       "systemd.show_status=auto"
       "rd.udev.log_level=3"
       "udev.log_level=3"
+      "ttm.pages_limit=29360128"
+      "ttm.page_pool_size=29360128"
     ];
 
     # Disable logging
@@ -73,6 +90,16 @@ in
     AllowSuspend=yes
     AllowHibernate=yes
   '';
+
+  networking = {
+    wireguard.enable = true;
+
+    firewall = {
+      checkReversePath = false;
+      allowedTCPPorts = [ 443 ];
+      allowedUDPPorts = [ 1194 ];
+    };
+  };
 
   # Install extra packages
   environment.systemPackages = [ pkgs.sbctl ];
@@ -111,4 +138,11 @@ in
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
   };
+
+  services.ollama = {
+    enable = true;
+    package = pkgs-unstable.ollama-rocm;
+  };
+
+  services.nordvpn.enable = true;
 }
