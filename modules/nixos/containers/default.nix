@@ -16,14 +16,13 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    virtualisation.podman = {
+    virtualisation.docker = {
       enable = true;
-      dockerCompat = cfg.enableDockerCompatibility;
-      dockerSocket.enable = cfg.enableDockerCompatibility;
 
-      extraPackages = with pkgs; [
-        podman-compose
-      ];
+      rootless = {
+        enable = true;
+        setSocketVariable = true;
+      };
 
       autoPrune = {
         enable = true;
