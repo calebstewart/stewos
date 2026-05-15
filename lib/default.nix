@@ -66,6 +66,7 @@ rec {
       inherit system;
 
       config.allowUnfree = true;
+      chromium.enableWideVine = true;
 
       overlays = [
         (final: prev: import ../packages/default.nix system inputs)
