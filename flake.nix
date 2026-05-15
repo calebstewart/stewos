@@ -42,15 +42,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # caelestia-cli = {
-    #   url = "github:Gitkubikon/cli/main";
-    # };
+    caelestia-cli = {
+      url = "github:Gitkubikon/cli/main";
+    };
 
     caelestia-shell = {
       url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
       # url = "github:Gitkubikon/shell/screenshot-card";
-      # inputs.caelestia-cli.follows = "caelestia-cli";
+      inputs.caelestia-cli.follows = "caelestia-cli";
     };
 
     vfio-hooks = {

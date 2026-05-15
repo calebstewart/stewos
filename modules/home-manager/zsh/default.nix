@@ -123,16 +123,30 @@ in
       };
 
       # Initialize any-nix-shell during zsh startup
-      initContent = ''
-        ${pkgs.any-nix-shell}/bin/any-nix-shell zsh --info-right | source /dev/stdin
+      initContent =
+        let
+          any-nix-shell-init = lib.escapeShellArgs [
+            (lib.getExe pkgs.any-nix-shell)
+            "zsh"
+            "--info-right"
+          ];
 
-        # Initialize Oh-My-Posh prompt with above configuration
-        eval "$(${pkgs.oh-my-posh}/bin/oh-my-posh init zsh --config "$HOME/.config/ohmyposh/config.toml")"
+          oh-my-posh-init = lib.escapeShellArgs [
+            (lib.getExe pkgs.oh-my-posh)
+            "init"
+            "zsh"
+            "--config"
+            "~/.config/ohmyposh/config.toml"
+          ];
+        in
+        ''
+          ${any-nix-shell-init} | source /dev/stdin
+          ${oh-my-posh-init} | source /dev/stdin
 
-        if [[ -t 0 && $- = *i* ]]; then
-          stty -ixon
-        fi
-      '';
+          if [[ -t 0 && $- = *i* ]]; then
+            stty -ixon
+          fi
+        '';
 
       plugins = [ ];
     };
