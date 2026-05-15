@@ -22,6 +22,7 @@
     opencode
     nixfmt
     github-cli
+    lucas-chess
   ];
 
   systemd.user.services.embermug-tray = {
