@@ -93,11 +93,17 @@ in
 
   networking = {
     wireguard.enable = true;
+    nftables.enable = true;
 
     firewall = {
+      enable = true;
       checkReversePath = false;
+      trustedInterfaces = [ "tailscale0" ];
       allowedTCPPorts = [ 443 ];
-      allowedUDPPorts = [ 1194 ];
+      allowedUDPPorts = [
+        1194
+        config.services.tailscale.port
+      ];
     };
   };
 
@@ -106,28 +112,44 @@ in
 
   time.timeZone = "America/Chicago";
 
-  # Enable printing
-  services.printing = {
-    enable = true;
+  services = {
+    # Enable printing
+    printing = {
+      enable = true;
 
-    drivers = with pkgs; [
-      cups-filters
-      cups-browsed
-    ];
+      drivers = with pkgs; [
+        cups-filters
+        cups-browsed
+      ];
+    };
+
+    # Enable network printer discovery
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
+
+    # Enable firmware upgrades
+    fwupd.enable = true;
+
+    # Enable power management daemon
+    upower.enable = true;
+
+    ollama = {
+      enable = true;
+      package = pkgs-unstable.ollama-rocm;
+    };
+
+    nordvpn.enable = true;
+
+    tailscale.enable = true;
   };
 
-  # Enable network printer discovery
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
-
-  # Enable firmware upgrades
-  services.fwupd.enable = true;
-
-  # Enable power management daemon
-  services.upower.enable = true;
+  # Force nftables usage for tailscale
+  systemd.services.tailscaled.serviceConfig.Environment = [
+    "TS_DEBUG_FIREWALL_MODE=nftables"
+  ];
 
   hardware.logitech.wireless = {
     enable = true;
@@ -139,10 +161,7 @@ in
     dedicatedServer.openFirewall = true;
   };
 
-  services.ollama = {
-    enable = true;
-    package = pkgs-unstable.ollama-rocm;
-  };
-
-  services.nordvpn.enable = true;
+  # Speed up boot w/ a VPN
+  systemd.network.wait-online.enable = true;
+  boot.initrd.systemd.network.wait-online.enable = false;
 }

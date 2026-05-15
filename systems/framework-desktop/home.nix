@@ -21,6 +21,7 @@
     claude-code
     opencode
     nixfmt
+    github-cli
   ];
 
   systemd.user.services.embermug-tray = {
@@ -113,9 +114,7 @@
   # Setup Chrome
   programs.chromium = {
     enable = true;
-    package = pkgs.chromium.override {
-      enableWideVine = true;
-
+    package = pkgs.google-chrome.override {
       commandLineArgs = [
         "--ozone-platform-hint=auto"
         "--enable-features=UseOzonePlatform"
