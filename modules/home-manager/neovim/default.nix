@@ -160,6 +160,7 @@ in
           ts_ls.enable = true;
           vala_ls.enable = true;
           mesonlsp.enable = true;
+          qmlls.enable = true;
 
           ruby_lsp = {
             enable = true;

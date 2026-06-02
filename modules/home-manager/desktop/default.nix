@@ -1,4 +1,4 @@
-{ stew-shell, ... }@inputs:
+{ stew-shell, caelestia-shell, ... }@inputs:
 {
   pkgs,
   lib,
@@ -16,16 +16,17 @@ in
 {
   imports = [
     hyprland
-    stew-shell.homeModules.default
+    # stew-shell.homeModules.default
+    caelestia-shell.homeManagerModules.default
 
     ./fonts.nix
     ./gtk.nix
-    ./hypridle.nix
-    ./hyprlock.nix
-    ./hyprpaper.nix
+    # ./hypridle.nix
+    # ./hyprlock.nix
+    # ./hyprpaper.nix
     ./polkit.nix
     ./qt.nix
-    ./rofi.nix
+    # ./rofi.nix
     ./xdg.nix
     ./aerospace.nix
     ./raycast.nix
@@ -200,7 +201,26 @@ in
     ];
 
     # Stew-Shell is only valid for Linux hosts
-    stew-shell.enable = pkgs.stdenv.isLinux;
+    # stew-shell.enable = pkgs.stdenv.isLinux;
+
+    programs.caelestia = {
+      enable = pkgs.stdenv.isLinux;
+      systemd.enable = true;
+      cli.enable = true;
+
+      settings = {
+        paths.wallpaperDir = "~/Pictures/Wallpapers";
+
+        # Defaults to IP location
+        services.weatherLocation = lib.mkDefault "";
+
+        # We run a single-user system, so logging out is just locking the screen.
+        session.commands.logout = [
+          "loginctl"
+          "lock-session"
+        ];
+      };
+    };
 
     # Setup a volume control application for Linux
     home.packages = lib.mkIf pkgs.stdenv.isLinux (
@@ -209,6 +229,8 @@ in
         pwvucontrol
       ]
     );
+
+    home.file."Pictures/Wallpapers/wallpaper.jpg".source = cfg.wallpaper;
 
     # Set the wallpaper for darwin systems
     home.activation.setDarwinWallpaper = lib.mkIf pkgs.stdenv.isDarwin (

@@ -1,4 +1,4 @@
-{ ... }:
+{ stewos, ... }:
 {
   lib,
   config,
@@ -9,24 +9,9 @@ let
   cfg = config.stewos.user;
 in
 {
-  options.stewos.user = {
-    username = lib.mkOption {
-      type = lib.types.str;
-      default = null;
-      description = "Name of the default StewOS user";
-    };
-
-    fullname = lib.mkOption {
-      type = lib.types.str;
-      default = "";
-      description = "Full name of the default StewOS user";
-    };
-
-    groups = lib.mkOption {
-      description = "List of groups that hsould be applied to the default user";
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-    };
+  # Common user options
+  options.stewos.user = stewos.lib.mkUserOptions {
+    inherit lib config;
   };
 
   config = lib.mkIf (cfg.username != null) {
@@ -42,7 +27,6 @@ in
       shell = pkgs.zsh;
       createHome = true;
       isNormalUser = true;
-      initialPassword = "password";
     };
 
     # Create the user group

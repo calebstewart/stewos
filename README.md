@@ -8,6 +8,74 @@ from `stewos.desktop` which will configure Hyprland and my custom [stew-shell] s
 services (`hyprlock`, `swaync`, etc.) for NixOS. For Nix-Darwin, `stewos.desktop` configures Aerospace
 and associated services for customizing the graphical interface in MacOS.
 
+## Quick Start
+
+To get started with StewOS on a new NixOS system:
+
+```bash
+# Create a new configuration from the template
+nix flake new -t github:calebstewart/stewos#nixos-single ./my-config
+cd my-config
+
+# Initialize git and add files
+git init
+git add .
+
+# Copy your hardware configuration (generated during NixOS install)
+cp /etc/nixos/hardware-configuration.nix .
+git add hardware-configuration.nix
+
+# Edit flake.nix with your hostname and user info
+# Then rebuild your system
+nixos-rebuild switch --flake .#your-hostname
+```
+
+## Initial Setup on a New System
+
+### Prerequisites
+- NixOS installed with a base configuration
+- Nix flakes enabled (add `experimental-features = nix-command flakes` to `/etc/nix/nix.conf`)
+
+### Step-by-Step Setup
+
+1. **Create your configuration** using the StewOS template:
+   ```bash
+   nix flake new -t github:calebstewart/stewos#nixos-single ~/git/stewos
+   cd ~/git/stewos
+   ```
+
+2. **Initialize git** (required for flakes):
+   ```bash
+   git init
+   git add .
+   ```
+
+3. **Copy your hardware configuration**:
+   ```bash
+   cp /etc/nixos/hardware-configuration.nix .
+   git add hardware-configuration.nix
+   ```
+
+4. **Edit `flake.nix`** and set your:
+   - Hostname
+   - Username
+   - Full name
+   - Email address
+
+5. **Edit `src/configuration.nix`** to enable the StewOS modules you want.
+
+6. **Edit `src/home.nix`** to configure Home-Manager modules.
+
+7. **Build and switch**:
+   ```bash
+   # First time (before nh is available)
+   sudo nixos-rebuild switch --flake .#your-hostname
+
+   # Subsequent rebuilds (after nh is installed)
+   nh os switch ~/git/stewos
+   nh home switch ~/git/stewos
+   ```
+
 ## Defining a System
 To define a system, create a new directory under [systems/] and a `default.nix` in that directory.
 `default.nix` is a function taking all inputs from the flake, and should return the flake outputs.
@@ -23,6 +91,12 @@ configurations which automatically include the StewOS NixOS, Nix-Darwin and/or H
 # Creating a NixOS configuration=
 nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
   inherit hostname;
+
+  user = {
+    username = "username";
+    fullname = "User Name";
+    email = "user.name@system.tld";
+  };
 
   system = "x86_64-linux";
   modules = [./hardware-configuration.nix ./configuration.nix];
@@ -41,8 +115,60 @@ You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes ap
 build and execute a virtual machine of the given NixOS configuration.
 
 ```nix
-apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp hostname nixosConfigurations.${hostname}
+apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname}
 ```
+
+## Available Modules
+
+### NixOS Modules
+
+These modules are enabled under `stewos.*` in your NixOS configuration:
+
+| Module | Description |
+|--------|-------------|
+| `user` | User account creation with groups and shell configuration |
+| `audio` | PipeWire, JACK, ALSA, and NoiseTorch audio configuration |
+| `networking` | NetworkManager, firewall, and Bluetooth configuration |
+| `sshd` | SSH server configuration |
+| `containers` | Docker with rootless support |
+| `virtualisation` | KVM/QEMU/libvirt with VFIO hooks for GPU passthrough |
+| `security` | Security hardening options |
+| `desktop-services` | Polkit and common desktop services |
+| `autologin` | Automatic login support |
+| `greeter` | Display manager (greetd/tuigreet) configuration |
+| `zsa` | ZSA keyboard (Moonlander, Voyager, etc.) support |
+| `looking-glass` | Looking Glass VM display client support |
+
+### Home-Manager Modules
+
+These modules are enabled under `stewos.*` in your Home-Manager configuration:
+
+| Module | Description |
+|--------|-------------|
+| `desktop` | Hyprland (Linux) / Aerospace (macOS) desktop environment |
+| `neovim` | Full Neovim configuration via nixvim with LSP support |
+| `zsh` | Zsh shell with Oh-My-Posh prompt |
+| `git` | Git with SSH signing and conditional configuration |
+| `alacritty` | Terminal emulator configuration |
+| `firefox` | Firefox browser configuration |
+| `rofi` | Application launcher (Linux) |
+| `bat` | Syntax-highlighted cat replacement |
+| `eza` | Modern ls replacement |
+| `zoxide` | Smart directory navigation (z/cd replacement) |
+| `direnv` | Per-directory development environment management |
+
+## Available Packages
+
+Custom packages provided by StewOS:
+
+| Package | Description |
+|---------|-------------|
+| `gh-actions-language-server` | LSP for GitHub Actions workflow files |
+| `nordvpn` | NordVPN client |
+| `mkRofiConfig` | Helper function for generating Rofi configurations |
+| `rofiScripts` | Custom Rofi script modes (power menu, libvirt VMs) |
+| `rofiThemes` | StewOS Rofi theme |
+| `wl-gen-uuid` | Wayland UUID generation utility |
 
 ## Terminal Configuration
 The terminal for both NixOS and Nix-Darwin is Alacritty. The color scheme for Alacritty is defined by

@@ -23,20 +23,22 @@ in
     programs.git = {
       enable = true;
 
-      userName = config.stewos.user.fullName;
-      userEmail = config.stewos.user.email;
-
       ignores = [
         ".envrc"
         ".direnv"
       ];
 
-      extraConfig = {
+      settings = {
         init.defaultBranch = "main";
         push.autoSetupRemote = true;
         gpg.format = "ssh";
         commit.gpgsign = true;
-        user.signingkey = "${config.home.homeDirectory}/.ssh/id_ed25519";
+
+        user = {
+          email = config.stewos.user.email;
+          name = config.stewos.user.fullname;
+          signingkey = "${config.home.homeDirectory}/.ssh/id_ed25519";
+        };
 
         url = lib.mkIf cfg.forceSSH {
           "git@github.com:" = {
@@ -49,7 +51,7 @@ in
         condition = "gitdir:~/git/${name}";
         contents.user = {
           email = lib.attrsets.attrByPath [ "email" ] config.stewos.user.email alias;
-          name = lib.attrsets.attrByPath [ "fullName" ] config.stewos.user.fullName alias;
+          name = lib.attrsets.attrByPath [ "fullname" ] config.stewos.user.fullname alias;
         };
       }) config.stewos.user.aliases;
     };

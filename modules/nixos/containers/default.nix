@@ -12,18 +12,32 @@ in
   options.stewos.containers = {
     enable = lib.mkEnableOption "containers";
     enableCompose = lib.mkEnableOption "compose";
-    enableDockerCompatability = lib.mkEnableOption "docker compatability";
+    enableDockerCompatibility = lib.mkEnableOption "docker compatability";
   };
 
   config = lib.mkIf cfg.enable {
-    virtualisation.podman = {
-      enable = true;
-      dockerCompat = cfg.enableDockerCompatability;
-      dockerSocket.enable = cfg.enableDockerCompatability;
+    # virtualisation.podman = {
+    #   enable = true;
+    #   dockerCompat = cfg.enableDockerCompatibility;
+    #   dockerSocket.enable = cfg.enableDockerCompatibility;
 
-      extraPackages = with pkgs; [
-        podman-compose
-      ];
+    #   extraPackages = with pkgs; [
+    #     podman-compose
+    #   ];
+
+    #   autoPrune = {
+    #     enable = true;
+    #     dates = "weekly";
+    #   };
+    # };
+
+    virtualisation.docker = {
+      enable = true;
+
+      rootless = {
+        enable = true;
+        setSocketVariable = true;
+      };
 
       autoPrune = {
         enable = true;

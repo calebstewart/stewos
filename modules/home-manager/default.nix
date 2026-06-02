@@ -1,6 +1,7 @@
 {
   nix-colors,
   stylix,
+  stewos,
   ...
 }@inputs:
 {
@@ -27,33 +28,9 @@ in
     stylix.homeModules.stylix
   ];
 
-  options.stewos.user = {
-    fullName = lib.mkOption {
-      type = lib.types.str;
-    };
-
-    email = lib.mkOption {
-      type = lib.types.str;
-    };
-
-    aliases = lib.mkOption {
-      default = { };
-      type = lib.types.attrsOf (
-        lib.types.submodule {
-          options = {
-            fullName = lib.mkOption {
-              type = lib.types.str;
-              default = config.stewos.user.fullName;
-            };
-
-            email = lib.mkOption {
-              type = lib.types.str;
-              default = config.stewos.user.email;
-            };
-          };
-        }
-      );
-    };
+  # Common user options
+  options.stewos.user = stewos.lib.mkUserOptions {
+    inherit lib config;
   };
 
   config = {

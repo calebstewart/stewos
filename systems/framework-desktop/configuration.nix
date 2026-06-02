@@ -1,17 +1,35 @@
-{ nixos-hardware, lanzaboote, ... }@inputs:
+{
+  nixos-hardware,
+  lanzaboote,
+  nixpkgs-unstable,
+  nur,
+  ...
+}@inputs:
 {
   pkgs,
   lib,
   config,
   ...
 }:
-rec {
+let
+  user = config.stewos.user;
+  pkgs-unstable = nixpkgs-unstable.legacyPackages.${pkgs.system};
+in
+{
   imports = [
+    nur.modules.nixos.default
+    nur.legacyPackages.x86_64-linux.repos.wingej0.modules.nordvpn
     nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
     lanzaboote.nixosModules.lanzaboote
   ];
 
-  stewos = rec {
+  # nixpkgs.overlays = [
+  #   (final: prev: {
+  #     nordvpn = prev.nur.repos.wingej0.nordvpn;
+  #   })
+  # ];
+
+  stewos = {
     audio.enable = true;
     desktop-services.enable = true;
     greeter.enable = false;
@@ -23,12 +41,7 @@ rec {
     containers = {
       enable = true;
       enableCompose = true;
-      enableDockerCompatability = true;
-    };
-
-    user = {
-      username = "caleb";
-      fullname = "Caleb Stewart";
+      enableDockerCompatibility = true;
     };
 
     autologin = {
@@ -59,24 +72,14 @@ rec {
       "systemd.show_status=auto"
       "rd.udev.log_level=3"
       "udev.log_level=3"
+      "ttm.pages_limit=29360128"
+      "ttm.page_pool_size=29360128"
     ];
 
     # Disable logging
     consoleLogLevel = 0;
     initrd.verbose = false;
   };
-
-  # Set the system hostname
-  networking.hostName = "framework-desktop";
-
-  # I thought this was needed, but it seems that the config is already set by default
-  # boot.kernelPatches = lib.singleton {
-  #   name = "enable_fbcon_deferred_takeover";
-  #   patch = null;
-  #   extraStructuredConfig = with lib.kernel; {
-  #     FRAMEBUFFER_CONSOLE_DEFERRED_TAKEOVER = yes;
-  #   };
-  # };
 
   # This prevents hibernation
   security.protectKernelImage = false;
@@ -87,6 +90,16 @@ rec {
     AllowSuspend=yes
     AllowHibernate=yes
   '';
+
+  networking = {
+    wireguard.enable = true;
+
+    firewall = {
+      checkReversePath = false;
+      allowedTCPPorts = [ 443 ];
+      allowedUDPPorts = [ 1194 ];
+    };
+  };
 
   # Install extra packages
   environment.systemPackages = [ pkgs.sbctl ];
@@ -109,4 +122,27 @@ rec {
     nssmdns4 = true;
     openFirewall = true;
   };
+
+  # Enable firmware upgrades
+  services.fwupd.enable = true;
+
+  # Enable power management daemon
+  services.upower.enable = true;
+
+  hardware.logitech.wireless = {
+    enable = true;
+  };
+
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+  };
+
+  services.ollama = {
+    enable = true;
+    package = pkgs-unstable.ollama-rocm;
+  };
+
+  services.nordvpn.enable = true;
 }

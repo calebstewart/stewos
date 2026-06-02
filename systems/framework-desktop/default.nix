@@ -5,10 +5,17 @@
 }@inputs:
 let
   system = "x86_64-linux";
+
+  user = {
+    username = "caleb";
+    fullname = "Caleb Stewart";
+    email = "caleb.stewart94@gmail.com";
+    groups = ["nordvpn"];
+  };
 in
 {
   nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
-    inherit hostname system;
+    inherit hostname system user;
 
     modules = [
       ./hardware-configuration.nix
@@ -17,10 +24,9 @@ in
   };
 
   homeConfigurations."caleb@${hostname}" = stewos.lib.mkHomeManagerConfig {
-    inherit system;
+    inherit system user;
 
-    username = "caleb";
-    homeDirectory = "/home/caleb";
+    homeDirectory = "/home/${user.username}";
     modules = [ (import ./home.nix inputs) ];
   };
 }

@@ -2,7 +2,8 @@
   description = "Personal NixOS / Home-Manager / Nix-Darwin Modules";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-25.05-darwin";
     nix-colors.url = "github:misterio77/nix-colors";
     nur.url = "github:nix-community/NUR";
@@ -22,7 +23,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.05";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -46,6 +47,17 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # caelestia-cli = {
+    #   url = "github:Gitkubikon/cli/main";
+    # };
+
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+      # url = "github:Gitkubikon/shell/screenshot-card";
+      # inputs.caelestia-cli.follows = "caelestia-cli";
+    };
+
     vfio-hooks = {
       url = "github:PassthroughPOST/VFIO-Tools";
       flake = false;
@@ -58,6 +70,11 @@
 
     nh = {
       url = "github:nix-community/nh";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    embermug-tray = {
+      url = "github:calebstewart/embermug-tray";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -85,6 +102,11 @@
       # System outputs which may also provide overlapping output keys, and must
       # be recursively merged with the above two attrsets.
       systemOutputs = import ./systems inputs;
+
+      # Templates allow users to generate projects using StewOS from a template
+      templateOutputs = import ./templates inputs;
     in
-    inputs.nixpkgs.lib.attrsets.recursiveUpdate (baseOutputs // packageOutputs) systemOutputs;
+    inputs.nixpkgs.lib.attrsets.recursiveUpdate (
+      baseOutputs // packageOutputs // templateOutputs
+    ) systemOutputs;
 }

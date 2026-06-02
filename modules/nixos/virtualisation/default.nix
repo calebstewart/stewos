@@ -19,7 +19,6 @@ in
         package = pkgs.qemu_kvm;
         runAsRoot = true;
         swtpm.enable = true;
-        ovmf.enable = true;
       };
     };
 

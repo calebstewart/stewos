@@ -108,6 +108,44 @@ let
     ) [ ] bindings;
 
   defaultBindings = {
+    "" = {
+      "XF86MonBrightnessUp" = {
+        enable = true;
+        dispatcher = "global";
+        args = "caelestia:brightnessUp";
+      };
+      "XF86MonBrightnessDown" = {
+        enable = true;
+        dispatcher = "global";
+        args = "caelestia:brightnessDown";
+      };
+      "XF86AudioRaiseVolume" = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.wireplumber;
+        target = "wpctl";
+        args = [
+          "set-volume"
+          "-l"
+          "1"
+          "@DEFAULT_AUDIO_SINK@"
+          "5%+"
+        ];
+      };
+      "XF86AudioLowerVolume" = {
+        enable = true;
+        dispatcher = "exec";
+        package = pkgs.wireplumber;
+        target = "wpctl";
+        args = [
+          "set-volume"
+          "-l"
+          "1"
+          "@DEFAULT_AUDIO_SINK@"
+          "5%-"
+        ];
+      };
+    };
     "${cfg.modifier}" = {
       "1" = {
         enable = true;
@@ -184,15 +222,10 @@ let
         enable = true;
         dispatcher = "killactive";
       };
-      # D = { enable = true; dispatcher = "rofi"; modes = ["drun"]; };
       D = {
         enable = true;
-        dispatcher = "exec";
-        package = config.stew-shell.package;
-        args = [
-          "popup"
-          "launcher"
-        ];
+        dispatcher = "global";
+        args = "caelestia:launcher";
       };
       V = {
         enable = true;
@@ -207,17 +240,6 @@ let
         enable = true;
         dispatcher = "rofi";
         modes = [ pkgs.rofiScripts.libvirt ];
-      };
-
-      N = {
-        enable = true;
-        dispatcher = "exec";
-        package = pkgs.swaynotificationcenter;
-        target = "swaync-client";
-        args = [
-          "-t"
-          "-sw"
-        ];
       };
 
       Return = {
@@ -356,8 +378,11 @@ in
           ",preferred,auto,1"
         ] cfg.monitors;
 
-        # Disable default images
         misc = {
+          # Focus windows that send "activate" requests
+          focus_on_activate = true;
+
+          # Disable default images
           disable_hyprland_logo = true;
           disable_splash_rendering = true;
         };
@@ -381,7 +406,7 @@ in
         };
 
         decoration = {
-          rounding = 2;
+          rounding = 25;
 
           shadow = {
             enabled = true;
@@ -438,11 +463,11 @@ in
 
           # Smart Gaps
           "bordersize 0, floating:0, onworkspace:w[t1]"
-          "rounding 0, floating:0, onworkspace:w[t1]"
+          # "rounding 0, floating:0, onworkspace:w[t1]"
           "bordersize 0, floating:0, onworkspace:w[tg1]"
-          "rounding 0, floating:0, onworkspace:w[tg1]"
+          # "rounding 0, floating:0, onworkspace:w[tg1]"
           "bordersize 0, floating:0, onworkspace:f[1]"
-          "rounding 0, floating:0, onworkspace:f[1]"
+          # "rounding 0, floating:0, onworkspace:f[1]"
 
           # Make the authentication agent prompt *special* o.O
           "float,class:(polkit-gnome-authentication-agent-1)"
@@ -488,5 +513,15 @@ in
     # Ensure that the systemd session has access to home-manager session variables.
     # This means that hyprland in turn has access to these variables.
     systemd.user.sessionVariables = config.home.sessionVariables;
+
+    # This is useful when using something like greetd to launch our session
+    # with the correct Hyprland version.
+    home.file.".wayland-session" = {
+      executable = true;
+
+      text = ''
+        exec ${lib.getExe config.wayland.windowManager.hyprland.package} >/dev/null 2>/dev/null
+      '';
+    };
   };
 }
