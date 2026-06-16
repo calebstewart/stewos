@@ -36,14 +36,30 @@
     colima
     docker
     raycast
+    kubernetes-helm
+    kubectl
+    azure-cli
+    kubelogin
+    nodejs
+    circleci-cli
+    shortcut-cli
+    poppler-utils
   ];
 
-  programs.rbenv.enable = true;
+  home.sessionPath = [ "$HOME/.local/bin" ];
 
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
+
+    matchBlocks = {
+      "i-*" = {
+        proxyCommand = "sh -c \"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p' --region us-east-1\"";
+      };
+    };
   };
+
+  programs.rbenv.enable = true;
 
   # This fails in MacOS
   programs.nixvim.plugins.lsp.servers.mesonlsp.enable = lib.mkForce false;

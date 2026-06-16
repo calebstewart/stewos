@@ -4,7 +4,6 @@
 
   # Host-specific nix-darwin configuration
   system.primaryUser = "caleb.stewart";
-  services.karabiner-elements.enable = true;
   system.startup.chime = false;
 
   security.pam.services.sudo_local.touchIdAuth = true;
@@ -27,5 +26,7 @@
   programs.nh.flake = "${config.users.users."caleb.stewart".home}/git/personal/stewos";
   users.users."caleb.stewart".home = "/Users/caleb.stewart";
 
-  environment.systemPackages = [ pkgs.raycast ];
+  environment.systemPackages = [
+    pkgs.raycast
+  ];
 }

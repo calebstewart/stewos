@@ -9,8 +9,10 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
+    home.packages = [ pkgs.autoraise ];
+
     launchd.agents.autoraise = {
-      enable = true;
+      enable = false;
 
       config = {
         ProgramArguments = [

@@ -1,4 +1,9 @@
-{ lib, config, pkgs, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 let
   cfg = config.stewos.desktop;
   json = pkgs.formats.json { };
@@ -14,7 +19,9 @@ let
         selected = true;
         simple_modifications = [
           {
-            from = { key_code = "caps_lock"; };
+            from = {
+              key_code = "caps_lock";
+            };
             to = [ { key_code = "escape"; } ];
           }
         ];
@@ -27,23 +34,33 @@ let
                   type = "basic";
                   from = {
                     key_code = "left_command";
-                    modifiers = { optional = [ "any" ]; };
+                    modifiers = {
+                      optional = [ "any" ];
+                    };
                   };
                   to = [ { key_code = "left_alt"; } ];
-                  conditions = [
-                    { type = "device_if"; identifiers = [ { is_built_in_keyboard = true; } ]; }
-                  ];
+                  # conditions = [
+                  #   {
+                  #     type = "device_if";
+                  #     identifiers = [ { is_built_in_keyboard = true; } ];
+                  #   }
+                  # ];
                 }
                 {
                   type = "basic";
                   from = {
                     key_code = "left_alt";
-                    modifiers = { optional = [ "any" ]; };
+                    modifiers = {
+                      optional = [ "any" ];
+                    };
                   };
                   to = [ { key_code = "left_command"; } ];
-                  conditions = [
-                    { type = "device_if"; identifiers = [ { is_built_in_keyboard = true; } ]; }
-                  ];
+                  # conditions = [
+                  #   {
+                  #     type = "device_if";
+                  #     identifiers = [ { is_built_in_keyboard = true; } ];
+                  #   }
+                  # ];
                 }
               ];
             }
@@ -58,7 +75,6 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
-    xdg.configFile."karabiner/karabiner.json".source =
-      json.generate "karabiner.json" karabinerConfig;
+    xdg.configFile."karabiner/karabiner.json".source = json.generate "karabiner.json" karabinerConfig;
   };
 }
