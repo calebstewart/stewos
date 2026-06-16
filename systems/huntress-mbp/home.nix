@@ -42,7 +42,6 @@
     kubelogin
     nodejs
     circleci-cli
-    shortcut-cli
     poppler-utils
   ];
 
