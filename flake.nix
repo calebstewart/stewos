@@ -2,9 +2,9 @@
   description = "Personal NixOS / Home-Manager / Nix-Darwin Modules";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-26.05";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-25.05-darwin";
+    nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-26.05-darwin";
     nix-colors.url = "github:misterio77/nix-colors";
     nur.url = "github:nix-community/NUR";
     nix-std.url = "github:chessai/nix-std";
@@ -13,12 +13,12 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     nix-darwin = {
-      url = "github:nix-darwin/nix-darwin?ref=nix-darwin-25.05";
+      url = "github:nix-darwin/nix-darwin?ref=nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -28,7 +28,7 @@
     };
 
     stylix = {
-      url = "github:nix-community/stylix/release-25.05";
+      url = "github:nix-community/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
