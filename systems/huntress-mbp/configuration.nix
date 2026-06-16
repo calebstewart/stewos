@@ -3,7 +3,7 @@
   system.stateVersion = 6;
 
   # Host-specific nix-darwin configuration
-  system.primaryUser = "caleb";
+  system.primaryUser = "caleb.stewart";
   services.karabiner-elements.enable = true;
   system.startup.chime = false;
 
@@ -17,22 +17,15 @@
     WindowManager.EnableStandardClickToShowDesktop = false;
   };
 
-  # Maintain legacy UIDs
-  ids.gids.nixbld = 30000;
-
   homebrew = {
     enable = true;
 
-    taps = [ "ubuntu/microk8s" ];
-    brews = [
-      "ruby-install"
-      "ubuntu/microk8s/microk8s"
-    ];
-    casks = [ ];
+    brews = [ "ruby-install" ];
+    casks = [ "karabiner-elements" ];
   };
 
-  programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";
-  users.users.caleb.home = "/Users/caleb";
+  programs.nh.flake = "${config.users.users."caleb.stewart".home}/git/personal/stewos";
+  users.users."caleb.stewart".home = "/Users/caleb.stewart";
 
   environment.systemPackages = [ pkgs.raycast ];
 }

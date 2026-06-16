@@ -6,23 +6,28 @@
 }@inputs:
 let
   system = "aarch64-darwin";
+
+  user = {
+    username = "caleb.stewart";
+    fullname = "Caleb Stewart";
+    email = "caleb.stewart94@gmail.com";
+    aliases.personal.email = "caleb.stewart94@gmail.com";
+  };
 in
 {
   darwinConfigurations.${hostname} = stewos.lib.mkNixDarwinSystem {
-    inherit hostname;
+    inherit hostname system;
 
-    system = "aarch64-darwin";
     modules = [
       ./configuration.nix
     ];
   };
 
-  homeConfigurations."caleb@${hostname}" = stewos.lib.mkHomeManagerConfig {
-    inherit system;
+  homeConfigurations."caleb.stewart@${hostname}" = stewos.lib.mkHomeManagerConfig {
+    inherit system user;
 
     isDarwin = true;
-    username = "caleb";
-    homeDirectory = "/Users/caleb";
+    homeDirectory = "/Users/${user.username}";
     modules = [ (import ./home.nix inputs) ];
   };
 }

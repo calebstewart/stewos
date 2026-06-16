@@ -2,21 +2,14 @@
 { pkgs, lib, ... }:
 {
   stewos = {
-    # Setup user properties
-    user = {
-      fullName = "Caleb Stewart";
-      email = "caleb.stewart94@gmail.com";
-      aliases.huntress.email = "caleb.stewart@huntresslabs.com";
-    };
-
     # Setup our desktop
     desktop = {
       enable = true;
       modifier = "ALT";
 
       wallpaper = pkgs.fetchurl {
-        url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
-        sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
+        url = "https://images-assets.nasa.gov/image/art002e000191/art002e000191~large.jpg";
+        sha256 = "sha256-SQfQAhWvyUM7X6u+fW89TjR7eYaOSXIS9XzVaXsQIIc=";
       };
     };
 
@@ -43,12 +36,14 @@
     colima
     docker
     raycast
-    kubernetes-helm
-    kubectl
   ];
 
-  programs.ssh.enable = true;
   programs.rbenv.enable = true;
+
+  programs.ssh = {
+    enable = true;
+    enableDefaultConfig = false;
+  };
 
   # This fails in MacOS
   programs.nixvim.plugins.lsp.servers.mesonlsp.enable = lib.mkForce false;
