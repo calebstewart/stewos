@@ -20,9 +20,11 @@ in
       defaultEditor = true;
       withRuby = false;
 
-      nixpkgs.hostPlatform = pkgs.stdenv.hostPlatform.system;
-      nixpkgs.buildPlatform = pkgs.stdenv.buildPlatform.system;
-      nixpkgs.config.allowUnfree = true;
+      nixpkgs = {
+        hostPlatform = pkgs.stdenv.hostPlatform.system;
+        buildPlatform = pkgs.stdenv.buildPlatform.system;
+        config.allowUnfree = true;
+      };
 
       globals = {
         # The global leader is " ", which behaves similarly to emacs shortcuts
