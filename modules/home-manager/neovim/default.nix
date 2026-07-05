@@ -20,6 +20,10 @@ in
       defaultEditor = true;
       withRuby = false;
 
+      nixpkgs.hostPlatform = pkgs.stdenv.hostPlatform.system;
+      nixpkgs.buildPlatform = pkgs.stdenv.buildPlatform.system;
+      nixpkgs.config.allowUnfree = true;
+
       globals = {
         # The global leader is " ", which behaves similarly to emacs shortcuts
         mapleader = " ";
@@ -268,7 +272,6 @@ in
 
         sources.formatting = {
           nixfmt.enable = true;
-          nixfmt.package = pkgs.nixfmt-rfc-style;
         };
       };
 

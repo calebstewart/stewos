@@ -1,32 +1,32 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 {
   system.stateVersion = 6;
 
   # Host-specific nix-darwin configuration
-  system.primaryUser = "caleb";
-  system.keyboard.enableKeyMapping = true;
-  system.keyboard.remapCapsLockToEscape = true;
-  system.keyboard.swapLeftCommandAndLeftAlt = true;
-  # system.keyboard.swapLeftCtrlAndFn = true;
+  system.primaryUser = "caleb.stewart";
   system.startup.chime = false;
 
-  # This fucks with aerospace
-  system.defaults.spaces.spans-displays = false;
+  security.pam.services.sudo_local.touchIdAuth = true;
 
-  # Maintain legacy UIDs
-  ids.gids.nixbld = 30000;
+  system.defaults = {
+    # This fucks with aerospace
+    spaces.spans-displays = false;
+
+    # I hate this "feature"
+    WindowManager.EnableStandardClickToShowDesktop = false;
+  };
 
   homebrew = {
     enable = true;
 
-    taps = [ "ubuntu/microk8s" ];
-    brews = [
-      "ruby-install"
-      "ubuntu/microk8s/microk8s"
-    ];
-    casks = [ ];
+    brews = [ "ruby-install" ];
+    casks = [ "karabiner-elements" ];
   };
 
-  programs.nh.flake = "${config.users.users.caleb.home}/git/stewos";
-  users.users.caleb.home = "/Users/caleb";
+  programs.nh.flake = "${config.users.users."caleb.stewart".home}/git/personal/stewos";
+  users.users."caleb.stewart".home = "/Users/caleb.stewart";
+
+  environment.systemPackages = [
+    pkgs.raycast
+  ];
 }

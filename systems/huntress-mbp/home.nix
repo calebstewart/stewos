@@ -2,21 +2,14 @@
 { pkgs, lib, ... }:
 {
   stewos = {
-    # Setup user properties
-    user = {
-      fullName = "Caleb Stewart";
-      email = "caleb.stewart94@gmail.com";
-      aliases.huntress.email = "caleb.stewart@huntresslabs.com";
-    };
-
     # Setup our desktop
     desktop = {
       enable = true;
       modifier = "ALT";
 
       wallpaper = pkgs.fetchurl {
-        url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
-        sha256 = "sha256-Kh1bYNBodOBN4PDnuO1ko4rB12xAOOdSNYUnDFb0z+0=";
+        url = "https://images-assets.nasa.gov/image/art002e000191/art002e000191~large.jpg";
+        sha256 = "sha256-SQfQAhWvyUM7X6u+fW89TjR7eYaOSXIS9XzVaXsQIIc=";
       };
     };
 
@@ -34,22 +27,37 @@
     direnv.enable = true;
   };
 
-  home.packages =
-    with pkgs;
-    [
-      discord
-      github-cli
-      awscli2
-      ssm-session-manager-plugin
-      aws-vault
-      colima
-      docker
-    ]
-    ++ (with stewos.packages.${pkgs.system}; [
-      # hunt-cli
-    ]);
+  home.packages = with pkgs; [
+    discord
+    github-cli
+    awscli2
+    ssm-session-manager-plugin
+    aws-vault
+    colima
+    docker
+    raycast
+    kubernetes-helm
+    kubectl
+    azure-cli
+    kubelogin
+    nodejs
+    circleci-cli
+    poppler-utils
+  ];
 
-  programs.ssh.enable = true;
+  home.sessionPath = [ "$HOME/.local/bin" ];
+
+  programs.ssh = {
+    enable = true;
+    enableDefaultConfig = false;
+
+    matchBlocks = {
+      "i-*" = {
+        proxyCommand = "sh -c \"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p' --region us-east-1\"";
+      };
+    };
+  };
+
   programs.rbenv.enable = true;
 
   # This fails in MacOS
