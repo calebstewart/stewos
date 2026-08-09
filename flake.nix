@@ -2,7 +2,7 @@
   description = "Personal NixOS / Home-Manager / Nix-Darwin Modules";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-26.05";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-26.05-darwin";
     nix-colors.url = "github:misterio77/nix-colors";
@@ -11,6 +11,7 @@
     nixos-hardware.url = "github:nixos/nixos-hardware";
     nixvim.url = "github:nix-community/nixvim";
     flake-utils.url = "github:numtide/flake-utils";
+    hyprsplit.url = "github:shezdy/hyprsplit";
 
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin?ref=nix-darwin-26.05";
@@ -23,7 +24,7 @@
     };
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-26.05";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -44,6 +45,11 @@
 
     stew-shell = {
       url = "github:calebstewart/stew-shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    noctalia = {
+      url = "github:noctalia-dev/noctalia";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

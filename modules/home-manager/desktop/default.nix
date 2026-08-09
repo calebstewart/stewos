@@ -1,4 +1,9 @@
-{ stew-shell, caelestia-shell, ... }@inputs:
+{
+  stew-shell,
+  caelestia-shell,
+  noctalia,
+  ...
+}@inputs:
 {
   pkgs,
   lib,
@@ -18,6 +23,7 @@ in
     hyprland
     # stew-shell.homeModules.default
     caelestia-shell.homeManagerModules.default
+    noctalia.homeModules.default
 
     ./fonts.nix
     ./gtk.nix
@@ -203,8 +209,19 @@ in
     # Stew-Shell is only valid for Linux hosts
     # stew-shell.enable = pkgs.stdenv.isLinux;
 
-    programs.caelestia = {
+    programs.noctalia = {
       enable = pkgs.stdenv.isLinux;
+
+      settings = {
+        wallpaper = {
+          enabled = true;
+          default.path = cfg.wallpaper;
+        };
+      };
+    };
+
+    programs.caelestia = {
+      enable = false; # pkgs.stdenv.isLinux;
       systemd.enable = true;
       cli.enable = true;
 

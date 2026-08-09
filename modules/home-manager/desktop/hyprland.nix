@@ -1,4 +1,4 @@
-{ stewos, ... }:
+{ stewos, hyprsplit, ... }:
 {
   pkgs,
   config,
@@ -371,7 +371,21 @@ in
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;
-      plugins = with pkgs.hyprlandPlugins; [ hyprsplit ];
+
+      extraLuaFiles = {
+        "hyprsplit/init" = {
+          autoLoad = false;
+          content = builtins.readFile "${
+            hyprsplit.packages.${pkgs.stdenv.hostPlatform.system}.hyprsplitlua
+          }/share/hyprsplit/init.lua";
+        };
+        "hyprload" = {
+          autoLoad = true;
+          content = ''
+            local hs = require("hyprsplit")
+          '';
+        };
+      };
 
       settings = {
         monitor = lib.lists.foldl (acc: monitor: acc ++ [ (stewos.lib.hypr.mkMonitorConfig monitor) ]) [

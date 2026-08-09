@@ -18,16 +18,9 @@ in
 {
   imports = [
     nur.modules.nixos.default
-    nur.legacyPackages.x86_64-linux.repos.wingej0.modules.nordvpn
     nixos-hardware.nixosModules.framework-desktop-amd-ai-max-300-series
     lanzaboote.nixosModules.lanzaboote
   ];
-
-  # nixpkgs.overlays = [
-  #   (final: prev: {
-  #     nordvpn = prev.nur.repos.wingej0.nordvpn;
-  #   })
-  # ];
 
   stewos = {
     audio.enable = true;
@@ -85,11 +78,11 @@ in
   security.protectKernelImage = false;
 
   # Setup systemd sleep configuration
-  systemd.sleep.extraConfig = ''
-    AllowHybridSleep=yes
-    AllowSuspend=yes
-    AllowHibernate=yes
-  '';
+  systemd.sleep.settings.Sleep = {
+    AllowHybridSleep = true;
+    AllowSuspend = true;
+    AllowHibernate = true;
+  };
 
   networking = {
     wireguard.enable = true;

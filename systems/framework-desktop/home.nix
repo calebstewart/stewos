@@ -22,7 +22,6 @@
     opencode
     nixfmt
     github-cli
-    lucas-chess
   ];
 
   systemd.user.services.embermug-tray = {
@@ -123,12 +122,12 @@
       ];
     };
 
-    extensions =
-      let
-        lastpass.id = "hdokiejnpimakedhajhdlcegeplioahd";
-      in
-      [
-        lastpass
-      ];
+    # extensions =
+    #   let
+    #     lastpass.id = "hdokiejnpimakedhajhdlcegeplioahd";
+    #   in
+    #   [
+    #     lastpass
+    #   ];
   };
 }

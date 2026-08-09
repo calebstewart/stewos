@@ -11,6 +11,7 @@ in
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
     gtk = {
       enable = true;
+      gtk4.theme = null;
 
       cursorTheme = {
         name = "catppuccin-mocha-dark-cursors";
@@ -36,6 +37,7 @@ in
 
     # Double-check that the cursor is set properly (it's finicky)
     home.pointerCursor = {
+      enable = true;
       gtk.enable = true;
       name = "catppuccin-mocha-dark-cursors";
       package = pkgs.catppuccin-cursors.mochaDark;
