@@ -17,6 +17,28 @@ let
     url = "https://i.redd.it/187ouknqbs051.jpg";
     sha256 = "sha256-3x0pvEWWM2SqxzR16Hv7+xGxMqkEPQE5kcUY84kEIrw=";
   };
+
+  # Hyprland spawns this during compositor init when "startLocked" is set (see
+  # "--locked-cmd" in hyprland.nix). The session is already force-locked by the
+  # time it runs; its job is to hand that force-lock over to the real locker.
+  #
+  # caelestia's locker lives inside caelestia-shell, which systemd only starts
+  # once graphical-session.target is up, so its IPC socket does not exist yet.
+  # Poll until it answers instead of racing it: a single early attempt is what
+  # made the old ExecStartPost fail roughly half the time.
+  caelestiaLockCommand = pkgs.writeShellScript "caelestia-lock-session" ''
+    tries=0
+    while [ "$tries" -lt 300 ]; do
+      if ${lib.getExe config.programs.caelestia.cli.package} shell lock lock >/dev/null 2>&1; then
+        exit 0
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.2
+      tries=$((tries + 1))
+    done
+    echo "caelestia-shell did not accept the lock IPC within 60s;" \
+         "the session is still force-locked with no locker attached" >&2
+    exit 1
+  '';
 in
 {
   imports = [
@@ -43,6 +65,17 @@ in
   options.stewos.desktop = {
     enable = lib.mkEnableOption "Graphical Desktop";
     startLocked = lib.mkEnableOption "Start Desktop in Locked State";
+
+    lockCommand = lib.mkOption {
+      description = ''
+        Command Hyprland spawns during compositor init when "startLocked" is
+        set, to bring up the session locker. It runs against an already
+        force-locked session, so it must tolerate the shell that provides the
+        locker not being up yet. Defaults to the caelestia locker on Linux.
+      '';
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+    };
     swapEscape = lib.mkEnableOption "Swap Escape and Caps Lock";
     terminal = lib.mkPackageOption pkgs "alacritty" { };
 
@@ -219,6 +252,15 @@ in
         assertion = cfg.bindings == { } || !pkgs.stdenv.isDarwin;
         message = "Bindings are not supported for MacOS";
       }
+      {
+        assertion = !cfg.startLocked || cfg.lockCommand != null;
+        message = ''
+          stewos.desktop.startLocked requires stewos.desktop.lockCommand.
+          Hyprland force-locks the session during init, so without a command to
+          bring up a locker the session boots to an unlockable "your locker app
+          crashed or didn't start" screen.
+        '';
+      }
     ];
 
     # Stew-Shell is only valid for Linux hosts
@@ -254,19 +296,15 @@ in
       };
     };
 
-    # Lock as soon as caelestia is up. Hyprland has already force-locked itself
-    # via "--locked" (see hyprland.nix), so this is the handover to the real
-    # locker rather than the thing that closes the unlocked-desktop window.
-    systemd.user.services.caelestia.Service.ExecStartPost =
-      lib.mkIf (pkgs.stdenv.isLinux && cfg.startLocked)
-        [
-          (lib.escapeShellArgs [
-            (lib.getExe config.programs.caelestia.cli.package)
-            "shell"
-            "lock"
-            "lock"
-          ])
-        ];
+    # Hyprland drives the startup lock itself via "--locked-cmd" (see
+    # hyprland.nix), so this is not a systemd ExecStartPost. That matters for
+    # more than tidiness: Hyprland force-locks at init, and only exempts the
+    # incoming ext-session-lock from its "Cannot re-lock" check when it was
+    # given a locker command. A lock arriving from anywhere else is denied with
+    # a protocol error that kills the shell.
+    stewos.desktop.lockCommand = lib.mkIf pkgs.stdenv.isLinux (
+      lib.mkDefault "${caelestiaLockCommand}"
+    );
 
     # Setup a volume control application for Linux
     home.packages = lib.mkIf pkgs.stdenv.isLinux (

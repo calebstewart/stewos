@@ -752,8 +752,19 @@ in
     # ~/.config/hypr/hyprland.lua. Home-manager is standalone here, so the
     # system's programs.hyprland package can lag a "nh home switch".
     #
-    # Everything after "--" is forwarded to Hyprland. "--locked" force-locks
-    # before the first frame; caelestia's lock then takes over (see default.nix).
+    # Everything after "--" is forwarded to Hyprland. "--locked-cmd" force-locks
+    # before the first frame and spawns the locker command (see
+    # stewos.desktop.lockCommand in default.nix).
+    #
+    # It must be "--locked-cmd" and not the undocumented "--locked": both set
+    # the same startLocked state, but only "--locked-cmd" also populates
+    # m_startLockedCommand, and CSessionLockManager::onNewSessionLock denies an
+    # incoming lock on an already-locked session unless either that string is
+    # non-empty or misc:allow_session_lock_restore is set. A denial is a
+    # protocol error, so the locker is killed rather than told "no". Hyprland
+    # clears m_startLockedCommand once the real locker attaches, which keeps the
+    # exemption scoped to this handover instead of leaving re-locking open for
+    # the rest of the session the way the config option would.
     #
     # Output is deliberately not redirected, so the watchdog and the compositor
     # both land in "journalctl -u greetd".
@@ -761,7 +772,7 @@ in
       executable = true;
 
       text = ''
-        exec ${lib.getExe' hyprPkg "start-hyprland"} --path ${lib.getExe hyprPkg}${lib.optionalString cfg.startLocked " -- --locked"}
+        exec ${lib.getExe' hyprPkg "start-hyprland"} --path ${lib.getExe hyprPkg}${lib.optionalString cfg.startLocked " -- --locked-cmd ${cfg.lockCommand}"}
       '';
     };
   };
