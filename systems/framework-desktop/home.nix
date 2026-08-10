@@ -13,9 +13,7 @@
   home.packages = with pkgs; [
     discord
     gimp
-    (signal-desktop.override {
-      commandLineArgs = "--ozone-platform=wayland";
-    })
+    signal-desktop
     spotify
     solaar
     claude-code
@@ -114,13 +112,11 @@
   # Setup Chrome
   programs.chromium = {
     enable = true;
-    package = pkgs.google-chrome.override {
-      commandLineArgs = [
-        "--ozone-platform-hint=auto"
-        "--enable-features=UseOzonePlatform"
-        "--ozone-platform=wayland"
-      ];
-    };
+    # No Wayland flags needed: the google-chrome wrapper already adds
+    # "--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations
+    # --enable-wayland-ime=true" when NIXOS_OZONE_WL is set, which
+    # stewos.desktop-services does system-wide.
+    package = pkgs.google-chrome;
 
     # extensions =
     #   let

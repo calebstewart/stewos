@@ -8,6 +8,38 @@
 let
   cfg = config.stewos.desktop;
 
+  hypr = stewos.lib.hypr;
+
+  # Dispatchers that map a legacy Hyprland dispatcher name onto the Lua API. Each
+  # entry takes the binding's "args" (normalized to a single string) and returns a
+  # raw Lua expression suitable for the second argument of "hl.bind".
+  #
+  # "exec" and "rofi" are handled separately because they build their command line
+  # from the binding's package/target/args, and "lua" is an escape hatch which
+  # takes a raw expression from the binding's "lua" option.
+  luaDispatchers = {
+    global = args: hypr.mkDispatcher "hl.dsp.global" args;
+    movefocus = args: hypr.mkDispatcher "hl.dsp.focus" { direction = args; };
+    movewindow = args: hypr.mkDispatcher "hl.dsp.window.move" { direction = args; };
+    killactive = _: hypr.mkDispatcher "hl.dsp.window.close" null;
+    togglesplit = _: hypr.mkDispatcher "hl.dsp.layout" "togglesplit";
+    togglefloating = _: hypr.mkDispatcher "hl.dsp.window.float" { action = "toggle"; };
+    fullscreen = _: hypr.mkDispatcher "hl.dsp.window.fullscreen" null;
+    pseudo = _: hypr.mkDispatcher "hl.dsp.window.pseudo" null;
+
+    # Provided by the hyprsplit Lua module, bound to the "hyprsplit" local that
+    # the settings block below declares via "_var".
+    "split:workspace" = args: hypr.mkDispatcher "hyprsplit.dsp.focus" { workspace = args; };
+    "split:movetoworkspace" = args: hypr.mkDispatcher "hyprsplit.dsp.window.move" { workspace = args; };
+  };
+
+  # Dispatcher names which are handled by generateBinding rather than luaDispatchers.
+  builtinDispatchers = [
+    "exec"
+    "rofi"
+    "lua"
+  ];
+
   # Create an exec binding which runs rofi with the given theme, mode, and custom mode list.
   mkRofiBinding =
     {
@@ -56,21 +88,27 @@ let
         (lib.concatStringsSep "," modeNames)
       ];
     in
-    stewos.lib.hypr.mkExecBinding {
+    hypr.mkExecBinding {
       inherit modifier key;
       package = config.stewos.rofi.package;
       args = modeArgs ++ themeArgs ++ customModesArgs;
     };
 
-  # Generate a single binding string wrapped in an array or an empty
+  # Generate a single "hl.bind" call wrapped in an array, or an empty
   # array if the given binding config is disabled.
   generateBinding =
     modifier: key: binding:
+    let
+      # Dispatchers other than "exec" take a single argument string; accept a list
+      # for convenience and join it the way hyprlang used to.
+      rawArgs = lib.attrByPath [ "args" ] "" binding;
+      dispatcherArgs = if lib.isList rawArgs then lib.concatStringsSep " " rawArgs else rawArgs;
+    in
     if binding.enable then
       [
         (
           if binding.dispatcher == "exec" then
-            stewos.lib.hypr.mkExecBinding {
+            hypr.mkExecBinding {
               inherit modifier key;
               inherit (binding) package;
               target = lib.attrByPath [ "target" ] null binding;
@@ -83,10 +121,13 @@ let
               theme = lib.attrByPath [ "theme" ] null binding;
             }
           else
-            stewos.lib.hypr.mkBinding {
+            hypr.mkBinding {
               inherit modifier key;
-              inherit (binding) dispatcher;
-              args = lib.attrByPath [ "args" ] "" binding;
+              dispatcher =
+                if binding.dispatcher == "lua" then
+                  hypr.mkLua binding.lua
+                else
+                  luaDispatchers.${binding.dispatcher} dispatcherArgs;
             }
         )
       ]
@@ -106,6 +147,25 @@ let
       acc: modifier: keys:
       acc ++ (foldlKeys modifier keys)
     ) [ ] bindings;
+
+  # Every dispatcher name referenced by an enabled binding, used to assert that we
+  # know how to render it as Lua rather than failing at Hyprland startup.
+  usedDispatchers =
+    bindings:
+    lib.unique (
+      lib.foldlAttrs (
+        acc: _: keys:
+        acc
+        ++ lib.foldlAttrs (
+          keyAcc: _: binding:
+          keyAcc ++ lib.optional binding.enable binding.dispatcher
+        ) [ ] keys
+      ) [ ] bindings
+    );
+
+  unknownDispatchers = lib.filter (
+    name: !(builtins.elem name builtinDispatchers) && !(luaDispatchers ? ${name})
+  ) (lib.unique ((usedDispatchers defaultBindings) ++ (usedDispatchers cfg.bindings)));
 
   defaultBindings = {
     "" = {
@@ -368,9 +428,19 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+    assertions = [
+      {
+        assertion = unknownDispatchers == [ ];
+        message = "stewos.desktop.bindings uses Hyprland dispatchers with no Lua mapping: ${lib.concatStringsSep ", " unknownDispatchers}. Add them to luaDispatchers in modules/home-manager/desktop/hyprland.nix, or use dispatcher = \"lua\" with a raw expression.";
+      }
+    ];
+
     wayland.windowManager.hyprland = {
       enable = true;
       systemd.enable = true;
+
+      # hyprlang has been deprecated upstream since Hyprland 0.55.
+      configType = "lua";
 
       extraLuaFiles = {
         "hyprsplit/init" = {
@@ -379,136 +449,284 @@ in
             hyprsplit.packages.${pkgs.stdenv.hostPlatform.system}.hyprsplitlua
           }/share/hyprsplit/init.lua";
         };
-        "hyprload" = {
+
+        # This has to stay autoLoad, even though the "hyprsplit" local below does
+        # the real work: home-manager only emits the package.path preamble that
+        # require() depends on when at least one extraLuaFile is auto-loaded.
+        "stewos-init" = {
           autoLoad = true;
           content = ''
-            local hs = require("hyprsplit")
+            require("hyprsplit")
           '';
         };
       };
 
       settings = {
-        monitor = lib.lists.foldl (acc: monitor: acc ++ [ (stewos.lib.hypr.mkMonitorConfig monitor) ]) [
-          ",preferred,auto,1"
-        ] cfg.monitors;
+        # Rendered as "local hyprsplit = require(...)" ahead of every other call,
+        # so the split:* bindings below can reference it.
+        hyprsplit._var = hypr.mkLua ''require("hyprsplit")'';
 
-        misc = {
-          # Focus windows that send "activate" requests
-          focus_on_activate = true;
+        monitor = [
+          # Fallback for any monitor not described in stewos.desktop.monitors
+          {
+            output = "";
+            mode = "preferred";
+            position = "auto";
+            scale = "auto";
+          }
+        ]
+        ++ map hypr.mkMonitorSpec cfg.monitors;
 
-          # Disable default images
-          disable_hyprland_logo = true;
-          disable_splash_rendering = true;
-        };
+        config = {
+          misc = {
+            # Focus windows that send "activate" requests
+            focus_on_activate = true;
 
-        input = {
-          kb_layout = "us";
-          kb_options = if cfg.swapEscape then "caps:swapescape" else "";
-          follow_mouse = 1;
-          sensitivity = 0;
-          touchpad.natural_scroll = true;
-        };
-
-        general = with config.colorScheme.palette; {
-          gaps_in = 5;
-          gaps_out = 1;
-          border_size = 1;
-          "col.active_border" = "rgba(${base0D}ee) rgba(${base0E}ee) 45deg";
-          "col.inactive_border" = "rgba(${base05}aa)";
-          layout = "dwindle";
-          allow_tearing = false;
-        };
-
-        decoration = {
-          rounding = 25;
-
-          shadow = {
-            enabled = true;
-            range = 4;
-            render_power = 3;
-            color = "rgba(${config.colorScheme.palette.base02}ee)";
+            # Disable default images
+            disable_hyprland_logo = true;
+            disable_splash_rendering = true;
           };
 
-          blur = {
-            enabled = true;
-            size = 8;
-            passes = 1;
+          input = {
+            kb_layout = "us";
+            kb_options = if cfg.swapEscape then "caps:swapescape" else "";
+            follow_mouse = 1;
+            sensitivity = 0;
+            touchpad.natural_scroll = true;
           };
+
+          general = with config.colorScheme.palette; {
+            gaps_in = 5;
+            gaps_out = 1;
+            border_size = 1;
+            layout = "dwindle";
+            allow_tearing = false;
+
+            col = {
+              active_border = {
+                colors = [
+                  "rgba(${base0D}ee)"
+                  "rgba(${base0E}ee)"
+                ];
+                angle = 45;
+              };
+              inactive_border = "rgba(${base05}aa)";
+            };
+          };
+
+          decoration = {
+            rounding = 25;
+
+            shadow = {
+              enabled = true;
+              range = 4;
+              render_power = 3;
+              color = "rgba(${config.colorScheme.palette.base02}ee)";
+            };
+
+            blur = {
+              enabled = true;
+              size = 8;
+              passes = 1;
+            };
+          };
+
+          animations.enabled = true;
+
+          # NOTE: "pseudotile" was removed upstream; pseudotiling is now the
+          # "pseudo" window rule effect / hl.dsp.window.pseudo() dispatcher.
+          dwindle.preserve_split = true;
         };
 
-        animations = {
-          enabled = true;
-
-          bezier = "myBezier, 0.05, 0.9, 0.1, 1.05";
-          animation = [
-            "windows, 1, 7, myBezier"
-            "windowsOut, 1, 7, default, popin 80%"
-            "border, 1, 10, default"
-            "borderangle, 1, 8, default"
-            "fade, 1, 7, default"
-            "workspaces, 1, 6, default"
-            # "layers, 1, 7, default, slide"
-            # "specialWorkspace, 1, 6, default, slidefadevert -20%"
+        # "curve" is one of home-manager's importantPrefixes, so this is always
+        # emitted ahead of the animations which reference it.
+        curve = {
+          _args = [
+            "myBezier"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0.05
+                  0.9
+                ]
+                [
+                  0.1
+                  1.05
+                ]
+              ];
+            }
           ];
         };
 
-        dwindle = {
-          pseudotile = true;
-          preserve_split = true;
-          # no_gaps_when_only = 1;
-        };
-
-        workspace = [
-          "w[t1], gapsout:0, gapsin:0"
-          "w[tg1], gapsout:0, gapsin:0"
-          "f[1], gapsout:0, gapsin:0"
+        animation = [
+          {
+            leaf = "windows";
+            enabled = true;
+            speed = 7;
+            bezier = "myBezier";
+          }
+          {
+            leaf = "windowsOut";
+            enabled = true;
+            speed = 7;
+            bezier = "default";
+            style = "popin 80%";
+          }
+          {
+            leaf = "border";
+            enabled = true;
+            speed = 10;
+            bezier = "default";
+          }
+          {
+            leaf = "borderangle";
+            enabled = true;
+            speed = 8;
+            bezier = "default";
+          }
+          {
+            leaf = "fade";
+            enabled = true;
+            speed = 7;
+            bezier = "default";
+          }
+          {
+            leaf = "workspaces";
+            enabled = true;
+            speed = 6;
+            bezier = "default";
+          }
         ];
 
-        windowrulev2 = [
-          # Disallow maximization, and inhibit idle when fullscreen
-          "suppressevent maximize, class:.*"
-          "idleinhibit fullscreen, class:.*"
+        # Smart gaps
+        workspace_rule = [
+          {
+            workspace = "w[t1]";
+            gaps_out = 0;
+            gaps_in = 0;
+          }
+          {
+            workspace = "w[tg1]";
+            gaps_out = 0;
+            gaps_in = 0;
+          }
+          {
+            workspace = "f[1]";
+            gaps_out = 0;
+            gaps_in = 0;
+          }
+        ];
 
-          "float,class:(showmethekey-gtk)"
-          "size 100% 10%,class:(showmethekey-gtk)"
-          "move 0% 90%,class:(showmethekey-gtk)"
-          "noborder,class:(showmethekey-gtk)"
-          "animation slide bottom,class:(showmethekey-gtk)"
+        # NOTE: rules are evaluated top to bottom and the last match wins, so the
+        # order here is significant. They are deliberately left anonymous; naming a
+        # rule would promote it ahead of every anonymous one.
+        window_rule = [
+          # Disallow maximization, and inhibit idle when fullscreen
+          {
+            match.class = ".*";
+            suppress_event = "maximize";
+            idle_inhibit = "fullscreen";
+          }
+
+          {
+            match.class = "showmethekey-gtk";
+            float = true;
+            size = [
+              "monitor_w"
+              "monitor_h*0.1"
+            ];
+            move = [
+              "0"
+              "monitor_h*0.9"
+            ];
+            # Window rules have no "no_border"; that is a workspace rule field.
+            border_size = 0;
+            animation = "slide bottom";
+          }
 
           # Smart Gaps
-          "bordersize 0, floating:0, onworkspace:w[t1]"
-          # "rounding 0, floating:0, onworkspace:w[t1]"
-          "bordersize 0, floating:0, onworkspace:w[tg1]"
-          # "rounding 0, floating:0, onworkspace:w[tg1]"
-          "bordersize 0, floating:0, onworkspace:f[1]"
-          # "rounding 0, floating:0, onworkspace:f[1]"
+          {
+            match = {
+              float = false;
+              workspace = "w[t1]";
+            };
+            border_size = 0;
+          }
+          {
+            match = {
+              float = false;
+              workspace = "w[tg1]";
+            };
+            border_size = 0;
+          }
+          {
+            match = {
+              float = false;
+              workspace = "f[1]";
+            };
+            border_size = 0;
+          }
 
           # Make the authentication agent prompt *special* o.O
-          "float,class:(polkit-gnome-authentication-agent-1)"
-          "move 37% 2%,class:(polkit-gnome-authentication-agent)"
-          "size 25% 10%,class:(polkit-gnome-authentication-agent)"
-          "pin,class:(polkit-gnome-authentication-agent-1)"
-          "stayfocused,class:(polkit-gnome-authentication-agent-1)"
-          "animation slide top,class:(polkit-gnome-authentication-agent-1)"
-          "workspace special:polkit,class:(polkit-gnome-authentication-agent)"
+          {
+            match.class = "polkit-gnome-authentication-agent-1";
+            float = true;
+            move = [
+              "monitor_w*0.37"
+              "monitor_h*0.02"
+            ];
+            size = [
+              "monitor_w*0.25"
+              "monitor_h*0.1"
+            ];
+            pin = true;
+            stay_focused = true;
+            animation = "slide top";
+            workspace = "special:polkit";
+          }
 
           # Float windows with a dash prefix in their class like a dashboard
-          "float,class:^(dash)"
-          "move 33% 2%,class:^(dash)"
-          "size 33% 25%,class:^(dash)"
-          "opacity 0.98,class:^(dash)"
-          "stayfocused,class:^(dash)"
-          "animation slide top,class:^(dash)"
+          {
+            match.class = "^dash";
+            float = true;
+            move = [
+              "monitor_w*0.33"
+              "monitor_h*0.02"
+            ];
+            size = [
+              "monitor_w*0.33"
+              "monitor_h*0.25"
+            ];
+            opacity = "0.98";
+            stay_focused = true;
+            animation = "slide top";
+          }
 
           # Make slack into a floating drop-down panel
-          "float,class:^(Slack)$"
-          "move 15% 2%,class:^(Slack)$"
-          "size 70% 75%,class:^(Slack)$"
-          "animation slide top,class:^(Slack)$"
-          "workspace special:slack,class:^(Slack)$"
+          {
+            match.class = "^Slack$";
+            float = true;
+            move = [
+              "monitor_w*0.15"
+              "monitor_h*0.02"
+            ];
+            size = [
+              "monitor_w*0.7"
+              "monitor_h*0.75"
+            ];
+            animation = "slide top";
+            workspace = "special:slack";
+          }
 
-          "workspace special:shell,class:^(dash:shell)$"
-          "workspace special:python,class:^(dash:python)$"
+          {
+            match.class = "^dash:shell$";
+            workspace = "special:shell";
+          }
+          {
+            match.class = "^dash:python$";
+            workspace = "special:python";
+          }
         ];
 
         # Generate all the bindings
@@ -516,13 +734,8 @@ in
           (generateBindings defaultBindings)
           (generateBindings cfg.bindings)
         ];
-
-        source = "${config.xdg.configHome}/hypr/config.d/*.conf";
       };
     };
-
-    # Create an empty file so the glob import doesn't fail
-    xdg.configFile."hypr/config.d/00-empty.conf".text = "";
 
     # Ensure that the systemd session has access to home-manager session variables.
     # This means that hyprland in turn has access to these variables.

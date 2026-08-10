@@ -151,9 +151,24 @@ in
               };
 
               dispatcher = lib.mkOption {
-                description = "The Hyprland dispatcher to use for this binding";
+                description = ''
+                  The Hyprland dispatcher to use for this binding. In addition to
+                  the dispatcher names mapped onto the Lua API in the Hyprland
+                  module, "exec" runs a package, "rofi" opens rofi with a set of
+                  modes, and "lua" evaluates the raw expression in "lua".
+                '';
                 type = lib.types.str;
                 default = "exec";
+              };
+
+              lua = lib.mkOption {
+                description = ''
+                  Raw Lua expression evaluated as the dispatcher, used when
+                  "dispatcher" is set to "lua". For example
+                  "hl.dsp.window.move({ workspace = 3 })".
+                '';
+                type = lib.types.str;
+                default = "";
               };
 
               target = lib.mkOption {
@@ -210,7 +225,7 @@ in
     # stew-shell.enable = pkgs.stdenv.isLinux;
 
     programs.noctalia = {
-      enable = pkgs.stdenv.isLinux;
+      enable = false; # pkgs.stdenv.isLinux;
 
       settings = {
         wallpaper = {
@@ -221,7 +236,7 @@ in
     };
 
     programs.caelestia = {
-      enable = false; # pkgs.stdenv.isLinux;
+      enable = pkgs.stdenv.isLinux;
       systemd.enable = true;
       cli.enable = true;
 
@@ -246,6 +261,14 @@ in
         pwvucontrol
       ]
     );
+
+    # Electron reads this natively to pick its Ozone backend, which is the
+    # supported replacement for per-package "commandLineArgs" overrides. The
+    # Hyprland module copies home.sessionVariables into the systemd user
+    # environment, so the whole graphical session inherits it.
+    home.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+      ELECTRON_OZONE_PLATFORM_HINT = "auto";
+    };
 
     home.file."Pictures/Wallpapers/wallpaper.jpg".source = cfg.wallpaper;
 

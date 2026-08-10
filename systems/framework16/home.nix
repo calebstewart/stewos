@@ -48,12 +48,10 @@
     ])
   ];
 
-  xdg.configFile."hypr/config.d/99-framework-keyboard.conf".text = ''
-    device {
-      name = framework-laptop-16-keyboard-module---ansi-keyboard
-      kb_options = caps:swapescape
-    }
-  '';
+  wayland.windowManager.hyprland.settings.device = {
+    name = "framework-laptop-16-keyboard-module---ansi-keyboard";
+    kb_options = "caps:swapescape";
+  };
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 }

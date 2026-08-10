@@ -20,8 +20,11 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
-    wayland.windowManager.hyprland.settings.windowrulev2 = [
-      "animation slide left,initialclass:(SwayNotificationCenterControlCenter)"
+    wayland.windowManager.hyprland.settings.window_rule = [
+      {
+        match.initial_class = "SwayNotificationCenterControlCenter";
+        animation = "slide left";
+      }
     ];
 
     services.swaync = {

@@ -71,9 +71,25 @@
   # to automatically lock our session on the first startup of Hyprland. I like
   # hyprlock better than any locker, and I run a single-user machine, so this works
   # nicely. This is purely preference.
-  xdg.configFile."hypr/config.d/99-autolock.conf".text = ''
-    exec-once = ${lib.getExe config.programs.hyprlock.package} --immediate --quiet --no-fade-in
-  '';
+  wayland.windowManager.hyprland.settings.on = {
+    _args = [
+      "hyprland.start"
+      (lib.generators.mkLuaInline ''
+        function()
+          hl.exec_cmd(${
+            lib.generators.toLua { } (
+              lib.escapeShellArgs [
+                (lib.getExe config.programs.hyprlock.package)
+                "--immediate"
+                "--quiet"
+                "--no-fade-in"
+              ]
+            )
+          })
+        end
+      '')
+    ];
+  };
 
   # This is used for configuring various applications
   colorScheme = nix-colors.colorSchems.catppuccin-mocha;
