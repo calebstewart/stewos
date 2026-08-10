@@ -45,6 +45,7 @@
     desktop = {
       enable = true;
       modifier = "ALT";
+      startLocked = true;
 
       # wallpaper = pkgs.fetchurl {
       #   url = "https://i.redd.it/uhmtqleyl2sd1.jpeg";
@@ -96,16 +97,6 @@
     zoxide.enable = true;
     direnv.enable = true;
   };
-
-  # Lock caelestia on start
-  systemd.user.services.caelestia.Service.ExecStartPost = [
-    (lib.escapeShellArgs [
-      (lib.getExe config.programs.caelestia.cli.package)
-      "shell"
-      "lock"
-      "lock"
-    ])
-  ];
 
   colorScheme = nix-colors.colorSchemes.catppuccin-mocha;
 

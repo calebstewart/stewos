@@ -10,6 +10,7 @@
     desktop = {
       enable = true;
       modifier = "ALT";
+      startLocked = true;
     };
 
     git.enable = true;
@@ -28,24 +29,6 @@
     discord
     signal-desktop
     btop
-  ];
-
-  home.file.".wayland-session" = {
-    text = ''
-      exec ${lib.getExe config.wayland.windowManager.hyprland.package} >/dev/null 2>/dev/null
-    '';
-
-    executable = true;
-  };
-
-  # Lock caelestia on start
-  systemd.user.services.caelestia.Service.ExecStartPost = [
-    (lib.escapeShellArgs [
-      (lib.getExe config.programs.caelestia.cli.package)
-      "shell"
-      "lock"
-      "lock"
-    ])
   ];
 
   wayland.windowManager.hyprland.settings.device = {

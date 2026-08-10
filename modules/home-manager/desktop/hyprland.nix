@@ -10,6 +10,8 @@ let
 
   hypr = stewos.lib.hypr;
 
+  hyprPkg = config.wayland.windowManager.hyprland.package;
+
   # Dispatchers that map a legacy Hyprland dispatcher name onto the Lua API. Each
   # entry takes the binding's "args" (normalized to a single string) and returns a
   # raw Lua expression suitable for the second argument of "hl.bind".
@@ -741,13 +743,25 @@ in
     # This means that hyprland in turn has access to these variables.
     systemd.user.sessionVariables = config.home.sessionVariables;
 
-    # This is useful when using something like greetd to launch our session
-    # with the correct Hyprland version.
+    # greetd execs this (see modules/nixos/autologin). Hyprland 0.55+ wants to be
+    # started by its watchdog, "start-hyprland": it restarts a crashed compositor
+    # in safe mode, and re-locks it if the session was locked when it died.
+    # Launching the Hyprland binary directly makes it warn on every boot.
+    #
+    # "--path" pins the compositor to the same package that generated
+    # ~/.config/hypr/hyprland.lua. Home-manager is standalone here, so the
+    # system's programs.hyprland package can lag a "nh home switch".
+    #
+    # Everything after "--" is forwarded to Hyprland. "--locked" force-locks
+    # before the first frame; caelestia's lock then takes over (see default.nix).
+    #
+    # Output is deliberately not redirected, so the watchdog and the compositor
+    # both land in "journalctl -u greetd".
     home.file.".wayland-session" = {
       executable = true;
 
       text = ''
-        exec ${lib.getExe config.wayland.windowManager.hyprland.package} >/dev/null 2>/dev/null
+        exec ${lib.getExe' hyprPkg "start-hyprland"} --path ${lib.getExe hyprPkg}${lib.optionalString cfg.startLocked " -- --locked"}
       '';
     };
   };

@@ -254,6 +254,20 @@ in
       };
     };
 
+    # Lock as soon as caelestia is up. Hyprland has already force-locked itself
+    # via "--locked" (see hyprland.nix), so this is the handover to the real
+    # locker rather than the thing that closes the unlocked-desktop window.
+    systemd.user.services.caelestia.Service.ExecStartPost =
+      lib.mkIf (pkgs.stdenv.isLinux && cfg.startLocked)
+        [
+          (lib.escapeShellArgs [
+            (lib.getExe config.programs.caelestia.cli.package)
+            "shell"
+            "lock"
+            "lock"
+          ])
+        ];
+
     # Setup a volume control application for Linux
     home.packages = lib.mkIf pkgs.stdenv.isLinux (
       with pkgs;
