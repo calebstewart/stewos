@@ -55,11 +55,10 @@
     enable = true;
     enableDefaultConfig = false;
 
-    matchBlocks = {
-      "i-*" = {
-        proxyCommand = "sh -c \"aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p' --region us-east-1\"";
-      };
-    };
+    # Reach EC2 instances by instance ID through SSM rather than by address.
+    # Attribute names are Host patterns and keys are OpenSSH directive names.
+    settings."i-*".ProxyCommand =
+      ''sh -c "aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p' --region us-east-1"'';
   };
 
   programs.rbenv.enable = true;
