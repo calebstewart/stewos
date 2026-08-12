@@ -19,20 +19,32 @@ in
       package = inputs.hyprpolkitagent.packages.${pkgs.stdenv.hostPlatform.system}.default;
     };
 
-    # The home-manager unit has no Restart policy; add one.
-    systemd.user.services.hyprpolkitagent.Service = {
-      Restart = "on-failure";
-      RestartSec = 1;
-      TimeoutStopSec = 10;
+    systemd.user.services.hyprpolkitagent = {
+      # The home-manager unit has no Restart policy; add one.
+      Service = {
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
+
+      # The agent only reads its config at startup. Embedding the config's
+      # store path in the unit makes the unit change whenever the config
+      # does, so sd-switch restarts the agent on activation.
+      Unit.X-Restart-Triggers = [
+        "${config.xdg.configFile."hyprpolkitagent/hyprpolkitagent.conf".source}"
+      ];
     };
 
-    # The agent draws a fixed-size window (default 520x440) and auto-sizes the
-    # content inside it, so the default height leaves a large empty area below
-    # the buttons. Shrink it to roughly fit the content.
+    # The agent draws a fixed-size window and auto-sizes the content inside
+    # it, so an oversized window reads as heavy padding. Size it relative to
+    # the monitor. The agent honours the height but renders at its minimum
+    # width regardless of window_width (upstream bug), so the width is
+    # enforced by the window rule in hyprland.nix; it is still written here
+    # so the agent's internal layout targets agree once upstream fixes it.
     xdg.configFile."hyprpolkitagent/hyprpolkitagent.conf".text = ''
       general {
-        window_width = 520
-        window_height = 320
+        window_width = ${toString cfg.authDialogSize.width}
+        window_height = ${toString cfg.authDialogSize.height}
       }
     '';
   };

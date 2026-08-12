@@ -673,11 +673,17 @@ in
           # The authentication agent prompt: a normal centered floating
           # dialog, pinned so workspace switches don't lose it. The
           # hyprtoolkit rewrite sets a proper app-id, so class matching works.
+          # The size is forced here because the agent ignores its configured
+          # width and always opens at its minimum (see polkit.nix).
           {
             match.class = "^hyprpolkitagent$";
             float = true;
             pin = true;
             stay_focused = true;
+            size = [
+              (toString cfg.authDialogSize.width)
+              (toString cfg.authDialogSize.height)
+            ];
           }
 
           # Float windows with a dash prefix in their class like a dashboard
