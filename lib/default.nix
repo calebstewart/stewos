@@ -5,6 +5,7 @@
 # from a REPL without dragging the flake along.
 { lib }:
 {
-  hypr = import ./hypr.nix { inherit lib; };
+  desktop = import ./desktop.nix { inherit lib; };
   rasi = import ./rasi { inherit lib; };
+  rofi = import ./rofi.nix { inherit lib; };
 }

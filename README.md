@@ -17,7 +17,8 @@ overlays/     The StewOS overlay: adds a "stewos" package scope to nixpkgs.
 pkgs/         Package definitions. Plain callPackage derivations that never
               reference flake inputs.
 lib/          Pure helpers: takes a nixpkgs lib, returns functions.
-  hypr.nix      Hyprland monitor/keybinding/dispatcher generators
+  desktop.nix   Command line construction shared by both desktop backends
+  rofi.nix      Rofi command line construction
   rasi/         RASI DSL used to generate Rofi themes and configs
 modules/
   common/       Options shared by NixOS and Home-Manager
@@ -172,17 +173,48 @@ The largest module, and the one worth knowing the options of:
 
 | Option | Description |
 |--------|-------------|
-| `monitors` | Monitor list: description, resolution, position, scale |
-| `bindings` | Keybindings, as a modifier → key → dispatcher mapping |
+| `monitors` | Monitor list: description, resolution, position, scale (Linux) |
+| `keyboards` | Per-keyboard overrides, keyed by device name (Linux) |
+| `bindings` | Keybindings, keyed by name; see below |
 | `modifier` | Global modifier prefix for keybindings (default `SUPER`) |
 | `terminal` | Terminal package (default Alacritty) |
 | `wallpaper` | Path to a wallpaper image |
-| `startLocked` / `lockCommand` | Start the session locked, and how to hand off to the locker |
-| `swapEscape` | Swap Escape and Caps Lock |
+| `fonts.ui` / `fonts.monospace` | Interface and monospace fonts, shared by every toolkit |
+| `startLocked` | Bring the session up locked (Linux) |
+| `capsLockEscape` | Send Escape when Caps Lock is pressed |
+| `swapCommandAlt` | Swap left Command and left Alt (macOS) |
 
-Keybindings are generated as Lua through the helpers in `lib/hypr.nix`, and the
-module asserts that every dispatcher a binding names has a known Lua mapping, so
-a typo fails at build time rather than at compositor startup.
+None of these name a compositor. Hyprland runs the desktop on Linux and
+Aerospace on macOS, but that lives in `modules/home-manager/desktop/linux/` and
+`.../darwin/`; a host describes what it wants and the backend for the platform
+it is built for works out how to ask for it.
+
+Bindings are keyed by a name you choose, and name a `key`, the `modifiers` held
+with it, and either a neutral `action` or a `command` to run:
+
+```nix
+stewos.desktop.bindings = {
+  # Retarget a binding StewOS provides
+  launcher.key = "space";
+
+  # Or stop binding it
+  power-menu.enable = false;
+
+  # Or add one of your own
+  notes = {
+    key = "n";
+    modifiers = [ "shift" ];
+    command.package = pkgs.obsidian;
+  };
+};
+```
+
+Each backend owns a table saying what every neutral key name and action means
+to it, and asserts on anything it cannot render — so a typo, a duplicated key
+combination, or an action the platform cannot perform fails at build time
+rather than at compositor startup. Aerospace does not implement `lock-session`
+or the media keys, for instance; restrict such a binding with
+`platforms = [ "linux" ]`.
 
 ## Packages
 

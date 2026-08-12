@@ -14,7 +14,8 @@ stewos/
 ├── pkgs/              # Package definitions; plain callPackage derivations
 │   └── default.nix    # Explicit list of every package in the scope
 ├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
-│   ├── hypr.nix       # Hyprland helpers (monitors, keybindings, dispatchers)
+│   ├── desktop.nix    # Shared desktop helpers (command line construction)
+│   ├── rofi.nix       # Rofi command line construction
 │   └── rasi/          # RASI DSL for Rofi theme generation
 ├── modules/
 │   ├── common/        # Options shared by NixOS and Home-Manager
@@ -175,19 +176,54 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 
 ## Desktop Configuration
 
+The directory is split by platform:
+
+```
+desktop/
+├── options.nix   # the whole stewos.desktop surface, in one file
+├── vocabulary.nix# the modifier/action/direction lists the options are typed against
+├── default.nix   # imports + cross-platform config + binding shape assertions
+├── linux/        # hyprland, style, bindings, theme, polkit, xdg
+└── darwin/       # aerospace, karabiner, autoraise, raycast
+```
+
+Both platform directories are imported unconditionally and every file guards
+its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin}`. Do not switch
+this to conditional `imports` -- deciding what to import from `pkgs.stdenv`
+risks a recursion the module system cannot see through.
+
 Options at `stewos.desktop`:
-- `monitors` - List of monitor configs (description, resolution, position, scale)
-- `bindings` - Keybindings, as modifier → key → dispatcher
-- `modifier` - Global keybinding modifier prefix (default `SUPER`)
+- `monitors` - List of monitor configs (description, resolution, position, scale); Linux
+- `keyboards` - Per-keyboard overrides keyed by device name (layout, variant, capsLockEscape); Linux
+- `bindings` - Keybindings, keyed by a name of your choosing
+- `modifier` - Global keybinding modifier prefix, enum `SUPER`/`ALT`/`CTRL`/`SHIFT` (default `SUPER`)
 - `terminal` - Terminal package (default Alacritty)
 - `wallpaper` - Path to wallpaper image
-- `startLocked`, `lockCommand` - Start locked, and how to hand off to the locker
-- `swapEscape` - Swap Escape and Caps Lock
+- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit
+- `startLocked` - Bring the session up locked; Linux
+- `capsLockEscape` - Send Escape when Caps Lock is pressed
+- `swapCommandAlt` - Swap left Command and left Alt; macOS
 
-Bindings are rendered to Lua via `lib/hypr.nix`. The module asserts that every
-dispatcher a binding names has a known Lua mapping, so a typo fails at build
-time rather than at compositor startup. New dispatchers go in `luaDispatchers`
-in `modules/home-manager/desktop/hyprland.nix`.
+`lockCommand` still exists but is `internal` -- the platform backend sets it,
+no host should.
+
+**The option surface deliberately names no compositor.** A binding is
+`{key, modifiers, useModifier, platforms, action | command}` where `key` and
+`action` are neutral names. Each backend (`linux/bindings.nix`,
+`darwin/aerospace.nix`) owns three tables -- modifiers, keys, actions --
+translating those names into its own vocabulary, and asserts on any it does not
+implement. Adding an action means adding it to `vocabulary.nix` plus at least
+one backend's `actions` table. Keep Hyprland and Rofi vocabulary out of
+`options.nix`.
+
+Each backend contributes its default keymap *through* `stewos.desktop.bindings`
+with per-field `mkDefault`, which is what lets a host retarget or disable a
+StewOS-provided binding by name. Do not go back to merging a private
+`defaultBindings` in at render time.
+
+The two keymaps genuinely diverge on `h/j/k/l`: Linux focuses/moves a *window*,
+macOS focuses/moves between *monitors*. That is why the vocabulary has separate
+window-directional and monitor-directional actions -- it is not redundancy.
 
 The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
 otherwise wire up individually: the locker, idle handling, notifications, the
@@ -198,12 +234,34 @@ checking whether caelestia already covers it.
 `stewos.rofi` is still a real module and is enabled per-host; caelestia does not
 replace the launcher.
 
-Hypr ecosystem theming lives in `modules/home-manager/desktop/hypr-theme.nix`,
-which generates `~/.config/hypr/{application-style.conf,hyprtoolkit.conf,hyprqt6engine.conf}`
-from the nix-colors palette: the QML style used by hyprpolkitagent, the
-hyprtoolkit-native apps, and general Qt6 apps respectively. `desktop/qt.nix`
-sets `QT_QPA_PLATFORMTHEME=hyprqt6engine` (from the `hyprqt6engine` flake
-input) instead of qt6ct/gtk3.
+All application theming lives in `modules/home-manager/desktop/linux/theme.nix`
+and is driven from `config.colorScheme` (nix-colors), so a scheme change moves
+the whole desktop rather than half of it:
+
+- GTK 3 and 4 via `adw-gtk3-dark` plus a generated `@define-color` stylesheet
+  set as both `gtk3.extraCss` and `gtk4.extraCss`. libadwaita ignores theme
+  packages but honours those named colours, and adw-gtk3 backports them to
+  GTK 3 -- which is why one stylesheet covers both.
+- `hypr/hyprtoolkit.conf` for hyprtoolkit-native apps.
+- `programs.hyprland-qt-support` for the QML style hyprpolkitagent uses.
+- `hypr/hyprqt6engine.conf` for every other Qt6 app, with `qt.platformTheme.name
+  = "hyprqt6engine"` (from the `hyprqt6engine` flake input) instead of
+  qt6ct/gtk3. Its palette is a **generated** qt5ct-format file -- three rows of
+  22 `#AARRGGBB` values in `QPalette::ColorRole` order -- not a path into a
+  theme package.
+
+The one thing not derived is cursors and tinted folder icons, which ship as
+per-flavour image sets. Those come from a small `schemeAssets` map in
+`theme.nix` keyed on `config.colorScheme.slug`, with a neutral fallback so an
+unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
+is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
+return a package.
+
+Stylix is imported (`modules/home-manager/default.nix`, and the NixOS and
+Darwin equivalents) but **deliberately never configured**. Adopting it would
+mean handing it Alacritty, Neovim, Firefox, GTK, Qt and the cursor -- all styled
+by hand here -- and giving the repo a second palette source alongside
+`config.colorScheme`. Do not wire it up as a drive-by.
 
 ## Conventions
 

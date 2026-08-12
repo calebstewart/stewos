@@ -11,6 +11,11 @@
       enable = true;
       modifier = "ALT";
 
+      capsLockEscape = true;
+
+      # Put the "ALT" prefix above on the key this keyboard labels Command.
+      swapCommandAlt = true;
+
       wallpaper = pkgs.fetchurl {
         url = "https://images-assets.nasa.gov/image/art002e000191/art002e000191~large.jpg";
         sha256 = "sha256-SQfQAhWvyUM7X6u+fW89TjR7eYaOSXIS9XzVaXsQIIc=";

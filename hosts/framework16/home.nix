@@ -11,6 +11,10 @@
       enable = true;
       modifier = "ALT";
       startLocked = true;
+
+      # The built-in keyboard enumerates as its own input device, which the
+      # session-wide keyboard settings do not reach.
+      keyboards."framework-laptop-16-keyboard-module---ansi-keyboard".capsLockEscape = true;
     };
 
     update-manager.enable = true;
@@ -32,11 +36,6 @@
     signal-desktop
     btop
   ];
-
-  wayland.windowManager.hyprland.settings.device = {
-    name = "framework-laptop-16-keyboard-module---ansi-keyboard";
-    kb_options = "caps:swapescape";
-  };
 
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 }
