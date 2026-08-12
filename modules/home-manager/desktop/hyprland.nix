@@ -671,10 +671,10 @@ in
           }
 
           # The authentication agent prompt: a normal centered floating
-          # dialog, pinned so workspace switches don't lose it. Matched by
-          # title because hyprpolkitagent sets no app-id (empty class).
+          # dialog, pinned so workspace switches don't lose it. The
+          # hyprtoolkit rewrite sets a proper app-id, so class matching works.
           {
-            match.title = "^Hyprland Polkit Agent$";
+            match.class = "^hyprpolkitagent$";
             float = true;
             pin = true;
             stay_focused = true;
