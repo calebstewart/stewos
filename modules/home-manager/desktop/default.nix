@@ -117,46 +117,6 @@ in
       );
     };
 
-    authDialogSize = lib.mkOption {
-      description = ''
-        Size of the polkit authentication prompt, in logical pixels. The
-        default derives ~22% of the first explicitly-configured monitor's
-        scale-adjusted resolution, clamped to the range the dialog content
-        needs; it falls back to a fixed size when every monitor uses
-        "preferred". Consumed by polkit.nix (agent config) and hyprland.nix
-        (window rule, because the agent honours configured height but not
-        width, so the compositor enforces it).
-      '';
-      internal = true;
-      type = lib.types.submodule {
-        options = {
-          width = lib.mkOption { type = lib.types.int; };
-          height = lib.mkOption { type = lib.types.int; };
-        };
-      };
-      default =
-        let
-          explicit = lib.filter (m: m.resolution != "preferred") config.stewos.desktop.monitors;
-          clamp =
-            lo: hi: v:
-            lib.min hi (lib.max lo v);
-          m = lib.head explicit;
-          logicalW = builtins.floor (m.resolution.width / m.scale);
-          logicalH = builtins.floor (m.resolution.height / m.scale);
-        in
-        if explicit == [ ] then
-          {
-            width = 520;
-            height = 320;
-          }
-        else
-          {
-            width = clamp 460 600 (builtins.floor (logicalW * 0.22));
-            height = clamp 280 400 (builtins.floor (logicalH * 0.22));
-          };
-      defaultText = lib.literalMD "~22% of the first explicit monitor's logical resolution";
-    };
-
     wallpaper = lib.mkOption {
       description = "Path to a wallpaper.";
       type = lib.types.path;
