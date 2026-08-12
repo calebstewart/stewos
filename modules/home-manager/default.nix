@@ -14,6 +14,7 @@
     ./bat.nix
     ./desktop
     ./direnv.nix
+    ./embermug-tray.nix
     ./eza.nix
     ./firefox.nix
     ./git.nix

@@ -6,10 +6,6 @@
   ...
 }:
 {
-  imports = [ inputs.embermug-tray.homeManagerModules.default ];
-
-  # services.embermug-tray.enable = true;
-
   home.packages =
     (with pkgs; [
       discord
@@ -25,25 +21,6 @@
       # From llm-agents.nix rather than nixpkgs, which lags upstream releases.
       inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
     ];
-
-  systemd.user.services.embermug-tray = {
-    Unit = {
-      Description = "EmberMug Tray application";
-      PartOf = [ "graphical-session.target" ];
-      After = [ "graphical-session.target" ];
-    };
-
-    Service = {
-      Type = "simple";
-      ExecStart = "${inputs.embermug-tray.packages.${pkgs.stdenv.system}.default}/bin/embermug-tray";
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-
-    Install = {
-      WantedBy = [ "graphical-session.target" ];
-    };
-  };
 
   stewos = {
     desktop = {
@@ -90,6 +67,7 @@
         }) orderedNames;
     };
 
+    embermug-tray.enable = true;
     update-manager.enable = true;
 
     git.enable = true;

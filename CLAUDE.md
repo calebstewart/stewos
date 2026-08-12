@@ -172,6 +172,7 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
 | `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main` |
+| `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
 ## Desktop Configuration
