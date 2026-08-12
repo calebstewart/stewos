@@ -150,11 +150,22 @@ This means `inputs` inside a StewOS module always refers to StewOS's inputs;
 pass your own under a different name. See [templates/nixos-single/src/flake.nix]
 for a complete example.
 
-The package scope is available separately:
+The modules also expect two overlays on the `pkgs` you hand them: StewOS's own
+package scope, and NUR, which the `firefox` module uses for browser addons.
 
 ```nix
-nixpkgs.overlays = [ stewos.overlays.default ];   # then use pkgs.stewos.*
+pkgs = import nixpkgs {
+  inherit system;
+  config.allowUnfree = true;
+  overlays = [
+    stewos.overlays.default                          # pkgs.stewos.*
+    stewos.lib.moduleInputs.nur.overlays.default     # pkgs.nur.*
+  ];
+};
 ```
+
+If you only want the packages and none of the modules, `overlays.default` on its
+own is enough.
 
 ## Available Modules
 

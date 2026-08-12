@@ -39,11 +39,16 @@
         inputs = stewos.lib.moduleInputs;
       };
 
-      # nixpkgs with the StewOS package scope (pkgs.stewos.*) available.
+      # nixpkgs with the overlays the StewOS modules expect: its own package
+      # scope (pkgs.stewos.*), and NUR, which the firefox module uses for
+      # browser addons. This is the same pair StewOS applies to its own hosts.
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        overlays = [ stewos.overlays.default ];
+        overlays = [
+          stewos.overlays.default
+          stewos.lib.moduleInputs.nur.overlays.default
+        ];
       };
     in
     {
