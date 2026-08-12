@@ -7,9 +7,6 @@
     # Configure doas to allow the administrators
     security.doas.enable = true;
 
-    # Allow hyprlock to unlock the system
-    security.pam.services.hyprlock = { };
-
     # Enable polkit
     security.polkit = {
       enable = true;

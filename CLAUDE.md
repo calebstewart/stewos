@@ -180,8 +180,6 @@ Options at `stewos.desktop`:
 - `modifier` - Global keybinding modifier prefix (default `SUPER`)
 - `terminal` - Terminal package (default Alacritty)
 - `wallpaper` - Path to wallpaper image
-- `idle.{dimSeconds,lockSeconds,sleepSeconds}` - Idle timeouts
-- `notifications.{enableSound,volume,soundTheme}` - Notification sounds
 - `startLocked`, `lockCommand` - Start locked, and how to hand off to the locker
 - `swapEscape` - Swap Escape and Caps Lock
 
@@ -190,10 +188,14 @@ dispatcher a binding names has a known Lua mapping, so a typo fails at build
 time rather than at compositor startup. New dispatchers go in `luaDispatchers`
 in `modules/home-manager/desktop/hyprland.nix`.
 
-The shell UI comes from `caelestia-shell` and `noctalia`, which is why several
-submodules are commented out of `desktop/default.nix` (`hypridle`, `hyprlock`,
-`hyprpaper`, `rofi`). `swaync.nix` and `waybar/` are not referenced at all and
-are dead code -- do not assume they are live.
+The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
+otherwise wire up individually: the locker, idle handling, notifications, the
+bar and the wallpaper daemon. There are deliberately no hypridle / hyprlock /
+hyprpaper / swaync / waybar modules here -- do not add them back without
+checking whether caelestia already covers it.
+
+`stewos.rofi` is still a real module and is enabled per-host; caelestia does not
+replace the launcher.
 
 ## Conventions
 
@@ -246,7 +248,6 @@ the consumer's. `templates/nixos-single/` is a worked example.
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework
 - `caelestia-cli` (github:Gitkubikon/cli) - CLI for the above
-- `noctalia` (github:noctalia-dev/noctalia) - Shell UI components
 - `vfio-hooks` (github:PassthroughPOST/VFIO-Tools) - GPU passthrough tools
 - `gh-actions-language-server` (github:lttb/gh-actions-language-server) - GitHub Actions LSP
 

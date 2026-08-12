@@ -38,17 +38,12 @@ in
   imports = [
     # inputs.stew-shell.homeModules.default
     inputs.caelestia-shell.homeManagerModules.default
-    inputs.noctalia.homeModules.default
 
     ./hyprland.nix
     ./fonts.nix
     ./gtk.nix
-    # ./hypridle.nix
-    # ./hyprlock.nix
-    # ./hyprpaper.nix
     ./polkit.nix
     ./qt.nix
-    # ./rofi.nix
     ./xdg.nix
     ./aerospace.nix
     ./raycast.nix
@@ -120,42 +115,6 @@ in
           };
         }
       );
-    };
-
-    idle = {
-      dimSeconds = lib.mkOption {
-        description = "Number of idle seconds before the default output is dimmed.";
-        default = 30;
-        type = lib.types.int;
-      };
-
-      lockSeconds = lib.mkOption {
-        description = "Number of idle seconds before the user session is locked.";
-        default = 45;
-        type = lib.types.int;
-      };
-
-      sleepSeconds = lib.mkOption {
-        description = "Number of idle seconds before the host is suspended.";
-        default = 60;
-        type = lib.types.int;
-      };
-    };
-
-    notifications = {
-      enableSound = lib.mkOption {
-        description = "Enable a sound for each notification";
-        default = pkgs.stdenv.isLinux;
-        type = lib.types.bool;
-      };
-
-      volume = lib.mkOption {
-        description = "The volume (0-1.0) of the notification sound";
-        default = 0.5;
-        type = lib.types.float;
-      };
-
-      soundTheme = lib.mkPackageOption pkgs "sound-theme-freedesktop" { };
     };
 
     wallpaper = lib.mkOption {
@@ -239,10 +198,6 @@ in
         message = "Monitor layouts cannot be configured for MacOS";
       }
       {
-        assertion = !cfg.notifications.enableSound || !pkgs.stdenv.isDarwin;
-        message = "Notification sounds cannot be configured in home-manager for MacOS";
-      }
-      {
         assertion = cfg.bindings == { } || !pkgs.stdenv.isDarwin;
         message = "Bindings are not supported for MacOS";
       }
@@ -259,17 +214,6 @@ in
 
     # Stew-Shell is only valid for Linux hosts
     # stew-shell.enable = pkgs.stdenv.isLinux;
-
-    programs.noctalia = {
-      enable = false; # pkgs.stdenv.isLinux;
-
-      settings = {
-        wallpaper = {
-          enabled = true;
-          default.path = cfg.wallpaper;
-        };
-      };
-    };
 
     programs.caelestia = {
       enable = pkgs.stdenv.isLinux;

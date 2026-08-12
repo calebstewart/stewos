@@ -176,8 +176,6 @@ The largest module, and the one worth knowing the options of:
 | `modifier` | Global modifier prefix for keybindings (default `SUPER`) |
 | `terminal` | Terminal package (default Alacritty) |
 | `wallpaper` | Path to a wallpaper image |
-| `idle.{dimSeconds,lockSeconds,sleepSeconds}` | Idle timeouts |
-| `notifications.{enableSound,volume,soundTheme}` | Notification sounds |
 | `startLocked` / `lockCommand` | Start the session locked, and how to hand off to the locker |
 | `swapEscape` | Swap Escape and Caps Lock |
 
