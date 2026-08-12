@@ -360,3 +360,28 @@ That adds a second nixpkgs to `flake.lock`, which is the correct trade — the
 follows is a lock-size optimization, not a requirement. Do not try to fix it by
 patching the package or pinning `llm-agents` to an older revision; the whole
 point of the input is that it tracks upstream.
+
+### Darwin home configuration pairs home-manager master with stable nixpkgs
+
+`home-manager` tracks master while `nixpkgs-darwin` tracks the
+`nixpkgs-*-darwin` release branch, so the darwin home configurations
+(currently `huntress-mbp`) build with mismatched versions — e.g. home-manager
+26.11 against nixpkgs 26.05. The Linux hosts are unaffected because they build
+from `nixos-unstable`, which is what home-manager master targets.
+
+This skew is deliberate (a stable home-manager would lag the modules the Linux
+hosts use), and home-manager's release-check warning is suppressed on the
+affected host with `home.enableNixpkgsReleaseCheck = false` in
+`hosts/huntress-mbp/home.nix`.
+
+**Symptom:** after a flake update, the darwin home configuration fails to
+evaluate or behaves oddly — typically a renamed/removed nixpkgs option or a
+home-manager module using a package attribute that stable nixpkgs does not
+have yet — while the Linux hosts and the darwin *system* configuration are
+fine. Because the warning is suppressed, nothing will point at the version
+skew; check for it before debugging the module itself.
+
+**Fix:** usually wait for (or pin to) a home-manager revision compatible with
+the darwin release branch, or bump `nixpkgs-darwin` to the next release. As a
+last resort, split the input and pin a separate `home-manager` release branch
+for darwin.
