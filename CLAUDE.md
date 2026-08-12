@@ -242,7 +242,6 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `mac-app-util` - macOS app trampolines for Home-Manager
 
 ### Personal Flakes (github:calebstewart)
-- `stew-shell` - Custom shell UI components (currently commented out)
 - `embermug-tray` - Ember Mug system tray app
 
 ### External Custom Flakes

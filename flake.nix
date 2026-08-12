@@ -36,11 +36,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    stew-shell = {
-      url = "github:calebstewart/stew-shell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     caelestia-cli = {
       url = "github:Gitkubikon/cli/main";
     };

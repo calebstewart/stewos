@@ -36,7 +36,6 @@ let
 in
 {
   imports = [
-    # inputs.stew-shell.homeModules.default
     inputs.caelestia-shell.homeManagerModules.default
 
     ./hyprland.nix
@@ -211,9 +210,6 @@ in
         '';
       }
     ];
-
-    # Stew-Shell is only valid for Linux hosts
-    # stew-shell.enable = pkgs.stdenv.isLinux;
 
     programs.caelestia = {
       enable = pkgs.stdenv.isLinux;
