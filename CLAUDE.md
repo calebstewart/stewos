@@ -247,9 +247,41 @@ the consumer's. `templates/nixos-single/` is a worked example.
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework
 - `caelestia-cli` (github:Gitkubikon/cli) - CLI for the above
+- `llm-agents` (github:numtide/llm-agents.nix) - Source of `claude-code`; see
+  the failure mode below
 - `vfio-hooks` (github:PassthroughPOST/VFIO-Tools) - GPU passthrough tools
 - `gh-actions-language-server` (github:lttb/gh-actions-language-server) - GitHub Actions LSP
 
 ### Community
 - `nur` - Nix User Repository
 - `nix-std` - Standard library extensions
+
+## Known Failure Modes
+
+### claude-code fails to build after a flake update
+
+`claude-code` comes from the `llm-agents` input rather than nixpkgs, because
+nixpkgs lags upstream releases. That input carries
+`inputs.nixpkgs.follows = "nixpkgs"` so it does not pull a second nixpkgs tree
+into the lock, and it built cleanly that way when it was added
+(claude-code 2.1.228, verified by building it and running the binary).
+
+The follows is the fragile part. `llm-agents` pins its own nixpkgs and builds
+through `bun2nix` against it, so it is only ever tested against that pin. A
+`nix flake update` can move either side and leave claude-code building against
+a nixpkgs its packaging never saw.
+
+**Symptom:** `claude-code` fails to build — most likely inside `bun2nix` or the
+bun/node derivation underneath it — while nothing in this repository changed
+and every other package still builds.
+
+**Fix:** drop the follows in `flake.nix` and let the flake use its own pin:
+
+```nix
+llm-agents.url = "github:numtide/llm-agents.nix";
+```
+
+That adds a second nixpkgs to `flake.lock`, which is the correct trade — the
+follows is a lock-size optimization, not a requirement. Do not try to fix it by
+patching the package or pinning `llm-agents` to an older revision; the whole
+point of the input is that it tracks upstream.
