@@ -106,6 +106,7 @@ impl ksni::Tray for UpdateTray {
             .into(),
             SubMenu {
                 label: "Apply".to_string(),
+                icon_name: "dialog-ok-apply".to_string(),
                 enabled: matches!(self.state, State::UpdatesAvailable(_)),
                 submenu: vec![
                     apply_item("System + home now", ApplyMode::Full),
