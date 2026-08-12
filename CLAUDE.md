@@ -264,7 +264,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
   remedy: drop the follows if it stops building after a flake update)
 - `hyprpolkitagent` (github:hyprwm/hyprpolkitagent) - Polkit agent from
   upstream because nixpkgs' 0.1.3 predates the hyprtoolkit rewrite (upstream
-  did not bump the version); same follows caveat as `hyprqt6engine`
+  did not bump the version); same follows caveat as `hyprqt6engine`. Consumed
+  as `pkgs.stewos.hyprpolkitagent`, which carries a local rendering patch
+  (`pkgs/hyprpolkitagent/`)
 
 ### Community
 - `nur` - Nix User Repository

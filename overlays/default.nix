@@ -20,6 +20,11 @@ inputs: final: prev: {
       # input rather than something fetched inside the derivation.
       gh-actions-language-server-src = inputs.gh-actions-language-server;
 
+      # The upstream hyprpolkitagent package, which pkgs/hyprpolkitagent
+      # patches. The flake only has Linux systems, hence the "or null".
+      hyprpolkitagent-upstream =
+        inputs.hyprpolkitagent.packages.${prev.stdenv.hostPlatform.system}.default or null;
+
       # The RASI DSL used to generate Rofi themes and configs.
       inherit (import ../lib { inherit (prev) lib; }) rasi;
     }
