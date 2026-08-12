@@ -1,1 +1,5 @@
 result
+
+# Per-machine Claude Code state. A shared .claude/settings.json can still be
+# checked in; only the local overlay is ignored.
+.claude/settings.local.json
