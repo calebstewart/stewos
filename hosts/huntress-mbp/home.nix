@@ -68,6 +68,7 @@
     circleci-cli
     poppler-utils
     stewos.shortcut-cli
+    stewos.macfetch
   ];
 
   home.sessionPath = [
