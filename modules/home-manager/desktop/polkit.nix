@@ -25,5 +25,15 @@ in
       RestartSec = 1;
       TimeoutStopSec = 10;
     };
+
+    # The agent draws a fixed-size window (default 520x440) and auto-sizes the
+    # content inside it, so the default height leaves a large empty area below
+    # the buttons. Shrink it to roughly fit the content.
+    xdg.configFile."hyprpolkitagent/hyprpolkitagent.conf".text = ''
+      general {
+        window_width = 520
+        window_height = 320
+      }
+    '';
   };
 }
