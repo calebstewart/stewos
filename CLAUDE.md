@@ -262,6 +262,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `hyprqt6engine` (github:hyprwm/hyprqt6engine) - Qt6 platform theme; unreleased
   upstream and carries the same `follows` fragility as `llm-agents` (same
   remedy: drop the follows if it stops building after a flake update)
+- `hyprpolkitagent` (github:hyprwm/hyprpolkitagent) - Polkit agent from
+  upstream because nixpkgs' 0.1.3 predates the hyprtoolkit rewrite (upstream
+  did not bump the version); same follows caveat as `hyprqt6engine`
 
 ### Community
 - `nur` - Nix User Repository

@@ -55,6 +55,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # The polkit agent from upstream rather than nixpkgs: upstream rewrote it
+    # in hyprtoolkit (themed by hyprtoolkit.conf) without bumping the version,
+    # so nixpkgs' "0.1.3" is still the old Qt dialog. Same follows caveat as
+    # hyprqt6engine.
+    hyprpolkitagent = {
+      url = "github:hyprwm/hyprpolkitagent";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     vfio-hooks = {
       url = "github:PassthroughPOST/VFIO-Tools";
       flake = false;
