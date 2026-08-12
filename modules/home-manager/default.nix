@@ -1,39 +1,27 @@
+# Every StewOS home-manager module.
+#
+# As with the NixOS tree, each module is inert until enabled, and the list is
+# explicit so that it can be read and grepped without evaluating anything.
+{ inputs, ... }:
 {
-  nix-colors,
-  stylix,
-  stewos,
-  ...
-}@inputs:
-{
-  lib,
-  config,
-  ...
-}:
-let
-  filterAttrs = lib.filterAttrs;
-  readDir = builtins.readDir;
-  foldlAttrs = lib.attrsets.foldlAttrs;
+  imports = [
+    inputs.nix-colors.homeManagerModules.default
+    inputs.stylix.homeModules.stylix
 
-  moduleFilter = name: type: type == "directory";
-  moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (
-    acc: name: _type:
-    acc ++ [ (import (./. + "/${name}") inputs) ]
-  ) [ ] moduleDirs;
-in
-{
-  # Load all sub-modules
-  imports = modulePaths ++ [
-    nix-colors.homeManagerModules.default
-    stylix.homeModules.stylix
+    ../common/user.nix
+
+    ./alacritty.nix
+    ./bat.nix
+    ./desktop
+    ./direnv.nix
+    ./eza.nix
+    ./firefox.nix
+    ./git.nix
+    ./neovim.nix
+    ./rofi.nix
+    ./zoxide.nix
+    ./zsh.nix
   ];
 
-  # Common user options
-  options.stewos.user = stewos.lib.mkUserOptions {
-    inherit lib config;
-  };
-
-  config = {
-    home.stateVersion = "25.05";
-  };
+  home.stateVersion = "25.05";
 }

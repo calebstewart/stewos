@@ -1,28 +1,12 @@
+# Every StewOS nix-darwin module, plus the macOS system defaults.
+{ inputs, ... }:
 {
-  home-manager,
-  nur,
-  stylix,
-  ...
-}@inputs:
-{ pkgs, lib, ... }:
-let
-  filterAttrs = lib.filterAttrs;
-  readDir = builtins.readDir;
-  foldlAttrs = lib.attrsets.foldlAttrs;
+  imports = [
+    inputs.home-manager.darwinModules.default
+    inputs.nur.modules.darwin.default
+    inputs.stylix.darwinModules.stylix
 
-  moduleFilter = name: type: type == "directory";
-  moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (
-    acc: name: _type:
-    acc ++ [ (import (./. + "/${name}") inputs) ]
-  ) [ ] moduleDirs;
-in
-{
-  # Load all sub-modules
-  imports = modulePaths ++ [
-    home-manager.darwinModules.default
-    nur.modules.darwin.default
-    stylix.darwinModules.stylix
+    ./nh.nix
   ];
 
   # Setup Nix configuration

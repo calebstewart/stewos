@@ -1,93 +1,30 @@
+# Every StewOS NixOS module.
+#
+# Importing this gives you all of the options; each module stays inert until you
+# set its "enable" flag, so this is cheap to import wholesale. The exception is
+# base.nix, which applies defaults and can be switched off with
+# stewos.base.enable = false.
+#
+# Modules are listed explicitly rather than discovered by scanning the
+# directory: adding a file here is one line, and in exchange every import is
+# greppable and the set of modules is visible without evaluating anything.
+{ inputs, ... }:
 {
-  stewos,
-  nur,
-  nh,
-  stylix,
-  ...
-}@inputs:
-{ pkgs, lib, ... }:
-let
-  filterAttrs = lib.filterAttrs;
-  readDir = builtins.readDir;
-  foldlAttrs = lib.attrsets.foldlAttrs;
-
-  moduleFilter = name: type: type == "directory";
-  moduleDirs = filterAttrs moduleFilter (readDir ./.);
-  modulePaths = foldlAttrs (
-    acc: name: _type:
-    acc ++ [ (import (./. + "/${name}") inputs) ]
-  ) [ ] moduleDirs;
-in
-{
-  # DO NOT MODIFY
-  system.stateVersion = "24.05";
-
-  # Load all sub-modules
   imports = [
-    stylix.nixosModules.stylix
-  ]
-  ++ modulePaths;
+    inputs.stylix.nixosModules.stylix
 
-  # Setup Nix configuration
-  nix = {
-    settings.auto-optimise-store = true;
-    settings.experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-  };
-
-  boot = {
-    # Clean tmpfs during system boot
-    tmp.cleanOnBoot = true;
-
-    # Use systemd-boot
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
-
-    # Use a pretty spinner animation for the boot process
-    plymouth = {
-      enable = true;
-      theme = "spin";
-      themePackages = [
-        (pkgs.adi1090x-plymouth-themes.override {
-          selected_themes = [ "spin" ];
-        })
-      ];
-    };
-  };
-
-  programs.appimage = {
-    enable = true;
-    binfmt = true;
-  };
-
-  # Setup Nix Helper for easy building
-  programs.nh = {
-    enable = true;
-    package = nh.packages.${pkgs.system}.default;
-    clean.enable = true;
-    clean.extraArgs = "--keep-since 7d --keep 5";
-  };
-
-  # This is needed or else home-manager fails to start later
-  programs.dconf.enable = true;
-
-  # We do not use sudo
-  security.sudo.enable = false;
-
-  # Configure doas to allow the administrators
-  security.doas.enable = true;
-
-  # Enable mandb and nix documentation
-  documentation = {
-    enable = true;
-
-    man = {
-      enable = true;
-      generateCaches = true;
-    };
-  };
+    ./audio.nix
+    ./autologin.nix
+    ./base.nix
+    ./containers.nix
+    ./desktop-services.nix
+    ./greeter.nix
+    ./looking-glass
+    ./networking.nix
+    ./security.nix
+    ./sshd.nix
+    ./user.nix
+    ./virtualisation.nix
+    ./zsa
+  ];
 }

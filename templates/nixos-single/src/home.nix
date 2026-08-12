@@ -1,5 +1,5 @@
-{ nix-colors, ... }:
 {
+  inputs,
   pkgs,
   lib,
   config,
@@ -92,5 +92,5 @@
   };
 
   # This is used for configuring various applications
-  colorScheme = nix-colors.colorSchems.catppuccin-mocha;
+  colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 }

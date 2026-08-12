@@ -1,4 +1,3 @@
-{ ... }:
 {
   pkgs,
   lib,
@@ -9,7 +8,7 @@ let
   cfg = config.stewos.zsa;
   zsa-rules = pkgs.writeTextFile {
     name = "zsa-udev-rules";
-    text = ./zsa.rules;
+    text = builtins.readFile ./zsa.rules;
     destination = "/etc/udev/rules.d/50-zsa.rules";
   };
 in

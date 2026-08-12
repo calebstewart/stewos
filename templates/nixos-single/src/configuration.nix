@@ -7,6 +7,10 @@ let
   user = config.stewos.user;
 in
 {
+  # The NixOS release you first installed this machine from. DO NOT CHANGE it
+  # when you upgrade -- it exists to keep stateful services readable.
+  system.stateVersion = "25.05";
+
   # All stewos-specific configuration is under the top-level `stewos` field
   stewos = {
     # Configure system services/packages needed for a graphical desktop

@@ -6,18 +6,21 @@ A declarative Nix Flake-based configuration management system for NixOS, Nix-Dar
 
 ```
 stewos/
-├── flake.nix          # Main flake configuration
-├── lib/               # Utility library functions
-│   ├── default.nix    # mkNixOSSystem, mkNixDarwinSystem, mkHomeManagerConfig, etc.
+├── flake.nix          # Inputs + every output, declared explicitly.
+│                      # The only place flake inputs are captured.
+├── overlays/          # The StewOS overlay (adds pkgs.stewos.*)
+├── pkgs/              # Package definitions; plain callPackage derivations
+│   └── default.nix    # Explicit list of every package in the scope
+├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
 │   ├── hypr.nix       # Hyprland helpers (monitors, keybindings, rofi)
 │   └── rasi/          # RASI DSL for Rofi theme generation
 ├── modules/
-│   ├── nixos/         # NixOS system modules
+│   ├── common/        # Options shared by NixOS and Home-Manager
+│   ├── nixos/         # NixOS system modules (default.nix lists them)
 │   ├── home-manager/  # Home-Manager user modules
 │   └── nix-darwin/    # macOS system modules
-├── packages/          # Custom package definitions
-├── systems/           # Machine-specific configurations
-│   ├── framework-desktop/  # AMD Framework 16 + NVIDIA
+├── hosts/             # Machine-specific configuration only
+│   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework laptop
 │   └── huntress-mbp/       # Apple Silicon MacBook
 └── templates/         # Flake templates for new systems
@@ -27,11 +30,12 @@ stewos/
 
 ### Module Structure
 
-All modules follow this pattern:
+Modules are ordinary module files, imported by path. `inputs` arrives through
+`specialArgs`, which `flake.nix` sets once:
 
 ```nix
-{ inputs... }:
 {
+  inputs,
   lib,
   config,
   pkgs,
@@ -51,31 +55,27 @@ in
 }
 ```
 
-### Automatic Discovery
+Take `inputs` only if you actually use it. Because modules are paths, the module
+system deduplicates them, so importing the same one twice is harmless.
 
-Modules and packages are auto-imported via directory structure:
-- `/modules/{platform}/{name}/default.nix` becomes a module
-- `/packages/{name}/default.nix` becomes a package overlay
+### No Automatic Discovery
 
-### System Configuration
+Nothing is discovered by scanning directories. To add a module, add a line to
+the relevant `modules/{platform}/default.nix`; to add a package, add a line to
+`pkgs/default.nix`. This keeps every import greppable.
 
-Systems in `/systems/{hostname}/default.nix` return flake outputs:
+### Host Configuration
 
-```nix
-{
-  hostname,
-  stewos,
-  ...
-}@inputs:
-let
-  system = "x86_64-linux";
-  user = stewos.lib.mkUserOptions { username = "caleb"; ... };
-in
-{
-  nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem { ... };
-  homeConfigurations."${user.username}@${hostname}" = stewos.lib.mkHomeManagerConfig { ... };
-}
-```
+`hosts/{hostname}/` holds configuration only. The outputs are declared in
+`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkHome` helpers defined
+there, so the full set of configurations is visible in one file.
+
+### Packages and the Overlay
+
+Packages under `pkgs/` never reference flake inputs. Anything that must come
+from an input (a `flake = false` source tree, a colour scheme) is injected into
+the scope by `overlays/default.nix` and resolved by argument name. Custom
+packages are reached as `pkgs.stewos.<name>`.
 
 ## Build Commands
 
@@ -100,25 +100,26 @@ Create `/modules/{platform}/{name}/default.nix`:
 
 ### New Package
 
-Create `/packages/{name}/default.nix`:
+Create `/pkgs/{name}/default.nix`:
 ```nix
 {
   lib,
   stdenv,
-  ...
 }:
 stdenv.mkDerivation {
   pname = "package-name";
   # ...
 }
 ```
+then add `{name} = self.callPackage ./{name} { };` to `/pkgs/default.nix`.
 
-### New System
+If it needs something from a flake input, add that value to the scope in
+`/overlays/default.nix` and take it as an argument here.
 
-Create `/systems/{hostname}/` with:
-- `default.nix` - Flake outputs
-- `configuration.nix` - NixOS config
-- `home.nix` - Home-Manager config
+### New Host
+
+Create `/hosts/{hostname}/` with `configuration.nix`, `home.nix` and (for NixOS)
+`hardware-configuration.nix`, then declare the outputs in `flake.nix`.
 
 ## Key Modules
 
@@ -145,7 +146,9 @@ Desktop module options at `stewos.desktop`:
 
 - **Privilege escalation**: Uses `doas` instead of `sudo`
 - **Git**: SSH URLs forced for GitHub, SSH key signing
-- **State versions**: NixOS 24.05, Home-Manager 25.05
+- **State versions**: `system.stateVersion` is per-host (in `hosts/*/configuration.nix`);
+  Home-Manager 25.05 is shared
+- **Formatting**: `nix fmt` (nixfmt-tree)
 - **Platform conditionals**: Use `lib.mkIf pkgs.stdenv.isLinux`
 - **Defaults**: Use `lib.mkDefault` for overridable values
 - **Experimental features**: `nix-command` and `flakes` enabled

@@ -1,5 +1,5 @@
-{ stewos, hyprsplit, ... }:
 {
+  inputs,
   pkgs,
   config,
   lib,
@@ -8,7 +8,7 @@
 let
   cfg = config.stewos.desktop;
 
-  hypr = stewos.lib.hypr;
+  hypr = inputs.self.lib.hypr;
 
   hyprPkg = config.wayland.windowManager.hyprland.package;
 
@@ -296,12 +296,12 @@ let
       U = {
         enable = true;
         dispatcher = "exec";
-        package = pkgs.wl-gen-uuid;
+        package = pkgs.stewos.wl-gen-uuid;
       };
       M = {
         enable = true;
         dispatcher = "rofi";
-        modes = [ pkgs.rofiScripts.libvirt ];
+        modes = [ pkgs.stewos.rofi-libvirt ];
       };
 
       Return = {
@@ -394,7 +394,7 @@ let
       E = {
         enable = true;
         dispatcher = "rofi";
-        modes = [ pkgs.rofiScripts.hyprpower ];
+        modes = [ pkgs.stewos.rofi-hyprpower ];
       };
       R = {
         enable = true;
@@ -448,7 +448,7 @@ in
         "hyprsplit/init" = {
           autoLoad = false;
           content = builtins.readFile "${
-            hyprsplit.packages.${pkgs.stdenv.hostPlatform.system}.hyprsplitlua
+            inputs.hyprsplit.packages.${pkgs.stdenv.hostPlatform.system}.hyprsplitlua
           }/share/hyprsplit/init.lua";
         };
 

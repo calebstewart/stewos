@@ -76,46 +76,84 @@ nixos-rebuild switch --flake .#your-hostname
    nh home switch ~/git/stewos
    ```
 
-## Defining a System
-To define a system, create a new directory under [systems/] and a `default.nix` in that directory.
-`default.nix` is a function taking all inputs from the flake, and should return the flake outputs.
-Additionally, `default.nix` takes a `hostname` input which is the name of the directory containing
-the file. This just decreases constant duplication because the name of the directory is often the
-hostname of the system (or maybe the name of the user for Home-Manager-only systems). The outputs
-from all systems are merged to create the outputs of the flake.
+## Repository Layout
 
-There are shortcut functions defined in `stewos.lib` to create NixOS, Nix-Darwin or Home-Manager
-configurations which automatically include the StewOS NixOS, Nix-Darwin and/or Home-Manager modules.
+```
+flake.nix     Inputs, and every output declared explicitly. The single place
+              where flake inputs are captured and handed to the module system.
+overlays/     The StewOS overlay: adds a "stewos" package scope to nixpkgs.
+              Exported as overlays.default.
+pkgs/         Package definitions. Plain callPackage derivations that never
+              reference flake inputs.
+lib/          Pure helpers (the RASI DSL, Hyprland generators). Takes a nixpkgs
+              lib, returns functions.
+modules/      Reusable modules, one file per module.
+  common/       Options shared by NixOS and home-manager.
+  nixos/        NixOS modules. default.nix lists them all.
+  home-manager/ Home-Manager modules.
+  nix-darwin/   Nix-Darwin modules.
+hosts/        Per-machine configuration. Configuration only -- flake.nix owns
+              the output shape.
+templates/    Starting points for new StewOS-based flakes.
+```
+
+Modules are ordinary module files. They take `{ inputs, lib, config, pkgs, ... }`
+and are imported by path, so `imports = [ ./audio.nix ]` works and the module
+system deduplicates them normally. Nothing is auto-discovered by scanning
+directories: to add a module, add a line to the relevant `default.nix`.
+
+## Defining a System
+
+Add a directory under [hosts/] with the machine's configuration, then declare
+the outputs in `flake.nix`:
 
 ```nix
-# Creating a NixOS configuration=
-nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
-  inherit hostname;
-
-  user = {
-    username = "username";
-    fullname = "User Name";
-    email = "user.name@system.tld";
-  };
-
+nixosConfigurations.my-host = mkNixOSHost {
+  hostname = "my-host";
   system = "x86_64-linux";
-  modules = [./hardware-configuration.nix ./configuration.nix];
-}
+  user = caleb;
+  modules = [
+    ./hosts/my-host/hardware-configuration.nix
+    ./hosts/my-host/configuration.nix
+  ];
+};
 
-# Creating a Nix-Darwin Configuration
-darwinConfigurations.${hostname} = stewos.lib.mkNixDarwinSystem {
-  inherit hostname;
-
-  system = "aarch64-darwin";
-  modules = [./configuration.nix];
+homeConfigurations."caleb@my-host" = mkHome {
+  system = "x86_64-linux";
+  user = caleb;
+  homeDirectory = "/home/caleb";
+  modules = [ ./hosts/my-host/home.nix ];
 };
 ```
 
-You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes app output which will
-build and execute a virtual machine of the given NixOS configuration.
+`mkNixOSHost`, `mkDarwinHost` and `mkHome` are defined in `flake.nix` itself --
+they are thin wrappers that attach the StewOS modules, the shared `pkgs`
+instance for that system, and `inputs` via `specialArgs`.
+
+Every NixOS host gets a `nix run .#<hostname>-vm` app for booting that
+configuration in a VM.
+
+## Using StewOS From Another Flake
+
+The modules are exported, but they are written against StewOS's own inputs and
+reference them inside `imports`, where only `specialArgs` are available. So pass
+them back in via the exported `moduleInputs`:
 
 ```nix
-apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname}
+nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+  specialArgs = { inputs = stewos.lib.moduleInputs; };
+  modules = [ stewos.nixosModules.default ./configuration.nix ];
+};
+```
+
+This means `inputs` inside a StewOS module always refers to StewOS's inputs;
+pass your own under a different name. See [templates/nixos-single/src/flake.nix]
+for a complete example.
+
+The package scope is available separately:
+
+```nix
+nixpkgs.overlays = [ stewos.overlays.default ];   # then use pkgs.stewos.*
 ```
 
 ## Available Modules
@@ -159,16 +197,22 @@ These modules are enabled under `stewos.*` in your Home-Manager configuration:
 
 ## Available Packages
 
-Custom packages provided by StewOS:
+Custom packages live in the `stewos` scope, reachable as `pkgs.stewos.<name>`
+once the overlay is applied, and as `nix build .#<name>`:
 
 | Package | Description |
 |---------|-------------|
 | `gh-actions-language-server` | LSP for GitHub Actions workflow files |
-| `nordvpn` | NordVPN client |
-| `mkRofiConfig` | Helper function for generating Rofi configurations |
-| `rofiScripts` | Custom Rofi script modes (power menu, libvirt VMs) |
-| `rofiThemes` | StewOS Rofi theme |
+| `lucas-chess` | Lucas Chess R2 |
+| `shortcut-cli` | Command line client for shortcut.com |
 | `wl-gen-uuid` | Wayland UUID generation utility |
+| `rofi-theme` | StewOS Rofi theme |
+| `rofi-hyprpower` | Rofi power menu script mode |
+| `rofi-libvirt` | Rofi libvirt VM script mode |
+
+The scope also contains the `mkRofiConfig` and `mkRofiTheme` builders. They are
+functions rather than derivations, so they are not part of the `packages`
+output.
 
 ## Terminal Configuration
 The terminal for both NixOS and Nix-Darwin is Alacritty. The color scheme for Alacritty is defined by
@@ -191,6 +235,7 @@ are:
 
 <img width="3826" height="2104" alt="image" src="https://github.com/user-attachments/assets/2651791c-c14e-4a41-87fd-9f40a92eaa9e" />
 
-[systems/]: ./systems
+[hosts/]: ./hosts
+[templates/nixos-single/src/flake.nix]: ./templates/nixos-single/src/flake.nix
 [stew-shell]: https://github.com/calebstewart/stew-shell
 [nixvim]: https://github.com/nix-community/nixvim

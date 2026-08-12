@@ -3,14 +3,12 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-26.05-darwin";
     nix-colors.url = "github:misterio77/nix-colors";
     nur.url = "github:nix-community/NUR";
     nix-std.url = "github:chessai/nix-std";
     nixos-hardware.url = "github:nixos/nixos-hardware";
     nixvim.url = "github:nix-community/nixvim";
-    flake-utils.url = "github:numtide/flake-utils";
     hyprsplit.url = "github:shezdy/hyprsplit";
 
     nix-darwin = {
@@ -35,11 +33,6 @@
 
     stylix = {
       url = "github:nix-community/stylix/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -86,33 +79,229 @@
   };
 
   outputs =
-    { self, ... }@externalInputs:
+    { self, nixpkgs, ... }@inputs:
     let
-      inputs = externalInputs // {
-        stewos = self;
+      inherit (nixpkgs) lib;
+
+      # ----------------------------------------------------------------------
+      # nixpkgs instances
+      # ----------------------------------------------------------------------
+
+      # Which nixpkgs each target system is built from. Add a system here to get
+      # "packages" and "formatter" outputs for it.
+      nixpkgsFor = {
+        x86_64-linux = nixpkgs;
+        aarch64-darwin = inputs.nixpkgs-darwin;
       };
 
-      # Base outputs which don't need any fancieness
-      baseOutputs = {
-        lib = import ./lib/default.nix inputs;
-        nixosModules = import ./modules/nixos/individual.nix inputs;
-        homeModules = import ./modules/home-manager/individual.nix inputs;
-        darwinModules = import ./modules/nix-darwin/individual.nix inputs;
+      # One nixpkgs instance per system, with the StewOS overlay applied.
+      # Instantiated once and reused, so a host's system configuration and its
+      # home configuration share an instance instead of evaluating nixpkgs twice.
+      pkgsFor = lib.mapAttrs (
+        system: src:
+        import src {
+          inherit system;
+
+          config.allowUnfree = true;
+
+          overlays = [
+            (import ./overlays inputs)
+            inputs.nur.overlays.default
+          ];
+        }
+      ) nixpkgsFor;
+
+      forAllSystems = f: lib.mapAttrs (_system: pkgs: f pkgs) pkgsFor;
+
+      # ----------------------------------------------------------------------
+      # Configuration builders
+      #
+      # "inputs" is handed to the module system once, here, via specialArgs.
+      # Every module below modules/ and hosts/ is then a plain module file that
+      # can be imported by path and takes { inputs, lib, config, pkgs, ... }.
+      # ----------------------------------------------------------------------
+
+      mkNixOSHost =
+        {
+          hostname,
+          system,
+          user,
+          modules ? [ ],
+        }:
+        lib.nixosSystem {
+          pkgs = pkgsFor.${system};
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/nixos
+            {
+              networking.hostName = hostname;
+              stewos.user = user;
+            }
+          ]
+          ++ modules;
+        };
+
+      mkDarwinHost =
+        {
+          hostname,
+          system,
+          modules ? [ ],
+        }:
+        inputs.nix-darwin.lib.darwinSystem {
+          pkgs = pkgsFor.${system};
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/nix-darwin
+            { networking.hostName = hostname; }
+          ]
+          ++ modules;
+        };
+
+      mkHome =
+        {
+          system,
+          user,
+          modules ? [ ],
+        }:
+        let
+          isDarwin = lib.hasSuffix "darwin" system;
+        in
+        inputs.home-manager.lib.homeManagerConfiguration {
+          pkgs = pkgsFor.${system};
+          extraSpecialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/home-manager
+            {
+              home.username = user.username;
+              # Derived rather than passed in: the home directory and the
+              # username cannot disagree if only one of them is written down.
+              home.homeDirectory = (if isDarwin then "/Users/" else "/home/") + user.username;
+              stewos.user = user;
+            }
+          ]
+          ++ lib.optional isDarwin inputs.mac-app-util.homeManagerModules.default
+          ++ modules;
+        };
+
+      # ----------------------------------------------------------------------
+      # Users
+      # ----------------------------------------------------------------------
+
+      caleb = {
+        username = "caleb";
+        fullname = "Caleb Stewart";
+        email = "caleb.stewart94@gmail.com";
       };
 
-      # Packages which must use the flake-utils helper
-      packageOutputs = inputs.flake-utils.lib.eachDefaultSystem (system: {
-        packages = import ./packages system inputs;
-      });
-
-      # System outputs which may also provide overlapping output keys, and must
-      # be recursively merged with the above two attrsets.
-      systemOutputs = import ./systems inputs;
-
-      # Templates allow users to generate projects using StewOS from a template
-      templateOutputs = import ./templates inputs;
+      calebWork = {
+        username = "caleb.stewart";
+        fullname = "Caleb Stewart";
+        email = "caleb.stewart94@gmail.com";
+        aliases.personal.email = "caleb.stewart94@gmail.com";
+      };
     in
-    inputs.nixpkgs.lib.attrsets.recursiveUpdate (
-      baseOutputs // packageOutputs // templateOutputs
-    ) systemOutputs;
+    {
+      lib = import ./lib { inherit lib; } // {
+        # The inputs the modules below are written against.
+        #
+        # StewOS modules reference specific inputs (stylix, nh, vfio-hooks, ...)
+        # from inside "imports", and only specialArgs are available that early --
+        # a _module.args value used in "imports" is an infinite recursion. So a
+        # consuming flake has to hand these back in:
+        #
+        #   specialArgs = { inputs = stewos.lib.moduleInputs; };
+        #
+        # which also means "inputs" inside a StewOS module always refers to
+        # StewOS's inputs. Pass your own under a different name.
+        moduleInputs = inputs;
+      };
+
+      # The StewOS package scope, for use in other flakes:
+      #   nixpkgs.overlays = [ stewos.overlays.default ];
+      overlays.default = import ./overlays inputs;
+
+      nixosModules.default = ./modules/nixos;
+      homeModules.default = ./modules/home-manager;
+      darwinModules.default = ./modules/nix-darwin;
+
+      templates = import ./templates;
+
+      # Only the derivations from the scope, and only the ones that can be built
+      # on the system in question. The scope also holds builders (mkRofiConfig,
+      # mkRofiTheme) which are functions, and Linux-only packages which must not
+      # show up in the darwin output.
+      packages = forAllSystems (
+        pkgs:
+        lib.filterAttrs (
+          _name: drv: lib.isDerivation drv && lib.meta.availableOn pkgs.stdenv.hostPlatform drv
+        ) pkgs.stewos
+      );
+
+      formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
+
+      nixosConfigurations = {
+        framework-desktop = mkNixOSHost {
+          hostname = "framework-desktop";
+          system = "x86_64-linux";
+          user = caleb // {
+            groups = [ "nordvpn" ];
+          };
+          modules = [
+            ./hosts/framework-desktop/hardware-configuration.nix
+            ./hosts/framework-desktop/configuration.nix
+          ];
+        };
+
+        framework16 = mkNixOSHost {
+          hostname = "framework16";
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [
+            ./hosts/framework16/hardware-configuration.nix
+            ./hosts/framework16/configuration.nix
+          ];
+        };
+      };
+
+      darwinConfigurations = {
+        huntress-mbp = mkDarwinHost {
+          hostname = "huntress-mbp";
+          system = "aarch64-darwin";
+          modules = [ ./hosts/huntress-mbp/configuration.nix ];
+        };
+      };
+
+      homeConfigurations = {
+        "caleb@framework-desktop" = mkHome {
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [ ./hosts/framework-desktop/home.nix ];
+        };
+
+        "caleb@framework16" = mkHome {
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [ ./hosts/framework16/home.nix ];
+        };
+
+        "caleb.stewart@huntress-mbp" = mkHome {
+          system = "aarch64-darwin";
+          user = calebWork;
+          modules = [ ./hosts/huntress-mbp/home.nix ];
+        };
+      };
+
+      # "nix run .#<hostname>-vm" boots a host's configuration in a VM.
+      apps.x86_64-linux = lib.mapAttrs' (
+        hostname: host:
+        lib.nameValuePair "${hostname}-vm" {
+          type = "app";
+          program = "${host.config.system.build.vm}/bin/run-${hostname}-vm";
+          meta.description = "Boot the ${hostname} configuration in a VM";
+        }
+      ) self.nixosConfigurations;
+    };
 }

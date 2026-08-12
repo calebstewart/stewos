@@ -43,7 +43,7 @@ in
             bothlock_color = "rgb(${base09})";
             numlock_color = -1;
             swap_font_color = false;
-            fail_text = ''<i>$FAIL <b>($ATTEMPTS)</b></i>'';
+            fail_text = "<i>$FAIL <b>($ATTEMPTS)</b></i>";
             fail_transition = 500;
             fade_on_empty = true;
             font_family = "JetBrains Mono Nerd Font Mono";

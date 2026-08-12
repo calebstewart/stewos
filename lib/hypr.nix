@@ -1,7 +1,5 @@
-{ nixpkgs, ... }:
+{ lib }:
 let
-  lib = nixpkgs.lib;
-
   # Render a Nix value as a Lua literal. Used for every string we splice into a
   # generated Lua expression so quoting/escaping is never hand-rolled.
   toLua = lib.generators.toLua { };

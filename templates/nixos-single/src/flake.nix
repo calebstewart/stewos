@@ -2,18 +2,16 @@
   description = "Personal NixOS / Home-Manager Configuration";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
-    nix-colors.url = "github:misterio77/nix-colors";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
     stewos = {
       url = "github:calebstewart/stewos";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nix-colors.follows = "nix-colors";
     };
   };
 
   outputs =
-    { stewos, ... }@inputs:
+    { nixpkgs, stewos, ... }:
     let
       hostname = "my-hostname";
       system = "x86_64-linux";
@@ -33,33 +31,51 @@
         # "foo" or "google" or the name of the business for which you work.
         aliases.work.email = "your.name@yourjob.tld";
       };
+
+      # StewOS modules are written against StewOS's own flake inputs, and they
+      # use them inside "imports", so they have to arrive as specialArgs. See
+      # the comment on "moduleInputs" in the StewOS flake.
+      specialArgs = {
+        inputs = stewos.lib.moduleInputs;
+      };
+
+      # nixpkgs with the StewOS package scope (pkgs.stewos.*) available.
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+        overlays = [ stewos.overlays.default ];
+      };
     in
-    rec {
-      nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
-        inherit hostname system user;
+    {
+      nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
+        inherit pkgs specialArgs;
 
         modules = [
+          stewos.nixosModules.default
+          {
+            networking.hostName = hostname;
+            stewos.user = user;
+          }
           ./hardware-configuration.nix
           ./configuration.nix
         ];
       };
 
-      homeConfigurations."${user.username}@${hostname}" = stewos.lib.mkHomeManagerConfig {
-        inherit system user;
+      homeConfigurations."${user.username}@${hostname}" =
+        stewos.lib.moduleInputs.home-manager.lib.homeManagerConfiguration
+          {
+            inherit pkgs;
+            extraSpecialArgs = specialArgs;
 
-        homeDirectory = "/home/${user.username}";
-
-        modules = [
-          # We pass `inputs` here so that we have access to nix-colors
-          (import ./home.nix inputs)
-        ];
-      };
-
-      # This is a uses an app entrypoint to allow running a VM of this
-      # system with a single command like: nix run .#start
-      #
-      # NOTE: This will only have the NixOS configuration, and not the
-      # home-manager configuration by default.
-      apps.${system}.start = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname};
+            modules = [
+              stewos.homeModules.default
+              {
+                home.username = user.username;
+                home.homeDirectory = "/home/${user.username}";
+                stewos.user = user;
+              }
+              ./home.nix
+            ];
+          };
     };
 }

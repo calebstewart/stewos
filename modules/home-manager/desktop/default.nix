@@ -1,10 +1,5 @@
 {
-  stew-shell,
-  caelestia-shell,
-  noctalia,
-  ...
-}@inputs:
-{
+  inputs,
   pkgs,
   lib,
   config,
@@ -12,7 +7,6 @@
 }:
 let
   cfg = config.stewos.desktop;
-  hyprland = import ./hyprland.nix inputs;
   defaultWallpaper = pkgs.fetchurl {
     url = "https://i.redd.it/187ouknqbs051.jpg";
     sha256 = "sha256-3x0pvEWWM2SqxzR16Hv7+xGxMqkEPQE5kcUY84kEIrw=";
@@ -42,11 +36,11 @@ let
 in
 {
   imports = [
-    hyprland
-    # stew-shell.homeModules.default
-    caelestia-shell.homeManagerModules.default
-    noctalia.homeModules.default
+    # inputs.stew-shell.homeModules.default
+    inputs.caelestia-shell.homeManagerModules.default
+    inputs.noctalia.homeModules.default
 
+    ./hyprland.nix
     ./fonts.nix
     ./gtk.nix
     # ./hypridle.nix
@@ -302,9 +296,7 @@ in
     # incoming ext-session-lock from its "Cannot re-lock" check when it was
     # given a locker command. A lock arriving from anywhere else is denied with
     # a protocol error that kills the shell.
-    stewos.desktop.lockCommand = lib.mkIf pkgs.stdenv.isLinux (
-      lib.mkDefault "${caelestiaLockCommand}"
-    );
+    stewos.desktop.lockCommand = lib.mkIf pkgs.stdenv.isLinux (lib.mkDefault "${caelestiaLockCommand}");
 
     # Setup a volume control application for Linux
     home.packages = lib.mkIf pkgs.stdenv.isLinux (

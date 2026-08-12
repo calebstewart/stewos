@@ -12,7 +12,7 @@ in
     stewos.rofi = {
       enable = true;
       theme = lib.mkDefault (
-        pkgs.rofiThemes.stewos.override {
+        pkgs.stewos.rofi-theme.override {
           colorScheme = config.colorScheme;
         }
       );
