@@ -25,6 +25,12 @@ inputs: final: prev: {
       hyprpolkitagent-upstream =
         inputs.hyprpolkitagent.packages.${prev.stdenv.hostPlatform.system}.default or null;
 
+      # The upstream hyprqt6engine package, which pkgs/hyprqt6engine rebuilds
+      # against the Qt stdenv so its plugin can actually be loaded. Linux-only
+      # upstream, hence the "or null".
+      hyprqt6engine-upstream =
+        inputs.hyprqt6engine.packages.${prev.stdenv.hostPlatform.system}.default or null;
+
       # The RASI DSL used to generate Rofi themes and configs.
       inherit (import ../lib { inherit (prev) lib; }) rasi;
     }

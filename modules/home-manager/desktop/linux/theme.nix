@@ -12,7 +12,6 @@
 # draws the compositor's own chrome from, so changing the scheme changes the
 # whole desktop rather than half of it.
 {
-  inputs,
   pkgs,
   lib,
   config,
@@ -54,7 +53,10 @@ let
       };
     };
 
-  hyprqt6engine = inputs.hyprqt6engine.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  # pkgs.stewos rebuilds the upstream flake package against the stdenv the Qt
+  # stack uses; upstream's gcc16Stdenv build cannot be dlopen'd into a Qt app at
+  # all, which silently costs every themed icon. See pkgs/hyprqt6engine.
+  hyprqt6engine = pkgs.stewos.hyprqt6engine;
 
   # The engine installs its Qt plugins at lib/qt-6/{platformthemes,styles},
   # but home-manager's QT_PLUGIN_PATH points at the profile's

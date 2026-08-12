@@ -17,6 +17,7 @@ self: {
   # Packages.
   gh-actions-language-server = self.callPackage ./gh-actions-language-server { };
   hyprpolkitagent = self.callPackage ./hyprpolkitagent { };
+  hyprqt6engine = self.callPackage ./hyprqt6engine { };
   lucas-chess = self.callPackage ./lucas-chess { };
   shortcut-cli = self.callPackage ./shortcut-cli { };
   update-manager = self.callPackage ./update-manager { };

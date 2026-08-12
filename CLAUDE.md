@@ -246,10 +246,12 @@ the whole desktop rather than half of it:
 - `hypr/hyprtoolkit.conf` for hyprtoolkit-native apps.
 - `programs.hyprland-qt-support` for the QML style hyprpolkitagent uses.
 - `hypr/hyprqt6engine.conf` for every other Qt6 app, with `qt.platformTheme.name
-  = "hyprqt6engine"` (from the `hyprqt6engine` flake input) instead of
-  qt6ct/gtk3. Its palette is a **generated** qt5ct-format file -- three rows of
-  22 `#AARRGGBB` values in `QPalette::ColorRole` order -- not a path into a
-  theme package.
+  = "hyprqt6engine"` (`pkgs.stewos.hyprqt6engine`) instead of qt6ct/gtk3. Its
+  palette is a **generated** qt5ct-format file -- three rows of 22 `#AARRGGBB`
+  values in `QPalette::ColorRole` order -- not a path into a theme package.
+  The package is the upstream flake's, rebuilt against the Qt stdenv: upstream
+  builds the plugin with `gcc16Stdenv` and it then cannot be loaded by a
+  nixpkgs Qt app at all. See "Qt apps lose every themed icon" below.
 
 The one thing not derived is cursors and tinted folder icons, which ship as
 per-flavour image sets. Those come from a small `schemeAssets` map in
@@ -320,7 +322,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `gh-actions-language-server` (github:lttb/gh-actions-language-server) - GitHub Actions LSP
 - `hyprqt6engine` (github:hyprwm/hyprqt6engine) - Qt6 platform theme; unreleased
   upstream and carries the same `follows` fragility as `llm-agents` (same
-  remedy: drop the follows if it stops building after a flake update)
+  remedy: drop the follows if it stops building after a flake update). Consumed
+  as `pkgs.stewos.hyprqt6engine`, which rebuilds it against the Qt stdenv
+  (`pkgs/hyprqt6engine/`)
 - `hyprpolkitagent` (github:hyprwm/hyprpolkitagent) - Polkit agent from
   upstream because nixpkgs' 0.1.3 predates the hyprtoolkit rewrite (upstream
   did not bump the version); same follows caveat as `hyprqt6engine`. Consumed
@@ -360,3 +364,38 @@ That adds a second nixpkgs to `flake.lock`, which is the correct trade — the
 follows is a lock-size optimization, not a requirement. Do not try to fix it by
 patching the package or pinning `llm-agents` to an older revision; the whole
 point of the input is that it tracks upstream.
+
+### Qt apps lose every themed icon
+
+**Symptom:** Qt apps render the broken-image placeholder wherever they draw an
+icon by freedesktop name — the caelestia tray, notification icons, menu icons.
+Icons supplied as pixmaps or absolute paths (an SNI app shipping its own) still
+work, which makes it look like the icon theme is at fault. It is not: the theme
+is installed and the names resolve on disk.
+
+**Cause:** the `hyprqt6engine` platform theme plugin failed to load, so Qt has
+no `QPlatformTheme::SystemIconThemeName` hint, `QIcon::themeName()` is empty and
+*every* `QIcon::fromTheme` call in the process returns null. Nothing reports
+this; Qt logs the load failure only under `QT_DEBUG_PLUGINS=1`.
+
+The usual reason is a libstdc++ ABI split. A `platformthemes` plugin is
+`dlopen`'d into a host that already has a `libstdc++.so.6` mapped, and the
+loader matches on SONAME rather than the plugin's RPATH — so the plugin gets the
+*host's* copy. nixpkgs builds its whole Qt stack with the default stdenv while
+the Hypr packages are pinned to `gcc16Stdenv`, and upstream's overlay pins the
+plugin the same way, so it asks gcc 15's libstdc++ for `GLIBCXX_3.4.36` and
+never loads.
+
+**Diagnose:**
+
+```bash
+QT_DEBUG_PLUGINS=1 <any qt6 app> 2>&1 | rg -i "hyprqt6engine|cannot load"
+```
+
+**Fix:** `pkgs/hyprqt6engine` already rebuilds the plugin — plus `hyprlang` and
+`hyprutils`, which leak the same symbol version — against
+`qt6Packages.qtbase.stdenv`. If a flake update reintroduces the failure, check
+that override still applies rather than reaching for a different platform theme.
+Deriving the stdenv from qtbase rather than naming a gcc version is deliberate:
+it stays correct as nixpkgs moves its Qt stack forward. `pkgs/hyprqt6engine/
+upstream-issue.md` is the report to file if this is still unfixed upstream.
