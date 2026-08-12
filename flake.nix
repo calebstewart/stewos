@@ -66,6 +66,13 @@
       url = "github:calebstewart/embermug-tray";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Packages the LLM coding agents, tracking their upstream releases more
+    # closely than nixpkgs manages to.
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

@@ -10,17 +10,21 @@
 
   # services.embermug-tray.enable = true;
 
-  home.packages = with pkgs; [
-    discord
-    gimp
-    signal-desktop
-    spotify
-    solaar
-    claude-code
-    opencode
-    nixfmt
-    github-cli
-  ];
+  home.packages =
+    (with pkgs; [
+      discord
+      gimp
+      signal-desktop
+      spotify
+      solaar
+      opencode
+      nixfmt
+      github-cli
+    ])
+    ++ [
+      # From llm-agents.nix rather than nixpkgs, which lags upstream releases.
+      inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
+    ];
 
   systemd.user.services.embermug-tray = {
     Unit = {
