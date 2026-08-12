@@ -19,6 +19,7 @@
     ./git.nix
     ./neovim.nix
     ./rofi.nix
+    ./update-manager.nix
     ./zoxide.nix
     ./zsh.nix
   ];

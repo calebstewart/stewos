@@ -18,6 +18,7 @@ self: {
   gh-actions-language-server = self.callPackage ./gh-actions-language-server { };
   lucas-chess = self.callPackage ./lucas-chess { };
   shortcut-cli = self.callPackage ./shortcut-cli { };
+  update-manager = self.callPackage ./update-manager { };
   wl-gen-uuid = self.callPackage ./wl-gen-uuid { };
 
   # Rofi theme and script modes.

@@ -90,6 +90,8 @@
         }) orderedNames;
     };
 
+    update-manager.enable = true;
+
     git.enable = true;
     alacritty.enable = true;
     bat.enable = true;
