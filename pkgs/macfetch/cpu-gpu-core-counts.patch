@@ -1,0 +1,317 @@
+diff --git a/src/macfetch/segments/mod.rs b/src/macfetch/segments/mod.rs
+index b121365..512a821 100644
+--- a/src/macfetch/segments/mod.rs
++++ b/src/macfetch/segments/mod.rs
+@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
+ use std::{env, fs};
+ use sysctl::Sysctl;
+ 
+-use crate::macfetch::utils::{ctl, host};
++use crate::macfetch::utils::{ctl, host, iokit};
+ 
+ use super::utils::cache;
+ 
+@@ -142,18 +142,61 @@ pub fn terminal() -> ColoredString {
+     titled_segment("Terminal", terminal)
+ }
+ 
++/// Physical core count per performance level, fastest tier first.
++///
++/// The tier names are read rather than assumed: they are not always the
++/// "Performance"/"Efficiency" pair, an M5 Pro reports "Super" and "Performance".
++fn cpu_perflevels() -> Vec<(String, u32)> {
++    let levels = ctl::get_ctl_number("hw.nperflevels").unwrap_or(0);
++
++    (0..levels)
++        .filter_map(|level| {
++            let name = ctl::get_ctl_info(&format!("hw.perflevel{}.name", level))
++                .and_then(|ctl| ctl.value_string().ok())?;
++            let cores = ctl::get_ctl_number(&format!("hw.perflevel{}.physicalcpu", level))?;
++
++            Some((name, cores))
++        })
++        .collect()
++}
++
+ pub fn cpu() -> ColoredString {
+-    let cpu = cache::fallback("cpu", || {
+-        ctl::get_ctl_info("machdep.cpu.brand_string")
++    // The cache key carries a version because cache::fallback never expires an
++    // entry, so a format change would otherwise never reach anyone who has
++    // already run macfetch once.
++    let cpu = cache::fallback("cpu.v2", || {
++        let brand = ctl::get_ctl_info("machdep.cpu.brand_string")
+             .and_then(|ctl| ctl.value_string().ok())
+-            .unwrap_or_else(|| "Unknown CPU".to_string())
++            .unwrap_or_else(|| "Unknown CPU".to_string());
++
++        // Threads rather than physical cores, which is what Neofetch prints.
++        let total = match ctl::get_ctl_number("hw.logicalcpu") {
++            Some(total) => total,
++            None => return brand,
++        };
++
++        // A single performance level carries no information worth printing, and
++        // is also the only case where thread and core counts can disagree:
++        // hyperthreading is Intel-only and Intel reports one level.
++        let perflevels = cpu_perflevels();
++        if perflevels.len() < 2 {
++            return format!("{} ({})", brand, total);
++        }
++
++        let breakdown = perflevels
++            .iter()
++            .map(|(name, cores)| format!("{} {}", cores, name))
++            .collect::<Vec<String>>()
++            .join(" + ");
++
++        format!("{} ({}) [{}]", brand, total, breakdown)
+     });
+ 
+     titled_segment("CPU", cpu)
+ }
+ 
+ pub fn gpu() -> ColoredString {
+-    let gpu = cache::fallback("gpu", || {
++    let gpu = cache::fallback("gpu.v2", || {
+         // SAFETY: CGMainDisplayID() returns the main display ID, always valid.
+         // CGDisplay::new wraps it safely.
+         let display = unsafe { CGDisplay::new(CGMainDisplayID()) };
+@@ -161,7 +204,14 @@ pub fn gpu() -> ColoredString {
+         // for the given display ID. The display.id is guaranteed valid from above.
+         let mtl_device = unsafe { CGDirectDisplayCopyCurrentMetalDevice(display.id) };
+         // SAFETY: get_name() returns a valid string reference from the Metal device.
+-        unsafe { mtl_device.get_name().to_string() }
++        let name = unsafe { mtl_device.get_name().to_string() };
++
++        // Metal does not expose the core count, it only lives in the IORegistry
++        // and only on Apple Silicon. Anything else keeps the bare device name.
++        match iokit::registry_property_i32("AGXAccelerator", "gpu-core-count") {
++            Some(cores) if cores > 0 => format!("{} ({} cores)", name, cores),
++            _ => name,
++        }
+     });
+ 
+     titled_segment("GPU", gpu)
+@@ -271,6 +321,16 @@ mod tests {
+         assert!(plain.contains("\x1b[0m"));
+     }
+ 
++    #[test]
++    fn test_cpu_perflevels_are_named_and_within_cpu_count() {
++        let total = ctl::get_ctl_number("hw.logicalcpu").unwrap();
++        let perflevels = cpu_perflevels();
++
++        assert!(perflevels.iter().all(|(name, _)| !name.is_empty()));
++        assert!(perflevels.iter().all(|(_, cores)| *cores > 0));
++        assert!(perflevels.iter().map(|(_, cores)| cores).sum::<u32>() <= total);
++    }
++
+     #[test]
+     fn test_light_colors_has_reset_code() {
+         let result = light_colors();
+diff --git a/src/macfetch/utils/ctl.rs b/src/macfetch/utils/ctl.rs
+index 3da52e3..2ce57f2 100644
+--- a/src/macfetch/utils/ctl.rs
++++ b/src/macfetch/utils/ctl.rs
+@@ -4,6 +4,16 @@ pub fn get_ctl_info(key: &str) -> Option<Ctl> {
+     Ctl::new(key).ok()
+ }
+ 
++/// Reads a numeric sysctl.
++///
++/// Every integer `CtlValue` renders as a plain decimal string, so parsing that
++/// covers the `hw.*` counters without caring about their underlying width.
++pub fn get_ctl_number(key: &str) -> Option<u32> {
++    get_ctl_info(key)
++        .and_then(|ctl| ctl.value_string().ok())
++        .and_then(|value| value.parse().ok())
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -28,4 +38,24 @@ mod tests {
+         assert!(value.is_ok());
+         assert!(!value.unwrap().is_empty());
+     }
++
++    #[test]
++    fn test_get_ctl_number_valid_key() {
++        // Every macOS system has at least one logical CPU
++        let result = get_ctl_number("hw.logicalcpu");
++        assert!(result.is_some_and(|cores| cores > 0));
++    }
++
++    #[test]
++    fn test_get_ctl_number_invalid_key() {
++        let result = get_ctl_number("invalid.nonexistent.key");
++        assert!(result.is_none());
++    }
++
++    #[test]
++    fn test_get_ctl_number_rejects_non_numeric_value() {
++        // kern.osrelease is a string sysctl, so it must not parse as a number
++        let result = get_ctl_number("kern.osrelease");
++        assert!(result.is_none());
++    }
+ }
+diff --git a/src/macfetch/utils/iokit.rs b/src/macfetch/utils/iokit.rs
+new file mode 100644
+index 0000000..d1af9b2
+--- /dev/null
++++ b/src/macfetch/utils/iokit.rs
+@@ -0,0 +1,144 @@
++use std::ffi::{c_char, c_void, CString};
++use std::ptr;
++
++/// An `io_object_t` / `io_service_t`. Zero means "no object".
++type IoObject = u32;
++
++/// An opaque Core Foundation reference (`CFTypeRef` and friends).
++type CfTypeRef = *const c_void;
++
++/// `kCFNumberSInt32Type`.
++const CF_NUMBER_SINT32_TYPE: i32 = 3;
++
++/// `kCFStringEncodingUTF8`.
++const CF_STRING_ENCODING_UTF8: u32 = 0x0800_0100;
++
++#[link(name = "IOKit", kind = "framework")]
++extern "C" {
++    fn IOServiceMatching(name: *const c_char) -> CfTypeRef;
++    fn IOServiceGetMatchingService(main_port: u32, matching: CfTypeRef) -> IoObject;
++    fn IORegistryEntryCreateCFProperty(
++        entry: IoObject,
++        key: CfTypeRef,
++        allocator: CfTypeRef,
++        options: u32,
++    ) -> CfTypeRef;
++    fn IOObjectRelease(object: IoObject) -> i32;
++}
++
++#[link(name = "CoreFoundation", kind = "framework")]
++extern "C" {
++    fn CFStringCreateWithCString(
++        allocator: CfTypeRef,
++        cstr: *const c_char,
++        encoding: u32,
++    ) -> CfTypeRef;
++    fn CFGetTypeID(cf: CfTypeRef) -> usize;
++    fn CFNumberGetTypeID() -> usize;
++    fn CFNumberGetValue(number: CfTypeRef, number_type: i32, value: *mut c_void) -> u8;
++    fn CFRelease(cf: CfTypeRef);
++}
++
++/// Reads an integer property from the first IORegistry entry matching a class.
++///
++/// Returns `None` when the class is absent (which is the ordinary case for
++/// Apple Silicon specific classes on an Intel Mac), when the entry carries no
++/// such property, or when the property is not a number.
++pub fn registry_property_i32(class_name: &str, property: &str) -> Option<i32> {
++    let class_name = CString::new(class_name).ok()?;
++    let property = CString::new(property).ok()?;
++
++    // SAFETY: IOServiceMatching copies the class name out of the pointer, which
++    // stays valid for the call. The dictionary it returns is consumed by
++    // IOServiceGetMatchingService, so it must not be released here.
++    let service = unsafe {
++        let matching = IOServiceMatching(class_name.as_ptr());
++        if matching.is_null() {
++            return None;
++        }
++
++        // A main port of 0 is MACH_PORT_NULL, which selects the default port.
++        // That avoids naming kIOMasterPortDefault, renamed kIOMainPortDefault
++        // in macOS 12.
++        IOServiceGetMatchingService(0, matching)
++    };
++
++    if service == 0 {
++        return None;
++    }
++
++    // SAFETY: service is a live io_service_t, released below on every path. The
++    // CFString and the property both come from "Create" calls, so we own them
++    // and release them here too.
++    unsafe {
++        let key =
++            CFStringCreateWithCString(ptr::null(), property.as_ptr(), CF_STRING_ENCODING_UTF8);
++
++        let value = if key.is_null() {
++            None
++        } else {
++            let property = IORegistryEntryCreateCFProperty(service, key, ptr::null(), 0);
++            let value = read_i32(property);
++
++            if !property.is_null() {
++                CFRelease(property);
++            }
++            CFRelease(key);
++
++            value
++        };
++
++        IOObjectRelease(service);
++
++        value
++    }
++}
++
++/// Unwraps a `CFNumberRef` into an `i32`.
++///
++/// # Safety
++///
++/// `property` must be null or a valid, owned Core Foundation object.
++unsafe fn read_i32(property: CfTypeRef) -> Option<i32> {
++    // CFNumberGetValue is undefined on anything that is not a CFNumber, so the
++    // type has to be checked rather than assumed.
++    if property.is_null() || CFGetTypeID(property) != CFNumberGetTypeID() {
++        return None;
++    }
++
++    let mut value: i32 = 0;
++    let read = CFNumberGetValue(
++        property,
++        CF_NUMBER_SINT32_TYPE,
++        &mut value as *mut i32 as *mut c_void,
++    );
++
++    match read {
++        0 => None,
++        _ => Some(value),
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn test_registry_property_unknown_class() {
++        let result = registry_property_i32("NoSuchIOKitClass", "gpu-core-count");
++        assert!(result.is_none());
++    }
++
++    #[test]
++    fn test_registry_property_unknown_property() {
++        // IOResources exists on every Mac, but carries no such property
++        let result = registry_property_i32("IOResources", "no-such-property");
++        assert!(result.is_none());
++    }
++
++    #[test]
++    fn test_registry_property_rejects_interior_nul() {
++        let result = registry_property_i32("IOResources\0", "gpu-core-count");
++        assert!(result.is_none());
++    }
++}
+diff --git a/src/macfetch/utils/mod.rs b/src/macfetch/utils/mod.rs
+index ca37df0..ecb6a73 100644
+--- a/src/macfetch/utils/mod.rs
++++ b/src/macfetch/utils/mod.rs
+@@ -3,3 +3,4 @@ pub mod cli;
+ pub mod config;
+ pub mod ctl;
+ pub mod host;
++pub mod iokit;
