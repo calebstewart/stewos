@@ -6,12 +6,23 @@
   dbus,
   git,
   nix,
+  update-manager-icons,
 }:
 rustPlatform.buildRustPackage {
   pname = "stewos-update-manager";
   version = "0.1.0";
 
-  src = lib.cleanSource ./.;
+  # An explicit file set rather than lib.cleanSource: the latter keeps target/,
+  # so every stray local build ends up copied into the store.
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.unions [
+      ./Cargo.toml
+      ./Cargo.lock
+      ./src
+      ./apply-system.sh
+    ];
+  };
   cargoLock.lockFile = ./Cargo.lock;
 
   nativeBuildInputs = [
@@ -29,6 +40,11 @@ rustPlatform.buildRustPackage {
   # git and nix are subprocesses of the daemon. run0 (the privilege path) is
   # deliberately not wrapped in: it must talk to the running system's PID 1,
   # so the system's own copy from the base PATH is the right one.
+  #
+  # The icons are set-default rather than set: this is only the fallback
+  # palette, and the home-manager module passes a recoloured set on the command
+  # line. Keeping them out of the build inputs proper is the point -- a palette
+  # change must not recompile the crate.
   postFixup = ''
     wrapProgram $out/bin/stewos-update-manager \
       --prefix PATH : ${
@@ -36,7 +52,8 @@ rustPlatform.buildRustPackage {
           git
           nix
         ]
-      }
+      } \
+      --set-default STEWOS_UPDATE_ICON_DIR ${update-manager-icons}/share/icons
   '';
 
   meta = {

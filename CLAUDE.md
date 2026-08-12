@@ -171,7 +171,7 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
-| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main` |
+| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons -- see below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -259,6 +259,64 @@ per-flavour image sets. Those come from a small `schemeAssets` map in
 unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
 is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
 return a package.
+
+### update-manager icons
+
+The update-manager daemon borrows no freedesktop icon names at all. It ships
+nine of its own: six status badges (idle, checking, up-to-date,
+updates-available, applying, error) and three menu glyphs (search, apply, quit).
+Nothing is looked up by name, which is also why they survive the Qt
+platform-theme failure described under "Qt apps lose every themed icon":
+
+- the tray icon goes out as an SNI **pixmap** (ARGB32, big-endian), with
+  `IconName` deliberately left empty -- a host prefers the name whenever it can
+  resolve one, so setting both would mean our art is never drawn;
+- menu entries go out as dbusmenu **`icon-data`** (raw PNG), with `icon-name`
+  empty for the same reason;
+- notifications get an **absolute path** to the 64px PNG.
+
+**The six status icons share one silhouette: an arrow landing on a baseline.**
+That mark is the identity and must stay in every state -- a tray icon's first
+job is to say *which daemon* it belongs to, and an earlier draft that used a
+plain ring as the constant element failed at exactly that (a ring plus a
+checkmark is indistinguishable from any VPN or sync indicator). State is carried
+by three channels layered on top:
+
+| Channel | Values |
+|---|---|
+| arrowhead | stroked (settled) / solid (wants attention) |
+| baseline | solid (settled) / `4 2` dashed (busy) |
+| colour | one `base16` slot per state |
+
+Two consequences worth knowing before editing the art. The baseline sits at the
+same `y` in every state on purpose, so the glyph does not visibly jump when the
+daemon changes state. And `idle` and `up-to-date` are deliberately the same
+shape, separated only by hue -- both mean "nothing to do", and `idle` only
+exists until the first check runs. `error` is the single state that breaks the
+pattern: the arrow shrinks to ~70% to make room for an exclamation, which is
+worth the lost size there and nowhere else.
+
+`pkgs/update-manager-icons/` holds the SVG sources -- one 24px grid, all strokes
+`currentColor` -- and rasterizes them with `resvg --stylesheet`, one colour per
+argument (the six states are `Status` context, the menu glyphs are `Actions`):
+
+```nix
+pkgs.stewos.update-manager-icons.override { error = "#ff0000"; }
+```
+
+It is a **separate derivation from the daemon on purpose**. The daemon takes the
+rendered tree as a runtime path (`--icon-dir`), so a recolour re-realizes one
+`runCommand`; folding the store path into `pkgs/update-manager`'s wrapper would
+put it in that derivation's `postFixup` and make every palette change -- every
+host on a different scheme -- recompile the Rust crate.
+
+The colours themselves are module options
+(`stewos.update-manager.icons.<state>`), each defaulting to a `base16` slot of
+`config.colorScheme.palette`, because `pkgs/` may not read `config` and the
+module may. `stewos.update-manager.iconPackage` is the escape hatch, and it is
+the one that matters while the module is enabled: the unit always passes
+`--icon-dir`, so overriding `update-manager-icons` on `package` only changes the
+binary's standalone default.
 
 Stylix is imported (`modules/home-manager/default.nix`, and the NixOS and
 Darwin equivalents) but **deliberately never configured**. Adopting it would

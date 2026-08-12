@@ -25,6 +25,11 @@ pub struct Args {
     /// Directory for the worktree, build out-links and persisted state
     #[arg(long)]
     cache_dir: Option<PathBuf>,
+
+    /// Icon-theme root holding the rendered status icons. Set by the wrapper;
+    /// without it the tray falls back to the ambient icon theme's names.
+    #[arg(long, env = "STEWOS_UPDATE_ICON_DIR")]
+    icon_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +39,7 @@ pub struct Config {
     pub user: String,
     pub branch: String,
     pub cache_dir: PathBuf,
+    pub icon_dir: Option<PathBuf>,
 }
 
 impl Args {
@@ -70,6 +76,7 @@ impl Args {
             user,
             branch: self.branch,
             cache_dir,
+            icon_dir: self.icon_dir,
         })
     }
 }

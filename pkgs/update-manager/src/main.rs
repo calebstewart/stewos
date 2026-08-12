@@ -1,10 +1,12 @@
 mod config;
+mod icons;
 mod notify;
 mod state;
 mod tray;
 mod updater;
 
 use std::sync::mpsc;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
@@ -50,11 +52,13 @@ fn main() -> Result<()> {
 
     let (tx, rx) = mpsc::channel::<Command>();
 
-    let tray_service = ksni::TrayService::new(tray::UpdateTray::new(tx.clone()));
+    let icons = Arc::new(icons::Icons::load(cfg.icon_dir.as_deref()));
+
+    let tray_service = ksni::TrayService::new(tray::UpdateTray::new(tx.clone(), icons.clone()));
     let tray = tray_service.handle();
     tray_service.spawn();
 
-    let notifier = notify::Notifier::new(tx);
+    let notifier = notify::Notifier::new(tx, icons);
     let mut worker = updater::Worker::new(cfg, notifier, tray.clone());
     worker.restore();
 

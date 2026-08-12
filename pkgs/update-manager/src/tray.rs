@@ -1,18 +1,33 @@
 use std::sync::mpsc::Sender;
+use std::sync::Arc;
 
+use crate::icons::{Icon, Icons, MenuIcon};
 use crate::state::State;
 use crate::{ApplyMode, Command};
 
 pub struct UpdateTray {
     state: State,
     tx: Sender<Command>,
+    icons: Arc<Icons>,
 }
 
 impl UpdateTray {
-    pub fn new(tx: Sender<Command>) -> Self {
+    pub fn new(tx: Sender<Command>, icons: Arc<Icons>) -> Self {
         Self {
             state: State::Idle,
             tx,
+            icons,
+        }
+    }
+
+    fn icon(&self) -> Icon {
+        match &self.state {
+            State::Idle => Icon::Idle,
+            State::Checking => Icon::Checking,
+            State::UpToDate { .. } => Icon::UpToDate,
+            State::UpdatesAvailable(_) => Icon::UpdatesAvailable,
+            State::Applying => Icon::Applying,
+            State::Error { .. } => Icon::Error,
         }
     }
 
@@ -60,14 +75,15 @@ impl ksni::Tray for UpdateTray {
         ksni::Category::SystemServices
     }
 
+    // Our own art goes out as a pixmap so the glyph does not depend on the
+    // host's icon theme; the name is left empty in that case, because a host
+    // that can resolve IconName will prefer it over IconPixmap.
     fn icon_name(&self) -> String {
-        match &self.state {
-            State::Idle | State::UpToDate { .. } => "system-software-update",
-            State::Checking | State::Applying => "emblem-synchronizing",
-            State::UpdatesAvailable(_) => "software-update-available",
-            State::Error { .. } => "software-update-urgent",
-        }
-        .to_string()
+        self.icons.name(self.icon())
+    }
+
+    fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        self.icons.pixmaps(self.icon())
     }
 
     fn tool_tip(&self) -> ksni::ToolTip {
@@ -96,7 +112,8 @@ impl ksni::Tray for UpdateTray {
             MenuItem::Separator,
             StandardItem {
                 label: "Check for updates".to_string(),
-                icon_name: "view-refresh".to_string(),
+                icon_name: self.icons.menu_name(MenuIcon::Search),
+                icon_data: self.icons.menu_data(MenuIcon::Search),
                 enabled: !self.busy(),
                 activate: Box::new(|tray: &mut Self| {
                     let _ = tray.tx.send(Command::Check);
@@ -106,7 +123,8 @@ impl ksni::Tray for UpdateTray {
             .into(),
             SubMenu {
                 label: "Apply".to_string(),
-                icon_name: "dialog-ok-apply".to_string(),
+                icon_name: self.icons.menu_name(MenuIcon::Apply),
+                icon_data: self.icons.menu_data(MenuIcon::Apply),
                 enabled: matches!(self.state, State::UpdatesAvailable(_)),
                 submenu: vec![
                     apply_item("System + home now", ApplyMode::Full),
@@ -120,7 +138,8 @@ impl ksni::Tray for UpdateTray {
             MenuItem::Separator,
             StandardItem {
                 label: "Quit".to_string(),
-                icon_name: "application-exit".to_string(),
+                icon_name: self.icons.menu_name(MenuIcon::Quit),
+                icon_data: self.icons.menu_data(MenuIcon::Quit),
                 activate: Box::new(|tray: &mut Self| {
                     let _ = tray.tx.send(Command::Quit);
                 }),

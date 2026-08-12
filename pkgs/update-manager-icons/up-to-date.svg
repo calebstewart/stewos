@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     color="#a6e3a1" fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <!-- The resting shape (see idle.svg), in green. -->
+  <path d="M12 3v10"/>
+  <path d="m7 10 5 5 5-5"/>
+  <path d="M4 18.5h16"/>
+</svg>
