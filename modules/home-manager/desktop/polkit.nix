@@ -41,10 +41,14 @@ in
     # width regardless of window_width (upstream bug), so the width is
     # enforced by the window rule in hyprland.nix; it is still written here
     # so the agent's internal layout targets agree once upstream fixes it.
+    # password_field_width also caps the width of every text line in the
+    # dialog (message, command, identity), so derive it from the dialog width
+    # or the content stays pinned at the 340px default and ellipsizes early.
     xdg.configFile."hyprpolkitagent/hyprpolkitagent.conf".text = ''
       general {
         window_width = ${toString cfg.authDialogSize.width}
         window_height = ${toString cfg.authDialogSize.height}
+        password_field_width = ${toString (cfg.authDialogSize.width - 120)}
       }
     '';
   };
