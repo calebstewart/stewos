@@ -670,22 +670,13 @@ in
             border_size = 0;
           }
 
-          # Make the authentication agent prompt *special* o.O
+          # The authentication agent prompt: a normal centered floating
+          # dialog, pinned so workspace switches don't lose it.
           {
-            match.class = "polkit-gnome-authentication-agent-1";
+            match.class = "hyprpolkitagent";
             float = true;
-            move = [
-              "monitor_w*0.37"
-              "monitor_h*0.02"
-            ];
-            size = [
-              "monitor_w*0.25"
-              "monitor_h*0.1"
-            ];
             pin = true;
             stay_focused = true;
-            animation = "slide top";
-            workspace = "special:polkit";
           }
 
           # Float windows with a dash prefix in their class like a dashboard

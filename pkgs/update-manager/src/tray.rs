@@ -63,9 +63,8 @@ impl ksni::Tray for UpdateTray {
     fn icon_name(&self) -> String {
         match &self.state {
             State::Idle | State::UpToDate { .. } => "system-software-update",
-            State::Checking => "emblem-synchronizing",
+            State::Checking | State::Applying => "emblem-synchronizing",
             State::UpdatesAvailable(_) => "software-update-available",
-            State::Applying => "system-software-install",
             State::Error { .. } => "software-update-urgent",
         }
         .to_string()
@@ -107,7 +106,6 @@ impl ksni::Tray for UpdateTray {
             .into(),
             SubMenu {
                 label: "Apply".to_string(),
-                icon_name: "system-software-install".to_string(),
                 enabled: matches!(self.state, State::UpdatesAvailable(_)),
                 submenu: vec![
                     apply_item("System + home now", ApplyMode::Full),

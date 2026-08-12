@@ -9,13 +9,14 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
-    # Automatically Start the Gnome Polkit Authentication Agent
-    systemd.user.services.polkit-gnome-authentication-agent-1 = {
-      Unit.Description = "Polkit Gnome Authentication Agent";
+    # Automatically start the Hyprland polkit authentication agent, which
+    # draws the privilege-escalation prompts (run0, pkexec, ...).
+    systemd.user.services.hyprpolkitagent = {
+      Unit.Description = "Hyprland Polkit Authentication Agent";
 
       Service = {
         Type = "simple";
-        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
         Restart = "on-failure";
         RestartSec = 1;
         TimeoutStopSec = 10;
