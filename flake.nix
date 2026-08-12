@@ -47,6 +47,14 @@
       inputs.caelestia-cli.follows = "caelestia-cli";
     };
 
+    # Qt6 platform theme + widget style for the Hyprland ecosystem (replaces
+    # qt6ct/gtk3). Unreleased upstream; carries the same follows fragility as
+    # llm-agents (see CLAUDE.md known failure modes).
+    hyprqt6engine = {
+      url = "github:hyprwm/hyprqt6engine";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     vfio-hooks = {
       url = "github:PassthroughPOST/VFIO-Tools";
       flake = false;

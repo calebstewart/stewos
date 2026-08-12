@@ -41,6 +41,7 @@ in
     ./hyprland.nix
     ./fonts.nix
     ./gtk.nix
+    ./hypr-theme.nix
     ./polkit.nix
     ./qt.nix
     ./xdg.nix

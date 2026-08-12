@@ -198,6 +198,13 @@ checking whether caelestia already covers it.
 `stewos.rofi` is still a real module and is enabled per-host; caelestia does not
 replace the launcher.
 
+Hypr ecosystem theming lives in `modules/home-manager/desktop/hypr-theme.nix`,
+which generates `~/.config/hypr/{application-style.conf,hyprtoolkit.conf,hyprqt6engine.conf}`
+from the nix-colors palette: the QML style used by hyprpolkitagent, the
+hyprtoolkit-native apps, and general Qt6 apps respectively. `desktop/qt.nix`
+sets `QT_QPA_PLATFORMTHEME=hyprqt6engine` (from the `hyprqt6engine` flake
+input) instead of qt6ct/gtk3.
+
 ## Conventions
 
 - **Privilege escalation**: Uses `doas` instead of `sudo`
@@ -252,6 +259,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
   the failure mode below
 - `vfio-hooks` (github:PassthroughPOST/VFIO-Tools) - GPU passthrough tools
 - `gh-actions-language-server` (github:lttb/gh-actions-language-server) - GitHub Actions LSP
+- `hyprqt6engine` (github:hyprwm/hyprqt6engine) - Qt6 platform theme; unreleased
+  upstream and carries the same `follows` fragility as `llm-agents` (same
+  remedy: drop the follows if it stops building after a flake update)
 
 ### Community
 - `nur` - Nix User Repository

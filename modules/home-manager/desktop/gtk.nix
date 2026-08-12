@@ -33,6 +33,13 @@ in
           accent = "blue";
         };
       };
+
+      # The same UI font hypr-theme.nix configures for the hypr toolkits.
+      font = {
+        name = "Roboto";
+        size = 11;
+        package = pkgs.roboto;
+      };
     };
 
     # Double-check that the cursor is set properly (it's finicky)

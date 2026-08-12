@@ -9,20 +9,15 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
-    # Automatically start the Hyprland polkit authentication agent, which
-    # draws the privilege-escalation prompts (run0, pkexec, ...).
-    systemd.user.services.hyprpolkitagent = {
-      Unit.Description = "Hyprland Polkit Authentication Agent";
+    # The Hyprland polkit authentication agent, which draws the
+    # privilege-escalation prompts (run0, pkexec, ...).
+    services.hyprpolkitagent.enable = true;
 
-      Service = {
-        Type = "simple";
-        ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
-        Restart = "on-failure";
-        RestartSec = 1;
-        TimeoutStopSec = 10;
-      };
-
-      Install.WantedBy = [ "graphical-session.target" ];
+    # The home-manager unit has no Restart policy; add one.
+    systemd.user.services.hyprpolkitagent.Service = {
+      Restart = "on-failure";
+      RestartSec = 1;
+      TimeoutStopSec = 10;
     };
   };
 }
