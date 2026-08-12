@@ -17,6 +17,7 @@
     ./embermug-tray.nix
     ./eza.nix
     ./firefox.nix
+    ./ghostty.nix
     ./git.nix
     ./neovim.nix
     ./rofi.nix

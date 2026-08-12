@@ -235,6 +235,18 @@ let
         modifiers = [ "shift" ];
         action = "move-workspace-to-next-monitor";
       };
+
+      # Same keys as the Linux keymap; both go straight to the clipboard.
+      screenshot-region = {
+        key = "r";
+        modifiers = [ "shift" ];
+        action = "screenshot-region";
+      };
+      screenshot-screen = {
+        key = "p";
+        modifiers = [ "shift" ];
+        action = "screenshot-screen";
+      };
     };
 
   # Bindings that apply to this platform, paired with the name they were given.

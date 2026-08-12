@@ -90,6 +90,9 @@
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Discord with Vencord, configured declaratively through home-manager.
+    nixcord.url = "github:4evy/nixcord";
   };
 
   outputs =

@@ -19,6 +19,7 @@ self: {
   hyprpolkitagent = self.callPackage ./hyprpolkitagent { };
   hyprqt6engine = self.callPackage ./hyprqt6engine { };
   lucas-chess = self.callPackage ./lucas-chess { };
+  macfetch = self.callPackage ./macfetch { };
   shortcut-cli = self.callPackage ./shortcut-cli { };
   update-manager = self.callPackage ./update-manager { };
   update-manager-icons = self.callPackage ./update-manager-icons { };

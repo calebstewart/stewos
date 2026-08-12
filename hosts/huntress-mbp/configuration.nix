@@ -19,7 +19,11 @@
   homebrew = {
     enable = true;
 
-    brews = [ "ruby-install" ];
+    taps = [ "datadog-labs/pack" ];
+    brews = [
+      "ruby-install"
+      "datadog-labs/pack/pup"
+    ];
     casks = [ "karabiner-elements" ];
   };
 

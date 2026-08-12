@@ -457,3 +457,28 @@ that override still applies rather than reaching for a different platform theme.
 Deriving the stdenv from qtbase rather than naming a gcc version is deliberate:
 it stays correct as nixpkgs moves its Qt stack forward. `pkgs/hyprqt6engine/
 upstream-issue.md` is the report to file if this is still unfixed upstream.
+
+### Darwin home configuration pairs home-manager master with stable nixpkgs
+
+`home-manager` tracks master while `nixpkgs-darwin` tracks the
+`nixpkgs-*-darwin` release branch, so the darwin home configurations
+(currently `huntress-mbp`) build with mismatched versions — e.g. home-manager
+26.11 against nixpkgs 26.05. The Linux hosts are unaffected because they build
+from `nixos-unstable`, which is what home-manager master targets.
+
+This skew is deliberate (a stable home-manager would lag the modules the Linux
+hosts use), and home-manager's release-check warning is suppressed on the
+affected host with `home.enableNixpkgsReleaseCheck = false` in
+`hosts/huntress-mbp/home.nix`.
+
+**Symptom:** after a flake update, the darwin home configuration fails to
+evaluate or behaves oddly — typically a renamed/removed nixpkgs option or a
+home-manager module using a package attribute that stable nixpkgs does not
+have yet — while the Linux hosts and the darwin *system* configuration are
+fine. Because the warning is suppressed, nothing will point at the version
+skew; check for it before debugging the module itself.
+
+**Fix:** usually wait for (or pin to) a home-manager revision compatible with
+the darwin release branch, or bump `nixpkgs-darwin` to the next release. As a
+last resort, split the input and pin a separate `home-manager` release branch
+for darwin.
