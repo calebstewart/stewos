@@ -15,6 +15,7 @@ self: {
   mkRofiTheme = self.callPackage ./rofi/mk-theme.nix { };
 
   # Packages.
+  caelestia-shell = self.callPackage ./caelestia-shell { };
   gh-actions-language-server = self.callPackage ./gh-actions-language-server { };
   hyprpolkitagent = self.callPackage ./hyprpolkitagent { };
   hyprqt6engine = self.callPackage ./hyprqt6engine { };

@@ -34,6 +34,11 @@ in
       systemd.enable = true;
       cli.enable = true;
 
+      # Our build of the shell, which adds pam_gnome_keyring to the locker's PAM
+      # stack so unlocking the screen also unlocks the login keyring. Autologin
+      # means the lock screen is the only place a password is entered.
+      package = pkgs.stewos.caelestia-shell;
+
       settings = {
         paths.wallpaperDir = "~/Pictures/Wallpapers";
 

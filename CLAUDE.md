@@ -235,6 +235,22 @@ checking whether caelestia already covers it.
 `stewos.rofi` is still a real module and is enabled per-host; caelestia does not
 replace the launcher.
 
+Unlocking the screen also unlocks the GNOME login keyring. The hosts autologin,
+so greetd never collects a password and the `pam_gnome_keyring` lines NixOS puts
+in `/etc/pam.d/login` have nothing to work with -- the lock screen is the only
+place in the session a password is typed. Two pieces make it work, and both are
+load-bearing:
+
+- `pkgs/caelestia-shell` appends `auth optional pam_gnome_keyring.so` to the
+  locker's PAM stack. Caelestia reads that stack from *inside the package*
+  (`modules/lock/Pam.qml` points Quickshell's `PamContext` at
+  `shellDir + "/assets/pam.d"`), not `/etc/pam.d`, which is why this is a
+  packaging override rather than an upstream patch. Quickshell calls only
+  `pam_authenticate` -- no `pam_setcred`, no session phase -- which works
+  because `pam_gnome_keyring` unlocks from `pam_sm_authenticate` itself.
+- `stewos.desktop-services` starts the keyring's secrets component up front.
+  Without that the unlock loses a race; see the failure mode below.
+
 All application theming lives in `modules/home-manager/desktop/linux/theme.nix`
 and is driven from `config.colorScheme` (nix-colors), so a scheme change moves
 the whole desktop rather than half of it:
@@ -372,7 +388,11 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `embermug-tray` - Ember Mug system tray app
 
 ### External Custom Flakes
-- `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework
+- `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed
+  as `pkgs.stewos.caelestia-shell`, which appends `pam_gnome_keyring` to the
+  locker's PAM stack (`pkgs/caelestia-shell/`). Note it overrides the flake's
+  `with-cli` output, not `default` -- that is what the upstream home-manager
+  module defaults to, and `cli.enable` is set here
 - `caelestia-cli` (github:Gitkubikon/cli) - CLI for the above
 - `llm-agents` (github:numtide/llm-agents.nix) - Source of `claude-code`; see
   the failure mode below
@@ -457,6 +477,52 @@ that override still applies rather than reaching for a different platform theme.
 Deriving the stdenv from qtbase rather than naming a gcc version is deliberate:
 it stays correct as nixpkgs moves its Qt stack forward. `pkgs/hyprqt6engine/
 upstream-issue.md` is the report to file if this is still unfixed upstream.
+
+### The lock screen says the keyring password is invalid
+
+**Symptom:** unlocking the screen leaves the login keyring locked, and the
+journal has `gkr-pam: the password for the login keyring was invalid`. The
+password is not wrong -- `pam_unix` accepted the very same string a moment
+earlier, which is why the session unlocked at all. Anything wanting a secret
+then prompts separately, and that prompt takes the same password happily.
+
+**Cause:** a race, not a credential problem. PAM's `auto_start` brings up
+`gnome-keyring-daemon --login`, which owns no well-known bus name and does not
+run the *secrets* component. That component only appears when something first
+asks for `org.freedesktop.secrets` and D-Bus activates gnome-keyring a second
+time; the new process finds the first (`discover_other_daemon`), hands the work
+over, and -- because the activation file passes `--foreground` -- sits parked
+for the rest of the session. With autologin and `startLocked`, the lock screen
+comes up before anything has asked for a secret, so the unlock reaches a daemon
+that cannot service it. A boot where this went wrong:
+
+```
+19:35:44  gnome-keyring-daemon --login  (PAM auto_start, at greetd)
+19:35:52  gkr-pam: the password for the login keyring was invalid
+19:36:00  secrets component activated over D-Bus
+19:36:06  gcr prompt unlocks it with the same password
+```
+
+**Fix:** already in place -- `stewos.desktop-services` defines a
+`gnome-keyring-secrets` user unit that runs
+`gnome-keyring-daemon --start --components=secrets` before
+`graphical-session.target`. Dropping `--foreground` matters: the command exits 0
+once the handoff is done, so `Type = "oneshot"` gives a real readiness barrier,
+whereas home-manager's own `services.gnome-keyring` module uses the foreground
+form under `Type = simple` and is considered started the instant it forks --
+which would not close this race. Owning the bus name early also stops the D-Bus
+activation firing at all, so the parked stub never appears.
+
+**Verify:** after a reboot, all three should hold.
+
+```bash
+systemctl --user status gnome-keyring-secrets   # active (exited)
+journalctl -b | rg gkr-pam                      # unlocked login keyring
+pgrep -af gnome-keyring                         # only --daemonize --login
+```
+
+Do not chase this as a wrong password. If the keyring genuinely has a different
+password the message is identical, so check the ordering above first.
 
 ### Darwin home configuration pairs home-manager master with stable nixpkgs
 

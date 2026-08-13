@@ -20,6 +20,15 @@ inputs: final: prev: {
       # input rather than something fetched inside the derivation.
       gh-actions-language-server-src = inputs.gh-actions-language-server;
 
+      # The upstream caelestia-shell package, which pkgs/caelestia-shell patches
+      # to unlock the login keyring from the lock screen. "with-cli" rather than
+      # "default" because programs.caelestia.cli.enable is set and upstream's
+      # home-manager module defaults to the with-cli variant, so overriding
+      # "default" would quietly drop the bundled CLI. Linux-only upstream, hence
+      # the "or null".
+      caelestia-shell-upstream =
+        inputs.caelestia-shell.packages.${prev.stdenv.hostPlatform.system}.with-cli or null;
+
       # The upstream hyprpolkitagent package, which pkgs/hyprpolkitagent
       # patches. The flake only has Linux systems, hence the "or null".
       hyprpolkitagent-upstream =
