@@ -304,10 +304,12 @@ Things that are the way they are on purpose:
 - **Both quoting sections are capped** (32 KiB of error, 24 KiB of log, tails
   kept). A failed `nix build` puts its entire log into the anyhow chain *and*
   the journal, and an unbounded report is one nobody reads.
-- **Claude gets the path in prose plus `--add-dir <cache_dir>`**, not an `@`
-  reference: `@` is CLAUDE.md import syntax, and the report lives outside the
-  checkout the session is rooted in. The positional prompt (no `-p`) is what
-  starts an interactive session with it already submitted.
+- **Claude gets the path in prose plus `--add-dir <cache_dir> -- <prompt>`**,
+  not an `@` reference: `@` is CLAUDE.md import syntax, and the report lives
+  outside the checkout the session is rooted in. The positional prompt (no
+  `-p`) is what starts an interactive session with it already submitted, and
+  the `--` is load-bearing -- `--add-dir` takes `<directories...>`, so without
+  it the prompt is read as another directory and the session opens empty.
 - **`editor` is a PATH-resolved string, `claudePackage` an absolute store
   path.** The editor should be whichever `nvim` the home profile installs, not
   a second one from the store; Claude should not depend on the unit's PATH.

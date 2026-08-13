@@ -124,17 +124,7 @@ pub fn launch(cfg: &Config, action: Action, report: &Path) -> Result<()> {
         bail!("flake checkout {} does not exist", cfg.flake.display());
     }
 
-    let inner: Vec<String> = match action {
-        Action::Report => vec![cfg.editor.clone(), report.display().to_string()],
-        Action::Claude => vec![
-            cfg.claude.clone(),
-            // The report lives in the cache directory, outside the flake
-            // checkout the session is rooted in.
-            "--add-dir".to_string(),
-            cfg.cache_dir.display().to_string(),
-            prompt(report),
-        ],
-    };
+    let inner = inner_argv(cfg, action, report);
 
     log::info!("opening {terminal} for {inner:?}");
     let mut child = Command::new(terminal)
@@ -155,6 +145,25 @@ pub fn launch(cfg: &Config, action: Action, report: &Path) -> Result<()> {
         }
     });
     Ok(())
+}
+
+/// What to run inside the terminal.
+fn inner_argv(cfg: &Config, action: Action, report: &Path) -> Vec<String> {
+    match action {
+        Action::Report => vec![cfg.editor.clone(), report.display().to_string()],
+        Action::Claude => vec![
+            cfg.claude.clone(),
+            // The report lives in the cache directory, outside the flake
+            // checkout the session is rooted in.
+            "--add-dir".to_string(),
+            cfg.cache_dir.display().to_string(),
+            // `--add-dir` takes *directories...*, so without this the prompt is
+            // read as another directory and the session opens with nothing
+            // submitted.
+            "--".to_string(),
+            prompt(report),
+        ],
+    }
 }
 
 /// The opening turn of the Claude session. A positional prompt starts an
@@ -323,4 +332,42 @@ fn capture(prog: &str, args: &[&str]) -> String {
     }
     out.push('\n');
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg() -> Config {
+        Config {
+            flake: PathBuf::from("/home/u/git/stewos"),
+            host: "host".to_string(),
+            user: "u".to_string(),
+            branch: "stewos-update".to_string(),
+            cache_dir: PathBuf::from("/home/u/.cache/stewos-update-manager"),
+            icon_dir: None,
+            terminal: Some("alacritty".to_string()),
+            terminal_args: vec!["-e".to_string()],
+            editor: "nvim".to_string(),
+            claude: "claude".to_string(),
+        }
+    }
+
+    /// `--add-dir` is variadic, so the prompt has to sit past a `--` or Claude
+    /// reads it as another directory and opens an empty session -- which looks
+    /// like the seeding simply not working.
+    #[test]
+    fn claude_prompt_is_separated_from_add_dir() {
+        let argv = inner_argv(&cfg(), Action::Claude, Path::new("/tmp/report.md"));
+        let separator = argv.iter().position(|a| a == "--").expect("no -- in argv");
+        let prompt = argv.len() - 1;
+        assert_eq!(separator, prompt - 1, "the prompt must follow -- directly");
+        assert!(argv[prompt].contains("/tmp/report.md"));
+    }
+
+    #[test]
+    fn report_opens_in_the_editor() {
+        let argv = inner_argv(&cfg(), Action::Report, Path::new("/tmp/report.md"));
+        assert_eq!(argv, vec!["nvim".to_string(), "/tmp/report.md".to_string()]);
+    }
 }
