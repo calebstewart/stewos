@@ -69,6 +69,8 @@ let
       [
         "search"
         "apply"
+        "report"
+        "troubleshoot"
         "quit"
       ];
 

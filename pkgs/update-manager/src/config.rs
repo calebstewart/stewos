@@ -30,6 +30,26 @@ pub struct Args {
     /// without it the tray falls back to the ambient icon theme's names.
     #[arg(long, env = "STEWOS_UPDATE_ICON_DIR")]
     icon_dir: Option<PathBuf>,
+
+    /// Terminal emulator the troubleshooting entries open in (defaults to
+    /// $TERMINAL). Without one, those entries are not offered at all.
+    #[arg(long, env = "STEWOS_UPDATE_TERMINAL")]
+    terminal: Option<String>,
+
+    /// Argument that makes the terminal run a command, repeatable. Passing any
+    /// replaces the default, so a terminal taking the command positionally is
+    /// spelled `--terminal-arg ""`. Values here are almost always flags, hence
+    /// allow_hyphen_values -- without it clap reads `-e` as an option of ours.
+    #[arg(long, default_value = "-e", allow_hyphen_values = true)]
+    terminal_arg: Vec<String>,
+
+    /// Editor the failure report opens in (defaults to $EDITOR, then nvim)
+    #[arg(long, env = "STEWOS_UPDATE_EDITOR")]
+    editor: Option<String>,
+
+    /// Claude Code executable used by the troubleshooting session
+    #[arg(long, env = "STEWOS_UPDATE_CLAUDE", default_value = "claude")]
+    claude: String,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +60,12 @@ pub struct Config {
     pub branch: String,
     pub cache_dir: PathBuf,
     pub icon_dir: Option<PathBuf>,
+    /// None disables the troubleshooting entries: there is nothing to open
+    /// them in.
+    pub terminal: Option<String>,
+    pub terminal_args: Vec<String>,
+    pub editor: String,
+    pub claude: String,
 }
 
 impl Args {
@@ -70,6 +96,12 @@ impl Args {
                 .join("stewos-update-manager")
         });
 
+        let terminal = self.terminal.or_else(|| std::env::var("TERMINAL").ok());
+        let editor = self
+            .editor
+            .or_else(|| std::env::var("EDITOR").ok())
+            .unwrap_or_else(|| "nvim".to_string());
+
         Ok(Config {
             flake,
             host,
@@ -77,6 +109,16 @@ impl Args {
             branch: self.branch,
             cache_dir,
             icon_dir: self.icon_dir,
+            terminal,
+            // An empty argument is how a terminal that takes its command
+            // positionally is spelled; drop it rather than passing "" on.
+            terminal_args: self
+                .terminal_arg
+                .into_iter()
+                .filter(|a| !a.is_empty())
+                .collect(),
+            editor,
+            claude: self.claude,
         })
     }
 }
@@ -96,6 +138,13 @@ impl Config {
 
     pub fn state_file(&self) -> PathBuf {
         self.cache_dir.join("state.json")
+    }
+
+    /// Where the failure report is written. One stable path, overwritten on
+    /// every troubleshooting request, so it survives a daemon restart and can
+    /// be reopened by hand.
+    pub fn troubleshoot_file(&self) -> PathBuf {
+        self.cache_dir.join("troubleshoot.md")
     }
 
     pub fn system_installable(&self) -> String {
@@ -134,5 +183,23 @@ impl Config {
                 .join("home-manager"),
         ];
         candidates.into_iter().find(|p| p.exists())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `-e` is a *value*, not a flag of ours. Without `allow_hyphen_values`
+    /// clap rejects the very default it is given, and the daemon exits 2 in a
+    /// restart loop -- which looks from the outside like the tray icon simply
+    /// disappearing. Nothing else checks that the default and the parser agree.
+    #[test]
+    fn terminal_args_may_start_with_a_hyphen() {
+        let args = Args::parse_from(["stewos-update-manager", "--terminal-arg", "-e"]);
+        assert_eq!(args.terminal_arg, vec!["-e".to_string()]);
+
+        let defaulted = Args::parse_from(["stewos-update-manager"]);
+        assert_eq!(defaulted.terminal_arg, vec!["-e".to_string()]);
     }
 }

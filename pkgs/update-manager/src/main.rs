@@ -3,6 +3,7 @@ mod icons;
 mod notify;
 mod state;
 mod tray;
+mod troubleshoot;
 mod updater;
 
 use std::sync::mpsc;
@@ -33,6 +34,8 @@ pub enum ApplyMode {
 pub enum Command {
     Check,
     Apply(ApplyMode),
+    /// Write a report about the last failure and open it.
+    Troubleshoot(troubleshoot::Action),
     Quit,
 }
 
@@ -54,7 +57,18 @@ fn main() -> Result<()> {
 
     let icons = Arc::new(icons::Icons::load(cfg.icon_dir.as_deref()));
 
-    let tray_service = ksni::TrayService::new(tray::UpdateTray::new(tx.clone(), icons.clone()));
+    // With no terminal to open them in, the troubleshooting entries would be
+    // dead weight, so the tray leaves them out entirely.
+    let troubleshoot_available = cfg.terminal.is_some();
+    if !troubleshoot_available {
+        log::warn!("no terminal configured; troubleshooting entries are disabled");
+    }
+
+    let tray_service = ksni::TrayService::new(tray::UpdateTray::new(
+        tx.clone(),
+        icons.clone(),
+        troubleshoot_available,
+    ));
     let tray = tray_service.handle();
     tray_service.spawn();
 
@@ -66,6 +80,7 @@ fn main() -> Result<()> {
         match rx.recv() {
             Ok(Command::Check) => worker.check(),
             Ok(Command::Apply(mode)) => worker.apply(mode),
+            Ok(Command::Troubleshoot(action)) => worker.troubleshoot(action),
             Ok(Command::Quit) | Err(_) => break,
         }
     }

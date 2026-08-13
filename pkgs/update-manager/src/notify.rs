@@ -4,6 +4,7 @@ use std::sync::Arc;
 use notify_rust::{Notification, Timeout, Urgency};
 
 use crate::icons::{Icon, Icons};
+use crate::troubleshoot::Action;
 use crate::{ApplyMode, Command};
 
 const APP_NAME: &str = "StewOS Updates";
@@ -40,7 +41,9 @@ impl Notifier {
         }
     }
 
-    /// Persistent error notification.
+    /// Persistent error notification, for the errors nothing can be done about
+    /// from here. A failure the worker recorded a report for goes through
+    /// [`Notifier::failure`] instead.
     pub fn error(&self, summary: &str, body: &str) {
         let result = Self::base(&self.icons, Icon::Error, summary, body)
             .urgency(Urgency::Critical)
@@ -49,6 +52,44 @@ impl Notifier {
         if let Err(err) = result {
             log::warn!("notification failed: {err}");
         }
+    }
+
+    /// A failed check or apply: the same persistent error notification, plus
+    /// the two entries the tray menu grows, so the report is one click away
+    /// without going to the tray. Like `updates_available`, the action wait
+    /// blocks, so this lives on its own thread.
+    pub fn failure(&self, summary: String, body: String) {
+        let tx = self.tx.clone();
+        let icons = self.icons.clone();
+        std::thread::spawn(move || {
+            let actions_supported = notify_rust::get_capabilities()
+                .map(|caps| caps.iter().any(|c| c == "actions"))
+                .unwrap_or(false);
+
+            let mut n = Self::base(&icons, Icon::Error, &summary, &body);
+            n.urgency(Urgency::Critical).timeout(Timeout::Never);
+            if actions_supported {
+                n.action("report", "Open report");
+                n.action("claude", "Troubleshoot");
+            }
+
+            match n.show() {
+                Ok(handle) if actions_supported => {
+                    handle.wait_for_action(|action| {
+                        let action = match action {
+                            "report" => Some(Action::Report),
+                            "claude" => Some(Action::Claude),
+                            _ => None,
+                        };
+                        if let Some(action) = action {
+                            let _ = tx.send(Command::Troubleshoot(action));
+                        }
+                    });
+                }
+                Ok(_) => {}
+                Err(err) => log::warn!("notification failed: {err}"),
+            }
+        });
     }
 
     /// Persistent "updates available" notification with an "Apply now" action

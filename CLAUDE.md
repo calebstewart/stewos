@@ -171,7 +171,7 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
-| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons -- see below |
+| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons, and opens a failure report in a terminal -- see below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -276,11 +276,50 @@ unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
 is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
 return a package.
 
+### update-manager failure reports
+
+A failed check or apply records an `ErrorReport` on the worker and grows two
+menu entries -- "Open failure report" and "Troubleshoot with Claude" -- which
+also appear as buttons on the error notification. Both write the same
+deterministic Markdown to `<cache_dir>/troubleshoot.md` and open it in the
+user's terminal: one in `$EDITOR`, the other as the opening prompt of a Claude
+Code session cwd'd to the flake checkout. One writer, two ways to open it.
+
+The tray menu is **contextual and exclusive**: between "Check for updates" and
+"Quit" there is at most one block, and a recorded failure beats a pending
+update. The consequence is deliberate -- a failed apply leaves `State::
+UpdatesAvailable` so its idempotence guards can resume it, but the Apply
+submenu is hidden until the next successful check clears the failure.
+
+Things that are the way they are on purpose:
+
+- **The report is written on click, not on failure.** It quotes `git status`,
+  the branch revs and the daemon's own journal, and those are only worth having
+  as of the moment someone is about to debug them. `last_error` is likewise
+  in-memory only, unlike `PendingUpdate`: it quotes this boot's journal.
+- **The journal comes from `INVOCATION_ID`**, falling back to `-t
+  stewos-update-manager` for a bare `cargo run`. `journalctl` is deliberately
+  not in the `makeWrapper` PATH, for the same reason `run0` is not: it has to
+  match the running system.
+- **Both quoting sections are capped** (32 KiB of error, 24 KiB of log, tails
+  kept). A failed `nix build` puts its entire log into the anyhow chain *and*
+  the journal, and an unbounded report is one nobody reads.
+- **Claude gets the path in prose plus `--add-dir <cache_dir>`**, not an `@`
+  reference: `@` is CLAUDE.md import syntax, and the report lives outside the
+  checkout the session is rooted in. The positional prompt (no `-p`) is what
+  starts an interactive session with it already submitted.
+- **`editor` is a PATH-resolved string, `claudePackage` an absolute store
+  path.** The editor should be whichever `nvim` the home profile installs, not
+  a second one from the store; Claude should not depend on the unit's PATH.
+- `terminal` defaults to `config.stewos.desktop.terminal`, and with no terminal
+  configured at all the entries are never shown rather than shown broken.
+
 ### update-manager icons
 
 The update-manager daemon borrows no freedesktop icon names at all. It ships
-nine of its own: six status badges (idle, checking, up-to-date,
-updates-available, applying, error) and three menu glyphs (search, apply, quit).
+eleven of its own: six status badges (idle, checking, up-to-date,
+updates-available, applying, error) and five menu glyphs (search, apply, report,
+troubleshoot, quit).
 Nothing is looked up by name, which is also why they survive the Qt
 platform-theme failure described under "Qt apps lose every themed icon":
 

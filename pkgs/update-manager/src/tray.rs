@@ -3,20 +3,29 @@ use std::sync::Arc;
 
 use crate::icons::{Icon, Icons, MenuIcon};
 use crate::state::State;
+use crate::troubleshoot::Action;
 use crate::{ApplyMode, Command};
 
 pub struct UpdateTray {
     state: State,
     tx: Sender<Command>,
     icons: Arc<Icons>,
+    /// Whether the worker is holding a failure worth reporting on. The report
+    /// itself stays with the worker; the menu only needs to know it exists.
+    has_error: bool,
+    /// False when no terminal is configured, in which case the troubleshooting
+    /// entries have nothing to open and are never shown.
+    troubleshoot_available: bool,
 }
 
 impl UpdateTray {
-    pub fn new(tx: Sender<Command>, icons: Arc<Icons>) -> Self {
+    pub fn new(tx: Sender<Command>, icons: Arc<Icons>, troubleshoot_available: bool) -> Self {
         Self {
             state: State::Idle,
             tx,
             icons,
+            has_error: false,
+            troubleshoot_available,
         }
     }
 
@@ -33,6 +42,17 @@ impl UpdateTray {
 
     pub fn set_state(&mut self, state: State) {
         self.state = state;
+    }
+
+    pub fn set_has_error(&mut self, has_error: bool) {
+        self.has_error = has_error;
+    }
+
+    /// A recorded failure takes the menu over from a pending update: the two
+    /// blocks are mutually exclusive, and the failure is the thing to deal
+    /// with first.
+    fn troubleshootable(&self) -> bool {
+        self.has_error && self.troubleshoot_available
     }
 
     fn status_line(&self) -> String {
@@ -56,6 +76,27 @@ fn apply_item(label: &str, mode: ApplyMode) -> ksni::MenuItem<UpdateTray> {
         label: label.to_string(),
         activate: Box::new(move |tray: &mut UpdateTray| {
             let _ = tray.tx.send(Command::Apply(mode));
+        }),
+        ..Default::default()
+    }
+    .into()
+}
+
+fn troubleshoot_item(
+    tray: &UpdateTray,
+    label: &str,
+    icon: MenuIcon,
+    action: Action,
+) -> ksni::MenuItem<UpdateTray> {
+    ksni::menu::StandardItem {
+        label: label.to_string(),
+        icon_name: tray.icons.menu_name(icon),
+        icon_data: tray.icons.menu_data(icon),
+        // The worker runs everything on one thread, so a click during a check
+        // would sit in the queue for as long as the build takes.
+        enabled: !tray.busy(),
+        activate: Box::new(move |tray: &mut UpdateTray| {
+            let _ = tray.tx.send(Command::Troubleshoot(action));
         }),
         ..Default::default()
     }
@@ -99,10 +140,14 @@ impl ksni::Tray for UpdateTray {
         }
     }
 
+    /// Contextual: between "Check for updates" and "Quit" there is at most one
+    /// block, and only when there is something to act on. A recorded failure
+    /// wins over a pending update, so a failed apply trades its retry entry for
+    /// the troubleshooting ones until the next successful check.
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
         use ksni::menu::*;
 
-        vec![
+        let mut items: Vec<ksni::MenuItem<Self>> = vec![
             StandardItem {
                 label: self.status_line(),
                 enabled: false,
@@ -121,21 +166,41 @@ impl ksni::Tray for UpdateTray {
                 ..Default::default()
             }
             .into(),
-            SubMenu {
-                label: "Apply".to_string(),
-                icon_name: self.icons.menu_name(MenuIcon::Apply),
-                icon_data: self.icons.menu_data(MenuIcon::Apply),
-                enabled: matches!(self.state, State::UpdatesAvailable(_)),
-                submenu: vec![
-                    apply_item("System + home now", ApplyMode::Full),
-                    apply_item("Home only", ApplyMode::HomeOnly),
-                    apply_item("Home now, system on next boot", ApplyMode::HomeAndBoot),
-                    apply_item("System only", ApplyMode::SystemOnly),
-                ],
-                ..Default::default()
-            }
-            .into(),
-            MenuItem::Separator,
+        ];
+
+        if self.troubleshootable() {
+            items.push(troubleshoot_item(
+                self,
+                "Open failure report",
+                MenuIcon::Report,
+                Action::Report,
+            ));
+            items.push(troubleshoot_item(
+                self,
+                "Troubleshoot with Claude",
+                MenuIcon::Troubleshoot,
+                Action::Claude,
+            ));
+        } else if matches!(self.state, State::UpdatesAvailable(_)) {
+            items.push(
+                SubMenu {
+                    label: "Apply".to_string(),
+                    icon_name: self.icons.menu_name(MenuIcon::Apply),
+                    icon_data: self.icons.menu_data(MenuIcon::Apply),
+                    submenu: vec![
+                        apply_item("System + home now", ApplyMode::Full),
+                        apply_item("Home only", ApplyMode::HomeOnly),
+                        apply_item("Home now, system on next boot", ApplyMode::HomeAndBoot),
+                        apply_item("System only", ApplyMode::SystemOnly),
+                    ],
+                    ..Default::default()
+                }
+                .into(),
+            );
+        }
+
+        items.push(MenuItem::Separator);
+        items.push(
             StandardItem {
                 label: "Quit".to_string(),
                 icon_name: self.icons.menu_name(MenuIcon::Quit),
@@ -146,6 +211,7 @@ impl ksni::Tray for UpdateTray {
                 ..Default::default()
             }
             .into(),
-        ]
+        );
+        items
     }
 }

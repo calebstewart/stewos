@@ -79,16 +79,28 @@ impl Icon {
 pub enum MenuIcon {
     Search,
     Apply,
+    Report,
+    Troubleshoot,
     Quit,
 }
 
 impl MenuIcon {
-    const ALL: [MenuIcon; 3] = [MenuIcon::Search, MenuIcon::Apply, MenuIcon::Quit];
+    // Positional: `index` is a lookup into the loaded set, so append rather
+    // than reorder.
+    const ALL: [MenuIcon; 5] = [
+        MenuIcon::Search,
+        MenuIcon::Apply,
+        MenuIcon::Report,
+        MenuIcon::Troubleshoot,
+        MenuIcon::Quit,
+    ];
 
     fn slug(self) -> &'static str {
         match self {
             MenuIcon::Search => "search",
             MenuIcon::Apply => "apply",
+            MenuIcon::Report => "report",
+            MenuIcon::Troubleshoot => "troubleshoot",
             MenuIcon::Quit => "quit",
         }
     }
@@ -97,6 +109,8 @@ impl MenuIcon {
         match self {
             MenuIcon::Search => "view-refresh",
             MenuIcon::Apply => "dialog-ok-apply",
+            MenuIcon::Report => "text-x-generic",
+            MenuIcon::Troubleshoot => "system-search",
             MenuIcon::Quit => "application-exit",
         }
     }

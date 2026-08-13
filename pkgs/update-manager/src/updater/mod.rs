@@ -12,6 +12,7 @@ use crate::config::Config;
 use crate::notify::Notifier;
 use crate::state::{self, PendingUpdate, State, Summary};
 use crate::tray::UpdateTray;
+use crate::troubleshoot::{self, Action, ErrorReport, Operation};
 use crate::ApplyMode;
 
 enum CheckOutcome {
@@ -40,7 +41,7 @@ impl ApplyMode {
         !matches!(self, ApplyMode::SystemOnly)
     }
 
-    fn describe(self) -> &'static str {
+    pub(crate) fn describe(self) -> &'static str {
         match self {
             ApplyMode::Full => "system + home",
             ApplyMode::HomeOnly => "home only",
@@ -67,6 +68,10 @@ pub struct Worker {
     notifier: Notifier,
     tray: ksni::Handle<UpdateTray>,
     state: State,
+    /// The last failure, whichever operation it came from. Deliberately not
+    /// persisted alongside `PendingUpdate`: the report quotes this boot's
+    /// journal, which would not survive a restart to describe.
+    last_error: Option<ErrorReport>,
 }
 
 impl Worker {
@@ -76,12 +81,21 @@ impl Worker {
             notifier,
             tray,
             state: State::Idle,
+            last_error: None,
         }
     }
 
     fn set_state(&mut self, state: State) {
         self.state = state.clone();
         self.tray.update(move |tray| tray.set_state(state.clone()));
+    }
+
+    /// Record (or clear) the failure the troubleshooting entries work from. The
+    /// tray is only told whether one exists; the report stays here.
+    fn set_last_error(&mut self, report: Option<ErrorReport>) {
+        let has_error = report.is_some();
+        self.last_error = report;
+        self.tray.update(move |tray| tray.set_has_error(has_error));
     }
 
     /// Restore "updates available" from state.json after a restart, but only
@@ -132,6 +146,7 @@ impl Worker {
         match self.do_check() {
             Ok(CheckOutcome::UpToDate) => {
                 let checked_at = chrono::Local::now().format("%H:%M").to_string();
+                self.set_last_error(None);
                 self.set_state(State::UpToDate { checked_at });
                 self.notifier
                     .info("Up to date", "All flake inputs are current.");
@@ -140,6 +155,7 @@ impl Worker {
                 if let Err(err) = state::save_pending(&self.cfg.state_file(), &pending) {
                     log::warn!("failed to persist state: {err:#}");
                 }
+                self.set_last_error(None);
                 self.notifier
                     .updates_available(pending.summary.short(), pending.summary.breakdown());
                 self.set_state(State::UpdatesAvailable(pending));
@@ -147,7 +163,9 @@ impl Worker {
             Err(err) => {
                 let message = format!("{err:#}");
                 log::error!("check failed: {message}");
-                self.notifier.error("Update check failed", &tail(&message, 3));
+                self.set_last_error(Some(ErrorReport::new(Operation::Check, message.clone())));
+                self.notifier
+                    .failure("Update check failed".to_string(), tail(&message, 3));
                 self.set_state(State::Error {
                     message: truncate(&message, 4000),
                 });
@@ -212,8 +230,7 @@ impl Worker {
             }
         };
         self.set_state(State::Applying);
-        self.notifier
-            .info("Applying updates", mode.describe());
+        self.notifier.info("Applying updates", mode.describe());
 
         match self.do_apply(&pending, mode) {
             Ok(ApplyOutcome::Applied {
@@ -223,6 +240,7 @@ impl Worker {
             }) => {
                 if os_done && home_done {
                     state::clear_pending(&self.cfg.state_file());
+                    self.set_last_error(None);
                     let body = if mode == ApplyMode::HomeAndBoot {
                         format!(
                             "{}. The system generation takes effect on the next boot.",
@@ -266,9 +284,34 @@ impl Worker {
                 // succeeded on the next attempt.
                 let message = format!("{err:#}");
                 log::error!("apply failed: {message}");
-                self.notifier.error("Apply failed", &tail(&message, 3));
+                self.set_last_error(Some(ErrorReport::new(
+                    Operation::Apply(mode),
+                    message.clone(),
+                )));
+                self.notifier
+                    .failure("Apply failed".to_string(), tail(&message, 3));
                 self.set_state(State::UpdatesAvailable(pending));
             }
+        }
+    }
+
+    /// Write a report about the last failure and open it. Both entry points --
+    /// the tray menu and the error notification's buttons -- land here, so the
+    /// report has exactly one writer.
+    pub fn troubleshoot(&mut self, action: Action) {
+        let Some(report) = &self.last_error else {
+            log::info!("troubleshoot requested but no failure is recorded");
+            return;
+        };
+
+        let result = troubleshoot::write(&self.cfg, report)
+            .and_then(|path| troubleshoot::launch(&self.cfg, action, &path));
+        if let Err(err) = result {
+            log::error!("troubleshoot failed: {err:#}");
+            // Plain error(): offering to troubleshoot the troubleshooter is
+            // not a useful thing to do here.
+            self.notifier
+                .error("Could not open the failure report", &format!("{err:#}"));
         }
     }
 

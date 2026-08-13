@@ -1,4 +1,5 @@
 {
+  inputs,
   lib,
   config,
   pkgs,
@@ -72,6 +73,50 @@ in
       default = "stewos-update";
       description = "Branch the update check builds on.";
     };
+
+    # When something fails, the daemon writes a report to its cache directory
+    # and opens it in a terminal of its own -- in the editor, or as the opening
+    # prompt of a Claude Code session rooted in the flake checkout. These are
+    # what it opens it with.
+    terminal = lib.mkOption {
+      type = lib.types.package;
+      default = config.stewos.desktop.terminal;
+      defaultText = lib.literalExpression "config.stewos.desktop.terminal";
+      description = ''
+        Terminal emulator the troubleshooting entries open in. Follows the
+        desktop's terminal by default, which is the option a host already sets.
+      '';
+    };
+
+    terminalArgs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "-e" ];
+      description = ''
+        Arguments that make {option}`terminal` run a command, placed before the
+        command itself. Empty for a terminal that takes it positionally.
+      '';
+    };
+
+    editor = lib.mkOption {
+      type = lib.types.str;
+      default = "nvim";
+      description = ''
+        Editor the failure report opens in. Resolved from the daemon's PATH
+        rather than the store on purpose, so it picks up the editor the home
+        profile installs (the nixvim-wrapped `nvim`) instead of a second one.
+      '';
+    };
+
+    claudePackage = lib.mkOption {
+      type = lib.types.package;
+      default = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code;
+      defaultText = lib.literalExpression "inputs.llm-agents.packages.\${system}.claude-code";
+      description = ''
+        Claude Code used by the "Troubleshoot with Claude" entry. Passed by
+        absolute path, so unlike {option}`editor` it does not depend on the
+        unit's PATH.
+      '';
+    };
   };
 
   config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
@@ -86,12 +131,32 @@ in
 
       Service = {
         Type = "simple";
-        ExecStart = lib.concatStringsSep " " [
-          (lib.getExe cfg.package)
-          "--flake ${cfg.flakePath}"
-          "--branch ${cfg.branch}"
-          "--icon-dir ${cfg.iconPackage}/share/icons"
-        ];
+        # escapeShellArgs rather than a plain join: terminalArgs is a
+        # user-supplied list, and systemd honours the single quotes it emits.
+        ExecStart = lib.escapeShellArgs (
+          [
+            (lib.getExe cfg.package)
+            "--flake"
+            cfg.flakePath
+            "--branch"
+            cfg.branch
+            "--icon-dir"
+            "${cfg.iconPackage}/share/icons"
+            "--terminal"
+            (lib.getExe cfg.terminal)
+            "--editor"
+            cfg.editor
+            "--claude"
+            (lib.getExe cfg.claudePackage)
+          ]
+          # Always pass at least one, or the daemon's own "-e" default applies.
+          # An empty argument is how "this terminal needs none" is spelled; the
+          # daemon drops it.
+          ++ lib.concatMap (arg: [
+            "--terminal-arg"
+            arg
+          ]) (if cfg.terminalArgs == [ ] then [ "" ] else cfg.terminalArgs)
+        );
         Restart = "on-failure";
         RestartSec = 5;
       };
