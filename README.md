@@ -51,10 +51,11 @@ normally. `inputs` arrives once, through `specialArgs` set in `flake.nix`.
 | `huntress-mbp` | `aarch64-darwin` | Apple Silicon MacBook, work machine |
 
 The two Framework machines share `hosts/common/workstation.nix`, which holds the
-Secure Boot setup, silent boot, sleep settings and the StewOS modules they both
+Secure Boot setup, silent boot, plain suspend and the StewOS modules they both
 run. Anything genuinely machine-specific stays in that machine's
 `configuration.nix`, including `system.stateVersion`, which must never follow a
-shared default.
+shared default, and whether the machine hibernates -- framework16 does,
+framework-desktop deliberately does not.
 
 ## Building
 

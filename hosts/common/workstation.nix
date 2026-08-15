@@ -1,6 +1,10 @@
 # Policy shared by the Framework machines: Secure Boot via lanzaboote, a silent
-# boot, the StewOS modules they both run, and sleep settings that permit
-# hibernation.
+# boot, the StewOS modules they both run, and plain suspend.
+#
+# Hibernation is *not* shared policy. Whether S4 is viable depends on the
+# machine's swap-to-RAM ratio and on whether its GPU survives the suspend path,
+# so each host opts in or out in its own configuration.nix -- see the
+# framework-desktop lockup under "Known Failure Modes" in CLAUDE.md.
 #
 # This is host policy rather than a reusable module, which is why it lives under
 # hosts/ and is imported explicitly instead of being hidden behind an option.
@@ -68,14 +72,11 @@ in
     initrd.verbose = false;
   };
 
-  # This prevents hibernation
-  security.protectKernelImage = false;
-
-  # Setup systemd sleep configuration
+  # Plain suspend is all that is shared. A host that wants S4 sets
+  # AllowHibernation itself; one that wants it off for good also turns on
+  # security.protectKernelImage, which adds `nohibernate`.
   systemd.sleep.settings.Sleep = {
-    AllowHybridSleep = true;
     AllowSuspend = true;
-    AllowHibernate = true;
   };
 
   # sbctl manages the Secure Boot keys under /var/lib/sbctl

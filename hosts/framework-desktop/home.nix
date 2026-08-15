@@ -84,6 +84,41 @@
 
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
+  # caelestia's idle chain ends in `suspendThenHibernate`, which is what walked
+  # this machine into the dead-GPU lockup: the hibernate leg cannot succeed here
+  # (see configuration.nix), and the abort takes amdgpu with it. The defaults
+  # live in the plugin's C++, not in QML -- `GeneralIdle` in
+  # plugin/src/Caelestia/Config/generalconfig.hpp. Note that a checkout of the
+  # shell may carry an older QML-based config tree that spells this differently;
+  # the flake input is what builds.
+  #
+  # `["systemctl", "suspend"]` is not exec'd: SessionManager::exec aliases a
+  # two-element systemctl/loginctl invocation to the bare verb and calls logind
+  # over D-Bus, so this lands on the same path the default did.
+  #
+  # Restated in full rather than patched, because `timeouts` is a JSON list --
+  # the module system replaces it, it does not merge element-wise. The delays
+  # are longer than caelestia's 180/300/600 defaults: this machine lives at
+  # home, where an unattended screen is not much of a threat.
+  programs.caelestia.settings.general.idle.timeouts = [
+    {
+      timeout = 600;
+      idleAction = "lock";
+    }
+    {
+      timeout = 900;
+      idleAction = "dpms off";
+      returnAction = "dpms on";
+    }
+    {
+      timeout = 1200;
+      idleAction = [
+        "systemctl"
+        "suspend"
+      ];
+    }
+  ];
+
   # Setup Chrome
   programs.chromium = {
     enable = true;

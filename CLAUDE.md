@@ -434,7 +434,10 @@ the consumer's. `templates/nixos-single/` is a worked example.
   locker's PAM stack (`pkgs/caelestia-shell/`). Note it overrides the flake's
   `with-cli` output, not `default` -- that is what the upstream home-manager
   module defaults to, and `cli.enable` is set here
-- `caelestia-cli` (github:Gitkubikon/cli) - CLI for the above
+- `caelestia-cli` (github:caelestia-dots/cli) - CLI for the above. The shell
+  input `follows` this one, so both halves come from the same revision; without
+  that, the shell pulls in a second CLI and a second copy of the shell. It was
+  briefly a fork (`Gitkubikon/cli`) -- see the note below before restoring one
 - `llm-agents` (github:numtide/llm-agents.nix) - Source of `claude-code`; see
   the failure mode below
 - `vfio-hooks` (github:PassthroughPOST/VFIO-Tools) - GPU passthrough tools
@@ -518,6 +521,94 @@ that override still applies rather than reaching for a different platform theme.
 Deriving the stdenv from qtbase rather than naming a gcc version is deliberate:
 it stays correct as nixpkgs moves its Qt stack forward. `pkgs/hyprqt6engine/
 upstream-issue.md` is the report to file if this is still unfixed upstream.
+
+### Do not put caelestia back on a CLI fork
+
+`caelestia-cli` pointed at `Gitkubikon/cli` from 2025-12-07 to 2026-08-14. It
+arrived as the companion half of a `Gitkubikon/shell/screenshot-card` shell
+fork; the shell went back upstream in March 2026 but the CLI was left behind,
+and by the end it was **1 commit ahead of upstream and 289 behind** -- a 2025-09
+CLI paired with a 2026-08 shell, with the `follows` making the shell build
+against it.
+
+The one commit it carried added `_convert_to_physical_pixels` to `record.py`,
+multiplying a region by the monitor scale before handing it to
+`gpu-screen-recorder`. **Do not reintroduce that.** gpu-screen-recorder already
+does it -- `region_get_data` in `src/main.cpp` subtracts the monitor origin and
+multiplies by `monitor_scale_inverted` (physical / logical) itself, and its
+`-region` docs give `$(slurp -f "%wx%h+%x+%y")` as the intended invocation,
+which is exactly what upstream `record.py` passes. On the desktop's 1.5-scaled
+monitors the patch scales twice, for 2.25x and a doubly-offset origin.
+
+If region recording looks wrong, check gpu-screen-recorder's own version and
+behaviour before reaching for a CLI patch.
+
+### The desktop wakes up with a dead GPU
+
+**Symptom:** framework-desktop is left overnight and never comes back. Monitors
+report no input and re-sleep; mouse and keyboard do nothing; the power LED looks
+exactly as it does when the machine is running. A short power-button press turns
+the LED off, but the machine will not boot again -- only pulling PSU power for a
+few seconds recovers it, followed by a very long POST.
+
+**It is not a hang.** The CPU, disks and network are fine and journald keeps
+logging the whole time. The GPU is dead, so there is no display and the
+compositor is wedged, which is indistinguishable from a lockup at the desk. The
+long POST afterwards is 128 GiB of LPDDR5 retraining from a cold start.
+
+**Cause:** a chain that starts with hibernation, in one boot's journal:
+
+1. caelestia's idle timer runs `systemctl suspend-then-hibernate`; the machine
+   enters s2idle.
+2. `HibernateDelaySec` (2h) elapses and it wakes to hibernate.
+3. `PM: Image saving failed: -28` -- ENOSPC. The snapshot was 46.8 GiB
+   (`Allocated 49113792 kbytes`) against a **14.9 GiB swap partition**.
+4. ~3.5 seconds later (compare *monotonic* timestamps; realtime is skewed
+   across the sleep) it falls back to plain s2idle, and amdgpu suspends out of
+   the aborted S4 in a broken state: `SMU uninitialized but power ungate
+   requested for 14!`, `DPM enable vpe failed, ret = -95`, `DMCUB error`,
+   `pci_pm_resume returns -110`.
+5. `ring sdma0 timeout` -> `GPU reset begin` -> eight `MES failed to respond to
+   msg=REMOVE_QUEUE` -> `GPU reset end with ret = -5`. The reset fails, twice.
+6. Every subsequent `amdgpu_cs_ioctl` oopses with `Trying to move memory with
+   ring turned off`. Pressing power *is* seen (`systemd-logind: Power key
+   pressed short`) but the shutdown then wedges tearing down drm.
+
+The swap shortfall is the trigger and it is a coin flip, not a constant: the
+snapshot is sized by the working set, and prior nights' images of 12.6, 18.5 and
+31.3 GiB all compressed small enough to fit. `ttm.pages_limit=29360128` makes
+this worse -- the iGPU has 512M of real VRAM and 112 GiB of GTT, so GPU buffers
+are system RAM and land in the snapshot. `/sys/power/image_size` defaults to
+~50 GiB here and does not consult swap size, so the kernel happily builds an
+image it cannot write.
+
+**Fix:** already in place -- framework-desktop does not hibernate.
+`hosts/framework-desktop/configuration.nix` sets `AllowHibernation`,
+`AllowSuspendThenHibernate` and `AllowHybridSleep` to false and turns on
+`security.protectKernelImage`, which adds `nohibernate` to the kernel command
+line; `hosts/framework-desktop/home.nix` retargets caelestia's third idle
+timeout from `suspend-then-hibernate` to plain `suspend`. Both halves are
+needed: without the second, the shell would still ask for a sleep verb systemd
+now refuses, and the machine would never suspend at all.
+
+Hibernation is therefore **per-host, not shared policy**. framework16 opts in
+from its own `configuration.nix`; `hosts/common/workstation.nix` grants only
+`AllowSuspend`.
+
+Two things to know before touching this:
+
+- **`security.protectKernelImage` defaults to `false` in nixpkgs**, not `true`
+  as the name suggests. The shared profile used to set it to `false`
+  explicitly, which read as "we turned hibernation on" but was a no-op.
+- **systemd's key is `AllowHibernation`, not `AllowHibernate`.** The shared
+  profile carried the misspelling for a long time and logind silently ignored
+  it (`Unknown key 'AllowHibernate' in section [Sleep], ignoring`) -- the option
+  read as deliberate policy while doing nothing. `systemd.sleep.settings` is
+  freeform, so nothing in Nix will catch this; the journal is the only check.
+- **Making hibernation work here would take ~130 GiB of swap**, not a smaller
+  `image_size`. Capping `image_size` only asks the kernel to reclaim harder,
+  and there is nowhere to page anonymous memory out *to*. It would also still
+  be riding an amdgpu S4 path that demonstrably cannot survive being aborted.
 
 ### The lock screen says the keyring password is invalid
 

@@ -37,13 +37,15 @@
     };
 
     caelestia-cli = {
-      url = "github:Gitkubikon/cli/main";
+      url = "github:caelestia-dots/cli";
     };
 
     caelestia-shell = {
       url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
-      # url = "github:Gitkubikon/shell/screenshot-card";
+      # The follows keeps the shell built against the same CLI we install --
+      # without it the shell drags in a second copy of both the CLI and (via the
+      # CLI) the shell itself.
       inputs.caelestia-cli.follows = "caelestia-cli";
     };
 

@@ -22,6 +22,25 @@
     "ttm.page_pool_size=29360128"
   ];
 
+  # Hibernation is off on this machine, and it is not a preference -- an S4
+  # attempt here bricks the GPU until the PSU is unplugged. 128 GiB of RAM
+  # against a 14.9 GiB swap partition means the image does not fit, and amdgpu
+  # does not survive the aborted hibernate that follows. See "The desktop wakes
+  # up with a dead GPU" in CLAUDE.md for the whole chain.
+  #
+  # Belt and braces. protectKernelImage puts `nohibernate` on the kernel
+  # command line, so S4 is impossible no matter what asks for it; the sleep
+  # settings stop systemd trying in the first place, so a request fails loudly
+  # instead of getting halfway. Plain suspend (s2idle) is unaffected by either.
+  # The kexec that protectKernelImage also disables is unused here.
+  security.protectKernelImage = true;
+
+  systemd.sleep.settings.Sleep = {
+    AllowHibernation = false;
+    AllowSuspendThenHibernate = false;
+    AllowHybridSleep = false;
+  };
+
   networking = {
     wireguard.enable = true;
     nftables.enable = true;

@@ -53,6 +53,41 @@ in
       };
     };
 
+    # Restarting the shell must not take down what the shell launched.
+    #
+    # caelestia launches apps with Quickshell.execDetached, which forks but does
+    # not move the child out of caelestia.service's cgroup -- Quickshell has no
+    # systemd integration at all. Chromium then rescues *itself*: it calls
+    # StartTransientUnit to move its own PID into `app-com.google.Chrome-<pid>.
+    # scope`. Only its own PID. The crashpad handler and zygote are forked
+    # before that, so they stay behind, and every renderer, GPU and utility
+    # process the zygote later forks inherits the cgroup with them. The result
+    # is a browser process alone in a scope while its whole process tree sits in
+    # caelestia.service.
+    #
+    # With systemd's default KillMode=control-group, stopping the unit SIGTERMs
+    # that whole cgroup. Chromium survives losing a renderer, but not losing the
+    # GPU process and zygote at once: it takes SIGTRAP from its own fatal check
+    # and dumps core, which is why Chrome and Discord die on every shell restart
+    # and reopen with "didn't shut down correctly".
+    #
+    # KillMode=process kills only quickshell itself. The shell's genuine helpers
+    # (an nmcli monitor and a couple of `cat`s on pipes) get EOF or SIGPIPE when
+    # it goes and exit on their own, so nothing is leaked by not killing them.
+    #
+    # This is not a stale pin -- we track upstream main, and main does this.
+    # Until caelestia 3d97d50 ("feat: support non-systemd systems", PR #1607,
+    # 2026-06-23) the launcher went through app2unit, which starts each app in
+    # its own systemd scope and makes this structurally impossible. That commit
+    # dropped it deliberately, to run on distros without systemd: app2unit is
+    # systemd-only. The tradeoff was not discussed on the PR, and nothing
+    # replaced the scope placement it was providing.
+    #
+    # So this is upstream behaviour we are compensating for locally, not a bug
+    # to fix by moving the input. If upstream reintroduces per-app scopes, this
+    # override can go.
+    systemd.user.services.caelestia.Service.KillMode = "process";
+
     # Setup a volume control application
     home.packages = [ pkgs.pwvucontrol ];
 
