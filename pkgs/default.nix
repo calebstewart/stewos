@@ -16,6 +16,7 @@ self: {
 
   # Packages.
   caelestia-shell = self.callPackage ./caelestia-shell { };
+  flakedoc = self.callPackage ./flakedoc { };
   gh-actions-language-server = self.callPackage ./gh-actions-language-server { };
   hyprpolkitagent = self.callPackage ./hyprpolkitagent { };
   hyprqt6engine = self.callPackage ./hyprqt6engine { };

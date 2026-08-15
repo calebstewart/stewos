@@ -33,11 +33,15 @@
             fullname = lib.mkOption {
               type = lib.types.str;
               default = config.stewos.user.fullname;
+              defaultText = lib.literalExpression "config.stewos.user.fullname";
+              description = "Human-readable name committed under this directory.";
             };
 
             email = lib.mkOption {
               type = lib.types.str;
               default = config.stewos.user.email;
+              defaultText = lib.literalExpression "config.stewos.user.email";
+              description = "Email address committed under this directory.";
             };
           };
         }

@@ -13,6 +13,7 @@ in
     forceSSH = lib.mkOption {
       type = lib.types.bool;
       default = true;
+      description = "Rewrite GitHub HTTPS remotes to SSH, so pushes never ask for a password.";
     };
   };
 

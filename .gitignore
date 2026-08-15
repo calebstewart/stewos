@@ -1,5 +1,10 @@
 result
 
+# A locally generated documentation site, and the Rust build tree of the program
+# that generates it.
+site/
+target/
+
 # Per-machine Claude Code state. A shared .claude/settings.json can still be
 # checked in; only the local overlay is ignored.
 .claude/settings.local.json

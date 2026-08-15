@@ -9,11 +9,13 @@ in
     address = lib.mkOption {
       type = lib.types.str;
       default = "0.0.0.0";
+      description = "Address the SSH server listens on.";
     };
 
     port = lib.mkOption {
       type = lib.types.int;
       default = 22;
+      description = "Port the SSH server listens on, and the one opened in the firewall.";
     };
   };
 

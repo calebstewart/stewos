@@ -14,6 +14,7 @@ let
     lib.mkOption {
       type = lib.types.str;
       default = "#${palette.${slot}}";
+      defaultText = lib.literalMD "the `${slot}` slot of {option}`colorScheme.palette`";
       description = "Colour of the icon shown ${when}.";
     };
 in
@@ -24,6 +25,7 @@ in
     package = lib.mkOption {
       type = lib.types.package;
       default = pkgs.stewos.update-manager;
+      defaultText = lib.literalExpression "pkgs.stewos.update-manager";
       description = "The update-manager package to run.";
     };
 
@@ -65,6 +67,7 @@ in
     flakePath = lib.mkOption {
       type = lib.types.str;
       default = "${config.home.homeDirectory}/git/stewos";
+      defaultText = lib.literalExpression ''"''${config.home.homeDirectory}/git/stewos"'';
       description = "Git checkout of the flake to update and merge back into.";
     };
 

@@ -16,7 +16,9 @@ stewos/
 ├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
 │   ├── desktop.nix    # Shared desktop helpers (command line construction)
 │   ├── rofi.nix       # Rofi command line construction
-│   └── rasi/          # RASI DSL for Rofi theme generation
+│   ├── rasi/          # RASI DSL for Rofi theme generation
+│   └── docs/          # Extraction half of the documentation generator
+├── docs/              # This flake's own site: config + hand-written prose
 ├── modules/
 │   ├── common/        # Options shared by NixOS and Home-Manager
 │   ├── nixos/         # NixOS system modules (default.nix lists them)
@@ -92,6 +94,70 @@ packages are reached as `pkgs.stewos.<name>`.
 The modules expect two overlays on `pkgs`: `stewos.overlays.default` and NUR
 (the `firefox` module pulls addons from `pkgs.nur`). `flake.nix` applies both.
 
+### Documentation
+
+`nix build .#docs` generates a complete static site -- searchable options,
+packages, hosts, `lib/`, outputs and inputs -- and `.github/workflows/pages.yml`
+publishes it. It is two halves with a JSON document between them:
+
+- **`lib/docs/`** evaluates the flake and writes one `docs.json`. It lives in
+  `lib/` rather than under `docs/` so the generator documents its own entry
+  point, and it keeps `lib/`'s contract: the *file* is pkgs-free, and `mkSite`
+  takes `pkgs`, `self` and `inputs` as arguments the way `mkCommandLine` takes a
+  package.
+- **`pkgs/flakedoc/`** is the Rust renderer. Ordinary `callPackage`, no flake
+  inputs, so splitting the pair into its own repository is a move rather than a
+  rewrite.
+- **`docs/`** is only this flake's site inputs: `flakedoc.toml` and `content/`.
+  Both halves read the TOML.
+
+Things that are the way they are on purpose:
+
+- **Module trees are evaluated against a machine that does not exist.** A tree
+  cannot be evaluated alone -- `modules/nixos/default.nix` imports stylix, whose
+  nvf module probes `options.programs`, so `lib.evalModules` dies the moment
+  `.options` is touched -- so each goes through its real evaluator with a stub
+  host. Using one of the real hosts instead works and is wrong: an option whose
+  default reads `config` then documents that host's value. `kvmfr.owner`
+  documented itself as `"caleb"` before this was fixed. Keep the stub minimal
+  for the same reason.
+- **Options are recognised by declaration path, not by name prefix.** An option
+  is ours when a declaration lives inside `self.outPath`. That needs no
+  configuration and catches `programs.nh`, which is the *only* thing the darwin
+  tree declares -- a `stewos.` prefix filter would document nothing there. Note
+  the modules must be imported as `"${self}/modules/nixos"`; a relative
+  `./modules/nixos` copies a second store path and the filter silently matches
+  nothing.
+- **A module imported as a value has no file, so give it one.** A bare
+  `imports = [ inputs.embermug-tray.homeManagerModules.default ]` leaves the
+  module system crediting upstream's `services.embermug-tray.*` to the StewOS
+  file that imported it, and the declaration filter cannot tell the difference.
+  Both such imports -- embermug-tray and caelestia -- are therefore wrapped:
+
+  ```nix
+  imports = [
+    {
+      _file = "${inputs.embermug-tray}/nix/hm-module.nix";
+      imports = [ inputs.embermug-tray.homeManagerModules.default ];
+    }
+  ];
+  ```
+
+  Do not replace this with `excludeOptions` in `flakedoc.toml`. That list is
+  the fallback for imports you do not control; `_file` fixes the attribution
+  properly and improves the module's error messages too. Re-declaring the
+  offending option with a `defaultText` does *not* work -- `mergeOptionDecls`
+  folds with `opt.options // res`, so upstream's declaration wins.
+- **Host pages are the reference's worked examples**, built from
+  `definitionsWithLocations`, one entry per defining file so shared policy stays
+  distinct from what a machine asked for itself. Definitions from `modules/` are
+  dropped -- a module's own `mkDefault` is documented on the module's page.
+  Every lookup is `tryEval`-guarded: an option can be perfectly documented and
+  still refuse to evaluate on one host.
+- **`warningsAreErrors = true`.** The docs build fails on an option with no
+  description or no type, which is the cheapest way to keep every option
+  documented.
+
 ## Build Commands
 
 ```bash
@@ -103,6 +169,10 @@ nh home switch ~/git/stewos
 
 # Test in VM
 nix run .#framework-desktop-vm
+
+# Build the documentation site and read it
+nix build .#docs
+nix run nixpkgs#miniserve -- result
 
 # Format and verify
 nix fmt

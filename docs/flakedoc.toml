@@ -1,0 +1,123 @@
+# Configuration for the documentation site built by pkgs/flakedoc.
+#
+# Both halves of the generator read this file: lib/docs uses it to decide what
+# to extract, and flakedoc uses it to decide how to present the result.
+
+[site]
+name = "StewOS"
+title = "StewOS"
+description = "NixOS, nix-darwin and Home-Manager configurations, and the modules, packages and helpers they are built from."
+repository = "https://github.com/calebstewart/stewos"
+branch = "main"
+packageDir = "pkgs"
+
+# Fail the build on an option with no description or no type. Every option in
+# this flake has both, and the cheapest way to keep it that way is to make the
+# documentation refuse to build without them.
+warningsAreErrors = true
+
+# Options that pass the "declared inside this flake" filter but are not this
+# flake's to document. Empty here on purpose: the only two that ever qualified,
+# caelestia's and embermug-tray's, are fixed at the source instead. Both are
+# imported as module *values* rather than as paths, so they carry no position
+# and the module system credits their options to the importing StewOS file;
+# wrapping each import in a `{ _file = ...; imports = [ ... ]; }` gives it one
+# back. Prefer that -- it fixes the error messages too. This list is for when
+# you cannot.
+excludeOptions = []
+
+# Reported on every host page by value, beside its kind and state version.
+#
+# `stewos.user` is handed to `mkNixOSHost` and `mkHome` from the same record in
+# flake.nix, so it is the one thing a machine's system and user halves are
+# guaranteed to agree on -- and it never appears in the settings list, because
+# an inline module has no file for the module system to attribute it to.
+hostFacts = ["stewos.user"]
+
+# ---------------------------------------------------------------------------
+# Option sets
+#
+# One entry per module tree. "kind" picks the evaluator; "modules" are
+# source-relative paths, evaluated against a machine that does not exist so that
+# the documented defaults are the module's own rather than some host's.
+# ---------------------------------------------------------------------------
+
+[[optionSets]]
+id = "nixos"
+title = "NixOS"
+kind = "nixos"
+system = "x86_64-linux"
+modules = ["modules/nixos"]
+description = "System-level options, applied by `nixosModules.default`."
+
+[[optionSets]]
+id = "home-manager"
+title = "Home-Manager"
+kind = "home-manager"
+system = "x86_64-linux"
+modules = ["modules/home-manager"]
+description = "User-level options, applied by `homeModules.default`."
+
+[[optionSets]]
+id = "darwin"
+title = "nix-darwin"
+kind = "darwin"
+system = "aarch64-darwin"
+modules = ["modules/nix-darwin"]
+description = "macOS system options, applied by `darwinModules.default`."
+
+# ---------------------------------------------------------------------------
+# Library namespaces
+#
+# Read by nixdoc, which only sees RFC-145 doc-comments -- /** ... */ directly
+# above a binding. A function commented with "#" is not documented, it is
+# missing.
+# ---------------------------------------------------------------------------
+
+[[libNamespaces]]
+name = "lib.desktop"
+category = "desktop"
+prefix = "lib"
+description = "Helpers shared by both desktop backends."
+files = ["lib/desktop.nix"]
+
+[[libNamespaces]]
+name = "lib.docs"
+category = "docs"
+prefix = "lib"
+description = "Extraction half of the documentation generator that built this site."
+files = [
+  "lib/docs/default.nix",
+  "lib/docs/options.nix",
+  "lib/docs/hosts.nix",
+  "lib/docs/packages.nix",
+  "lib/docs/outputs.nix",
+  "lib/docs/nixdoc.nix",
+]
+
+[[libNamespaces]]
+name = "lib.rasi"
+category = "rasi"
+prefix = "lib"
+description = "A DSL for generating Rofi's RASI theme format from Nix."
+files = ["lib/rasi/default.nix"]
+
+[[libNamespaces]]
+name = "lib.rofi"
+category = "rofi"
+prefix = "lib"
+description = "Rofi command line construction."
+files = ["lib/rofi.nix"]
+
+# ---------------------------------------------------------------------------
+# Presentation
+# ---------------------------------------------------------------------------
+
+[nav]
+# Sections are shown in this order. Anything generated but unlisted is appended.
+order = ["options", "modules", "packages", "hosts", "lib", "flake"]
+
+[theme]
+# Base16 (Catppuccin Mocha), matching the desktop this flake configures.
+accent = "#89b4fa"
+accentDark = "#89b4fa"

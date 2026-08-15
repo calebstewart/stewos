@@ -8,6 +8,11 @@ area is `stewos.desktop`, which sets up Hyprland and its associated services
 (locking, notifications, wallpaper, bar) on NixOS, and Aerospace with the
 equivalent macOS pieces on Nix-Darwin.
 
+**[Documentation](https://calebstewart.github.io/stewos/)** — every option,
+searchable, along with the packages, the hosts as worked examples, and the
+library reference. It is generated from this flake by `nix build .#docs`, so it
+cannot drift from the code.
+
 ## Repository Layout
 
 ```
@@ -20,6 +25,8 @@ lib/          Pure helpers: takes a nixpkgs lib, returns functions.
   desktop.nix   Command line construction shared by both desktop backends
   rofi.nix      Rofi command line construction
   rasi/         RASI DSL used to generate Rofi themes and configs
+  docs/         Extraction half of the documentation generator
+docs/         This flake's own site: flakedoc.toml and hand-written prose
 modules/
   common/       Options shared by NixOS and Home-Manager
   nixos/        NixOS modules; default.nix lists them all

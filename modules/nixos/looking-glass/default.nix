@@ -49,6 +49,10 @@ in
 
         patches = [ ./patches/0001-client-wayland-Let-viewporter-use-full-wl_buffer.patch ];
       };
+      defaultText = lib.literalMD ''
+        `pkgs.looking-glass-client` pinned back to B6, with the Wayland
+        viewporter patch applied.
+      '';
     };
 
     # Options for using the KVM Frame Relay Kernel Module
@@ -58,6 +62,7 @@ in
       owner = lib.mkOption {
         description = "Owner of the kvmfr device file(s)";
         default = config.stewos.user.username;
+        defaultText = lib.literalExpression "config.stewos.user.username";
         type = lib.types.str;
       };
 

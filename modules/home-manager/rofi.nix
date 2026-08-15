@@ -58,11 +58,13 @@ in
     imports = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
+      description = "Extra RASI files imported by the generated configuration file.";
     };
 
     theme = lib.mkOption {
       type = lib.types.package;
       default = pkgs.stewos.rofi-theme;
+      defaultText = lib.literalExpression "pkgs.stewos.rofi-theme";
       description = "Rofi theme to use in the default configuration file";
     };
   };

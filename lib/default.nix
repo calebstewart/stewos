@@ -6,6 +6,7 @@
 { lib }:
 {
   desktop = import ./desktop.nix { inherit lib; };
+  docs = import ./docs { inherit lib; };
   rasi = import ./rasi { inherit lib; };
   rofi = import ./rofi.nix { inherit lib; };
 }

@@ -15,7 +15,16 @@ let
 in
 {
   imports = [
-    inputs.caelestia-shell.homeManagerModules.default
+    # The `_file` is load-bearing for the option documentation. The upstream
+    # module is a function, so it carries no position of its own and everything
+    # it declares -- `programs.caelestia.*` -- would be attributed to this file
+    # and rendered as StewOS's own, with its package defaults showing as opaque
+    # `<derivation caelestia-shell-1.0.0>`. Naming the real file keeps upstream's
+    # options in upstream's documentation.
+    {
+      _file = "${inputs.caelestia-shell}/nix/hm-module.nix";
+      imports = [ inputs.caelestia-shell.homeManagerModules.default ];
+    }
 
     ./hyprland.nix
     ./style.nix

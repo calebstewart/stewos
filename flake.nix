@@ -221,6 +221,37 @@
         email = "caleb.stewart94@gmail.com";
         aliases.personal.email = "caleb.stewart94@gmail.com";
       };
+
+      # ----------------------------------------------------------------------
+      # Documentation
+      # ----------------------------------------------------------------------
+
+      # The whole site is built on one system. Reading an option tree never
+      # builds anything, so the darwin module set evaluates perfectly well from
+      # Linux -- which is what keeps this to a single job rather than a matrix
+      # with a macOS runner in it.
+      docsSystem = "x86_64-linux";
+
+      scopePackages = forAllSystems (
+        pkgs:
+        lib.filterAttrs (
+          _name: drv: lib.isDerivation drv && lib.meta.availableOn pkgs.stdenv.hostPlatform drv
+        ) pkgs.stewos
+      );
+
+      docs = self.lib.docs.mkSite {
+        pkgs = pkgsFor.${docsSystem};
+        inherit self inputs;
+        pkgsBySystem = pkgsFor;
+        config = ./docs/flakedoc.toml;
+        content = ./docs/content;
+
+        # No stubs. The module trees are evaluated against a machine that does
+        # not exist, and every option whose default reads "config" or "pkgs"
+        # carries a defaultText, so nothing forces a value the stub would have
+        # had to invent. Keep it that way: a stub is a value that shows up in
+        # the rendered defaults of real options.
+      };
     in
     {
       lib = import ./lib { inherit lib; } // {
@@ -252,12 +283,21 @@
       # on the system in question. The scope also holds builders (mkRofiConfig,
       # mkRofiTheme) which are functions, and Linux-only packages which must not
       # show up in the darwin output.
-      packages = forAllSystems (
-        pkgs:
-        lib.filterAttrs (
-          _name: drv: lib.isDerivation drv && lib.meta.availableOn pkgs.stdenv.hostPlatform drv
-        ) pkgs.stewos
-      );
+      #
+      # "docs" is not one of those: it is this flake's own documentation site,
+      # not a package the scope offers, and it exists on one system only.
+      packages = scopePackages // {
+        ${docsSystem} = scopePackages.${docsSystem} // {
+          inherit docs;
+        };
+      };
+
+      # Building the documentation is the check. It evaluates every module tree,
+      # every host and every package's meta, and refuses to finish if an option
+      # has no description -- which is a good deal more than "does it evaluate".
+      checks.${docsSystem} = {
+        inherit docs;
+      };
 
       formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
 
