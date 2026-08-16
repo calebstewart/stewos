@@ -32,6 +32,17 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      # Almost none of the build is the site. It is the renderer: syntect,
+      # two-face, fancy-regex, minijinja, clap and pulldown-cmark compile from
+      # source, and that output is identical on every run unless pkgs/flakedoc
+      # changes. This serves those paths from the Actions cache instead.
+      #
+      # A substituter rather than a store snapshot, so only the paths this build
+      # actually needs are fetched, and only new ones are pushed back. It needs
+      # no secrets; the id-token permission it wants is already granted below
+      # for the Pages deployment.
+      - uses: DeterminateSystems/magic-nix-cache-action@v14
+
       - name: Build the site
         run: nix build .#docs --print-build-logs
 
