@@ -170,9 +170,12 @@ nh home switch ~/git/stewos
 # Test in VM
 nix run .#framework-desktop-vm
 
-# Build the documentation site and read it
+# Build the documentation site and serve it (port is optional, defaults to 8080)
+nix run .#docs
+nix run .#docs -- 9000
+
+# Just the artifact
 nix build .#docs
-nix run nixpkgs#miniserve -- result
 
 # Format and verify
 nix fmt

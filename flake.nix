@@ -252,6 +252,24 @@
         # had to invent. Keep it that way: a stub is a value that shows up in
         # the rendered defaults of real options.
       };
+
+      # "nix run .#docs" builds the site and serves it. A documentation site is
+      # not much use as a store path -- every link in it is relative, so opening
+      # result/index.html from the filesystem works but tells you nothing about
+      # whether it will work once served.
+      docsServe =
+        let
+          pkgs = pkgsFor.${docsSystem};
+        in
+        pkgs.writeShellApplication {
+          name = "stewos-docs";
+          runtimeInputs = [ pkgs.miniserve ];
+          text = ''
+            port="''${1:-8080}"
+            echo "StewOS documentation on http://localhost:$port/"
+            exec miniserve --index index.html --port "$port" ${docs}
+          '';
+        };
     in
     {
       lib = import ./lib { inherit lib; } // {
@@ -354,7 +372,14 @@
       };
 
       # "nix run .#<hostname>-vm" boots a host's configuration in a VM.
-      apps.x86_64-linux = lib.mapAttrs' (
+      apps.x86_64-linux = {
+        docs = {
+          type = "app";
+          program = lib.getExe docsServe;
+          meta.description = "Build the documentation site and serve it";
+        };
+      }
+      // lib.mapAttrs' (
         hostname: host:
         lib.nameValuePair "${hostname}-vm" {
           type = "app";
