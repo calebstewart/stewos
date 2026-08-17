@@ -243,6 +243,7 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 | `stewos.neovim` | Nixvim configuration with LSP |
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
+| `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
 | `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons, and opens a failure report in a terminal -- see below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |

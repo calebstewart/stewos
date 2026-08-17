@@ -47,6 +47,7 @@
     neovim.enable = true;
     zsh.enable = true;
     git.enable = true;
+    delta.enable = true;
     zoxide.enable = true;
     bat.enable = true;
     eza.enable = true;

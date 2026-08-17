@@ -12,6 +12,7 @@
 
     ./alacritty.nix
     ./bat.nix
+    ./delta.nix
     ./desktop
     ./direnv.nix
     ./embermug-tray.nix

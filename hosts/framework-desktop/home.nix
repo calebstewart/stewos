@@ -71,6 +71,7 @@
     update-manager.enable = true;
 
     git.enable = true;
+    delta.enable = true;
     alacritty.enable = true;
     bat.enable = true;
     firefox.enable = true;
