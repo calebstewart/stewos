@@ -283,7 +283,7 @@ let
   duplicates = lib.unique (lib.filter (combo: lib.count (c: c == combo) combos > 1) combos);
 in
 {
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     assertions = [
       {
         assertion = unknownKeys == [ ];

@@ -8,7 +8,7 @@ let
   cfg = config.stewos.desktop;
 in
 {
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
     xdg.portal = {
       enable = true;
 

@@ -21,7 +21,7 @@ in
     ./raycast.nix
   ];
 
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     assertions = [
       {
         assertion = cfg.monitors == [ ];

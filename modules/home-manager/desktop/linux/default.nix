@@ -34,7 +34,7 @@ in
     ./xdg.nix
   ];
 
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
     # caelestia owns the pieces a Hyprland setup would otherwise wire up one at
     # a time: the locker, idle handling, notifications, the bar and the
     # wallpaper daemon.

@@ -462,7 +462,7 @@ by hand here -- and giving the repo a second palette source alongside
 - **State versions**: `system.stateVersion` is per-host (in `hosts/*/configuration.nix`);
   Home-Manager's 25.05 is shared in `modules/home-manager/default.nix`
 - **Formatting**: `nix fmt` (nixfmt-tree)
-- **Platform conditionals**: Use `lib.mkIf pkgs.stdenv.isLinux`
+- **Platform conditionals**: Use `lib.mkIf pkgs.stdenv.hostPlatform.isLinux`
 - **Defaults**: Use `lib.mkDefault` for overridable values
 - **Experimental features**: `nix-command` and `flakes` enabled
 

@@ -343,7 +343,7 @@ let
   duplicates = lib.unique (lib.filter (combo: lib.count (c: c == combo) combos > 1) combos);
 in
 {
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
     assertions = [
       {
         assertion = unknownKeys == [ ];

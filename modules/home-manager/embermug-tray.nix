@@ -46,7 +46,7 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
     services.embermug-tray = {
       enable = true;
       inherit (cfg) package settings;

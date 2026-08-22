@@ -53,7 +53,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isLinux) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
     assertions = [
       {
         assertion = !cfg.startLocked || cfg.lockCommand != null;

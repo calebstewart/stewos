@@ -90,7 +90,7 @@ let
   };
 in
 {
-  config = lib.mkIf (cfg.enable && pkgs.stdenv.isDarwin) {
+  config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     xdg.configFile."karabiner/karabiner.json".source = json.generate "karabiner.json" karabinerConfig;
   };
 }

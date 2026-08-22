@@ -68,7 +68,7 @@ in
       pkgs.nerd-fonts.jetbrains-mono
     ];
 
-    fonts.fontconfig = lib.mkIf pkgs.stdenv.isLinux {
+    fonts.fontconfig = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
       enable = true;
       defaultFonts.emoji = [ "OpenMoji Color" ];
     };
