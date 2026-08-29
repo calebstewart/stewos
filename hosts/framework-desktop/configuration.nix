@@ -41,6 +41,69 @@
     AllowHybridSleep = false;
   };
 
+  # DP-1 loses HPD across an s2idle resume. amdgpu comes back believing nothing
+  # is plugged into that port, and because no hotplug interrupt ever arrives it
+  # never revisits the question -- the resume is completely silent in the
+  # journal. The sink is healthy the entire time: forcing the detect over
+  # debugfs brings the link straight up, EDID and link training included. So
+  # this is HPD sense alone, not the monitor, and Windows on this same hardware
+  # is unaffected. HDMI-A-1 carries no equivalent link state and never fails.
+  #
+  # "trigger_hotplug" is the forced path and the reason this works.
+  # "echo detect > .../status" is NOT a substitute: that route consults HPD, so
+  # it agrees the port is empty and reports disconnected. Power-cycling the
+  # monitor by hand works for the same reason this does -- it manufactures an
+  # HPD edge -- which is why the monitor looked guilty for a long time.
+  #
+  # The poll runs first so a healthy resume is left completely alone; only a
+  # connector still dark after ~10s is forced. Both numbers are globbed because
+  # neither is stable: the DRM card index and the dri debugfs index are assigned
+  # at probe.
+  systemd.services.dp-resume-hotplug = {
+    description = "Force a DRM hotplug on DP-1, which loses HPD across resume";
+    after = [ "post-resume.target" ];
+    wantedBy = [ "post-resume.target" ];
+    path = [ pkgs.coreutils ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = pkgs.writeShellScript "dp-resume-hotplug" ''
+        for connector in DP-1; do
+          for status in /sys/class/drm/card*-$connector/status; do
+            [ -e "$status" ] || continue
+
+            attempts=5
+            state=""
+
+            while [ "$attempts" -gt 0 ]; do
+              read -r state < "$status"
+
+              if [ "$state" = connected ]; then
+                break
+              fi
+
+              attempts=$((attempts - 1))
+
+              if [ "$attempts" -gt 0 ]; then
+                sleep 2
+              fi
+            done
+
+            if [ "$state" = connected ]; then
+              continue
+            fi
+
+            for trigger in /sys/kernel/debug/dri/*/$connector/trigger_hotplug; do
+              [ -e "$trigger" ] || continue
+              echo "$connector still disconnected after resume; forcing hotplug"
+              echo 1 > "$trigger"
+            done
+          done
+        done
+      '';
+    };
+  };
+
   networking = {
     wireguard.enable = true;
     nftables.enable = true;
