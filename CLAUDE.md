@@ -221,7 +221,7 @@ Create `/hosts/{hostname}/` with `configuration.nix`, `home.nix` and (for NixOS)
 | Module | Purpose |
 |--------|---------|
 | `stewos.base` | Boot loader, Plymouth, Nix settings, `nh`. Enabled by default |
-| `stewos.audio` | PipeWire/JACK/ALSA with realtime scheduling |
+| `stewos.audio` | PipeWire/JACK/ALSA with realtime scheduling. `noiseCancellation` adds an rnnoise filter chain in front of the microphone, as a WirePlumber *smart filter* rather than a virtual source the user has to select -- see below |
 | `stewos.autologin` | greetd + regreet, straight into a session |
 | `stewos.containers` | Docker (Podman is present but commented out) |
 | `stewos.desktop-services` | Portals, polkit, graphical session services |
@@ -234,6 +234,34 @@ Create `/hosts/{hostname}/` with `configuration.nix`, `home.nix` and (for NixOS)
 `networking.nix`, `security.nix` and `user.nix` have no enable flag and apply
 unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 `user.nix` creates the account described by `stewos.user`.
+
+### Microphone noise cancellation
+
+`stewos.audio.noiseCancellation` writes one `pipewire.conf.d` drop-in loading
+`libpipewire-module-filter-chain` with `rnnoise-plugin`'s LADSPA suppressor.
+Both Framework machines get it from `hosts/common/workstation.nix`.
+
+The part worth knowing is that it is a **WirePlumber smart filter**
+(`filter.smart = true` on the source node, and deliberately *no*
+`filter.smart.target`), not a virtual source the user selects:
+
+- A targetless smart filter is inserted between the default device and any
+  stream that has not named a target of its own. So `wpctl set-default` still
+  picks the *microphone* -- the filter follows it -- while an application that
+  deliberately asks for a specific device still gets that device unfiltered.
+- The obvious alternative, giving the virtual source a high `priority.session`
+  so it becomes the default, breaks the microphone choice: the filter's own
+  capture side is the thing that reads the default source, so once it *is* the
+  default there is nowhere left to express which mic to filter. The desktop has
+  five sources; this is not hypothetical.
+- Both nodes carry an explicit `node.link-group = "rnnoise"`. The module would
+  otherwise generate one from its pid. WirePlumber keys a filter's identity off
+  that group, and it is also what stops the capture side from being linked back
+  to the source it feeds.
+
+This module used to set `programs.noisetorch.enable`. It does not any more, and
+should not again: NoiseTorch is the same rnnoise suppressor driven by hand, so
+running it on top of the filter chain processes the signal twice.
 
 ## Home-Manager Modules
 

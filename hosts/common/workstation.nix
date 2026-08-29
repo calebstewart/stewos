@@ -24,7 +24,10 @@ in
   imports = [ inputs.lanzaboote.nixosModules.lanzaboote ];
 
   stewos = {
-    audio.enable = true;
+    audio = {
+      enable = true;
+      noiseCancellation.enable = true;
+    };
     desktop-services.enable = true;
     greeter.enable = false;
     zsa.enable = false;
