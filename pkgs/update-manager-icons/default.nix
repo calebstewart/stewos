@@ -69,6 +69,7 @@ let
       [
         "search"
         "apply"
+        "review"
         "report"
         "troubleshoot"
         "quit"

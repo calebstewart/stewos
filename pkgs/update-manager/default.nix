@@ -3,7 +3,11 @@
   rustPlatform,
   pkg-config,
   makeWrapper,
+  wrapGAppsHook4,
   dbus,
+  glib,
+  gtk4,
+  libadwaita,
   git,
   nix,
   update-manager-icons,
@@ -28,8 +32,20 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = [
     pkg-config
     makeWrapper
+    # The review dialog is a GTK4 app and needs GSettings schemas and the icon
+    # cache resolved at runtime; without this it starts but logs
+    # `g_settings_schema_source_lookup: assertion 'source != NULL' failed`.
+    wrapGAppsHook4
   ];
-  buildInputs = [ dbus ];
+  # gtk4/libadwaita are the dialog's, not the daemon's. Cargo dependencies are
+  # per *package*, so both binaries build against them even though only
+  # stewos-update-review links the result.
+  buildInputs = [
+    dbus
+    glib
+    gtk4
+    libadwaita
+  ];
 
   postInstall = ''
     install -Dm555 apply-system.sh $out/libexec/stewos-apply-system
@@ -45,6 +61,12 @@ rustPlatform.buildRustPackage {
   # palette, and the home-manager module passes a recoloured set on the command
   # line. Keeping them out of the build inputs proper is the point -- a palette
   # change must not recompile the crate.
+  # wrapGAppsHook4 would otherwise wrap both binaries and fight the manual
+  # wrapProgram below. Taking its arguments by hand instead lets each binary
+  # get only what it needs: the daemon is not a GTK app, and the dialog does
+  # not run git or nix.
+  dontWrapGApps = true;
+
   postFixup = ''
     wrapProgram $out/bin/stewos-update-manager \
       --prefix PATH : ${
@@ -54,6 +76,11 @@ rustPlatform.buildRustPackage {
         ]
       } \
       --set-default STEWOS_UPDATE_ICON_DIR ${update-manager-icons}/share/icons
+
+    # The daemon finds the dialog as a sibling of its own executable, and
+    # makeWrapper keeps both in $out/bin -- so this stays the wrapper, and the
+    # GTK environment survives the spawn.
+    wrapProgram $out/bin/stewos-update-review "''${gappsWrapperArgs[@]}"
   '';
 
   meta = {

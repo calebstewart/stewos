@@ -50,6 +50,13 @@ pub struct Args {
     /// Claude Code executable used by the troubleshooting session
     #[arg(long, env = "STEWOS_UPDATE_CLAUDE", default_value = "claude")]
     claude: String,
+
+    /// The review dialog binary. Defaults to `stewos-update-review` sitting
+    /// next to this executable, which is where the crate's second [[bin]]
+    /// lands -- so the daemon and the dialog can never come from different
+    /// generations. Without one, the Review entry is not offered.
+    #[arg(long, env = "STEWOS_UPDATE_REVIEW_DIALOG")]
+    review_dialog: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +73,19 @@ pub struct Config {
     pub terminal_args: Vec<String>,
     pub editor: String,
     pub claude: String,
+    /// None disables the Review entry: there is no dialog to open.
+    pub review_dialog: Option<PathBuf>,
+}
+
+/// Find the review dialog next to our own executable.
+///
+/// This works under makeWrapper too: the wrapper leaves the real binary as
+/// `$out/bin/.stewos-update-manager-wrapped`, i.e. the same directory -- unlike
+/// the privileged apply helper, which has to climb out to libexec.
+fn sibling_dialog() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let candidate = exe.parent()?.join("stewos-update-review");
+    candidate.exists().then_some(candidate)
 }
 
 impl Args {
@@ -119,6 +139,7 @@ impl Args {
                 .collect(),
             editor,
             claude: self.claude,
+            review_dialog: self.review_dialog.or_else(sibling_dialog),
         })
     }
 }

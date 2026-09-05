@@ -350,6 +350,7 @@ mod tests {
             terminal_args: vec!["-e".to_string()],
             editor: "nvim".to_string(),
             claude: "claude".to_string(),
+            review_dialog: None,
         }
     }
 

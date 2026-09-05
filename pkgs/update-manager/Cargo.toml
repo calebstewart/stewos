@@ -5,6 +5,21 @@ edition = "2021"
 description = "Manual NixOS + Home-Manager update checker/applier with an SNI tray icon"
 license = "MIT"
 
+# Once src/lib.rs exists cargo would name the second binary after its file, so
+# all three targets are spelled out. The daemon and the dialog are separate
+# processes that share only src/lib.rs.
+[lib]
+name = "stewos_update_manager"
+path = "src/lib.rs"
+
+[[bin]]
+name = "stewos-update-manager"
+path = "src/main.rs"
+
+[[bin]]
+name = "stewos-update-review"
+path = "src/bin/review.rs"
+
 [dependencies]
 anyhow = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -16,3 +31,13 @@ notify-rust = "4"
 png = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# The review dialog only. These are the crate's one heavy dependency, and they
+# are why the dialog is a separate binary: the tray daemon never links them.
+#
+# The version features are required, not cosmetic: gtk4-rs gates each binding
+# behind the C release that introduced it. `AdwToolbarView` and
+# `AdwExpanderRow::add_suffix` are libadwaita 1.4, and `CssProvider::
+# load_from_string` is GTK 4.12; without these the dialog does not compile.
+gtk4 = { version = "0.10", features = ["v4_16"] }
+libadwaita = { version = "0.8", features = ["v1_5"] }

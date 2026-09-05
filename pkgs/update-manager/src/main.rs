@@ -1,6 +1,7 @@
 mod config;
 mod icons;
 mod notify;
+mod review;
 mod state;
 mod tray;
 mod troubleshoot;
@@ -12,28 +13,22 @@ use std::sync::Arc;
 use anyhow::Result;
 use clap::Parser;
 
-/// What an apply should cover. Only the variants that touch the OS need
-/// privileged execution (via run0); a home-only apply runs entirely as the
-/// user.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ApplyMode {
-    /// Switch the OS now and activate home.
-    Full,
-    /// Activate home only; the OS part stays pending.
-    HomeOnly,
-    /// Activate home and stage the OS generation for the next boot.
-    HomeAndBoot,
-    /// Switch the OS now only; the home part stays pending.
-    SystemOnly,
-}
+/// Defined in the shared library because the review dialog renders these too.
+pub use stewos_update_manager::ApplyMode;
 
-/// Requests handled by the worker loop. The tray menu and notification action
-/// threads only ever send these; all real work happens on the main thread, so
-/// a check and an apply can never overlap.
+/// Requests handled by the worker loop. The tray menu, the notification action
+/// threads and the review dialog's reader thread only ever send these; all real
+/// work happens on the main thread, so a check and an apply can never overlap.
+///
+/// Every variant is `Copy`, and must stay that way: `tray.rs`'s menu closures
+/// are `Box<dyn Fn(&mut T)>`, not `FnOnce`, so a payload that cannot be copied
+/// out of the closure will not compile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Check,
     Apply(ApplyMode),
+    /// Open the review window on the pending update.
+    ReviewChanges,
     /// Write a report about the last failure and open it.
     Troubleshoot(troubleshoot::Action),
     Quit,
@@ -64,22 +59,32 @@ fn main() -> Result<()> {
         log::warn!("no terminal configured; troubleshooting entries are disabled");
     }
 
+    // Same reasoning as the troubleshooting entries: with no dialog to open,
+    // a Review entry would be dead weight, so the tray leaves it out.
+    let review_dialog = cfg.review_dialog.clone();
+    if review_dialog.is_none() {
+        log::warn!("no review dialog found; the review entry is disabled");
+    }
+
     let tray_service = ksni::TrayService::new(tray::UpdateTray::new(
         tx.clone(),
         icons.clone(),
         troubleshoot_available,
+        review_dialog.is_some(),
     ));
     let tray = tray_service.handle();
     tray_service.spawn();
 
-    let notifier = notify::Notifier::new(tx, icons);
-    let mut worker = updater::Worker::new(cfg, notifier, tray.clone());
+    let notifier = notify::Notifier::new(tx.clone(), icons);
+    let reviewer = review_dialog.map(|dialog| review::Reviewer::new(tx, dialog));
+    let mut worker = updater::Worker::new(cfg, notifier, tray.clone(), reviewer);
     worker.restore();
 
     loop {
         match rx.recv() {
             Ok(Command::Check) => worker.check(),
             Ok(Command::Apply(mode)) => worker.apply(mode),
+            Ok(Command::ReviewChanges) => worker.review(),
             Ok(Command::Troubleshoot(action)) => worker.troubleshoot(action),
             Ok(Command::Quit) | Err(_) => break,
         }

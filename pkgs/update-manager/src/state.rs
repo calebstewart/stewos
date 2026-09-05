@@ -3,53 +3,14 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Counts {
-    pub upgraded: u32,
-    pub added: u32,
-    pub removed: u32,
-}
+// Counts and Summary live in the shared library because the review dialog
+// renders them too; they are re-exported here so the daemon's own modules can
+// keep using `state::Summary`.
+pub use stewos_update_manager::Summary;
 
-impl Counts {
-    pub fn is_zero(&self) -> bool {
-        self.upgraded == 0 && self.added == 0 && self.removed == 0
-    }
-
-    fn arrows(&self) -> String {
-        format!("{}\u{2191} {}+ {}\u{2212}", self.upgraded, self.added, self.removed)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Summary {
-    /// Union of the system and home diffs, deduplicated by package name.
-    pub total: Counts,
-    pub system: Counts,
-    pub home: Counts,
-}
-
-impl Summary {
-    /// Short menu/notification line: "12 updated, 3 new, 1 removed".
-    pub fn short(&self) -> String {
-        if self.total.is_zero() {
-            "Lock updated, no package changes".to_string()
-        } else {
-            format!(
-                "{} updated, {} new, {} removed",
-                self.total.upgraded, self.total.added, self.total.removed
-            )
-        }
-    }
-
-    /// Per-target breakdown for the tooltip.
-    pub fn breakdown(&self) -> String {
-        format!(
-            "System: {} \u{00b7} Home: {}",
-            self.system.arrows(),
-            self.home.arrows()
-        )
-    }
-}
+use stewos_update_manager::{
+    ApplyMode, InputChange, PackageChange, ReviewRequest, PROTOCOL_VERSION,
+};
 
 /// Everything needed to apply a checked update, persisted to state.json so the
 /// "updates available" state survives a daemon or session restart.
@@ -60,6 +21,35 @@ pub struct PendingUpdate {
     pub home_path: String,
     /// Commit `main` pointed at when the check ran; apply refuses if it moved.
     pub main_rev: String,
+    /// Per-package detail for the review dialog.
+    ///
+    /// `#[serde(default)]` is load-bearing, not tidiness: `load_pending`
+    /// swallows any deserialize error and returns None, so without a default a
+    /// state.json written before these fields existed would be silently
+    /// discarded on upgrade -- which the user sees as the tray forgetting a
+    /// pending update.
+    #[serde(default)]
+    pub packages: Vec<PackageChange>,
+    #[serde(default)]
+    pub inputs: Vec<InputChange>,
+}
+
+impl PendingUpdate {
+    /// The snapshot handed to the review dialog.
+    ///
+    /// It is only a snapshot: the daemon re-validates the rev and the
+    /// out-links at apply time, so a request that goes stale while the window
+    /// is open produces an apply the daemon refuses.
+    pub fn review_request(&self, host: &str) -> ReviewRequest {
+        ReviewRequest {
+            version: PROTOCOL_VERSION,
+            host: host.to_string(),
+            summary: self.summary.clone(),
+            packages: self.packages.clone(),
+            inputs: self.inputs.clone(),
+            modes: ApplyMode::MENU_ORDER.to_vec(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -93,5 +83,53 @@ pub fn clear_pending(path: &Path) {
         if let Err(err) = std::fs::remove_file(path) {
             log::warn!("failed to remove {}: {err}", path.display());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use stewos_update_manager::Counts;
+
+    /// The detail fields were added after the first release, so a state.json
+    /// without them must still load. If this regresses, the first run after an
+    /// upgrade silently drops the pending update.
+    #[test]
+    fn loads_a_state_file_written_before_the_detail_fields_existed() {
+        let old = r#"{
+            "summary": {
+                "total": {"upgraded": 1, "added": 0, "removed": 0},
+                "system": {"upgraded": 1, "added": 0, "removed": 0},
+                "home": {"upgraded": 0, "added": 0, "removed": 0}
+            },
+            "system_path": "/nix/store/aaa-nixos-system-host",
+            "home_path": "/nix/store/bbb-home-manager-generation",
+            "main_rev": "deadbeef"
+        }"#;
+        let pending: PendingUpdate = serde_json::from_str(old).unwrap();
+        assert_eq!(pending.main_rev, "deadbeef");
+        assert!(pending.packages.is_empty());
+        assert!(pending.inputs.is_empty());
+    }
+
+    #[test]
+    fn review_request_offers_every_mode() {
+        let pending = PendingUpdate {
+            summary: Summary {
+                total: Counts::default(),
+                system: Counts::default(),
+                home: Counts::default(),
+            },
+            system_path: "/nix/store/aaa".into(),
+            home_path: "/nix/store/bbb".into(),
+            main_rev: "abc".into(),
+            packages: Vec::new(),
+            inputs: Vec::new(),
+        };
+        let req = pending.review_request("framework-desktop");
+        assert_eq!(req.version, PROTOCOL_VERSION);
+        assert_eq!(req.host, "framework-desktop");
+        assert_eq!(req.modes.len(), 4);
+        assert_eq!(req.modes[0], ApplyMode::Full);
     }
 }

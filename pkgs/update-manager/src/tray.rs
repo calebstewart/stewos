@@ -16,16 +16,25 @@ pub struct UpdateTray {
     /// False when no terminal is configured, in which case the troubleshooting
     /// entries have nothing to open and are never shown.
     troubleshoot_available: bool,
+    /// False when no review dialog was found, in which case the Review entry
+    /// has nothing to open and is never shown.
+    review_available: bool,
 }
 
 impl UpdateTray {
-    pub fn new(tx: Sender<Command>, icons: Arc<Icons>, troubleshoot_available: bool) -> Self {
+    pub fn new(
+        tx: Sender<Command>,
+        icons: Arc<Icons>,
+        troubleshoot_available: bool,
+        review_available: bool,
+    ) -> Self {
         Self {
             state: State::Idle,
             tx,
             icons,
             has_error: false,
             troubleshoot_available,
+            review_available,
         }
     }
 
@@ -182,6 +191,25 @@ impl ksni::Tray for UpdateTray {
                 Action::Claude,
             ));
         } else if matches!(self.state, State::UpdatesAvailable(_)) {
+            // Inside the UpdatesAvailable block and above Apply: the
+            // contextual/exclusive invariant is untouched (still at most one
+            // block, and a recorded failure still hides both), and the order
+            // matches the workflow -- look, then apply.
+            if self.review_available {
+                items.push(
+                    StandardItem {
+                        label: "Review changes\u{2026}".to_string(),
+                        icon_name: self.icons.menu_name(MenuIcon::Review),
+                        icon_data: self.icons.menu_data(MenuIcon::Review),
+                        enabled: !self.busy(),
+                        activate: Box::new(|tray: &mut Self| {
+                            let _ = tray.tx.send(Command::ReviewChanges);
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                );
+            }
             items.push(
                 SubMenu {
                     label: "Apply".to_string(),

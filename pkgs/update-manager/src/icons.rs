@@ -82,17 +82,19 @@ pub enum MenuIcon {
     Report,
     Troubleshoot,
     Quit,
+    Review,
 }
 
 impl MenuIcon {
     // Positional: `index` is a lookup into the loaded set, so append rather
-    // than reorder.
-    const ALL: [MenuIcon; 5] = [
+    // than reorder. `Review` is last for that reason, not for menu order.
+    const ALL: [MenuIcon; 6] = [
         MenuIcon::Search,
         MenuIcon::Apply,
         MenuIcon::Report,
         MenuIcon::Troubleshoot,
         MenuIcon::Quit,
+        MenuIcon::Review,
     ];
 
     fn slug(self) -> &'static str {
@@ -102,6 +104,7 @@ impl MenuIcon {
             MenuIcon::Report => "report",
             MenuIcon::Troubleshoot => "troubleshoot",
             MenuIcon::Quit => "quit",
+            MenuIcon::Review => "review",
         }
     }
 
@@ -112,6 +115,7 @@ impl MenuIcon {
             MenuIcon::Report => "text-x-generic",
             MenuIcon::Troubleshoot => "system-search",
             MenuIcon::Quit => "application-exit",
+            MenuIcon::Review => "document-properties",
         }
     }
 

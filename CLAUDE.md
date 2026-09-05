@@ -273,7 +273,7 @@ running it on top of the filter chain processes the signal twice.
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
-| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons, and opens a failure report in a terminal -- see below |
+| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons, opens a GTK4 review dialog for the pending changes, and opens a failure report in a terminal -- see below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -378,6 +378,70 @@ unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
 is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
 return a package.
 
+### update-manager review dialog
+
+"Review changes…" opens a GTK4/libadwaita window listing the flake inputs that
+moved and the per-package `old → new` versions, with the four apply modes on an
+`AdwSplitButton`. It is the crate's **second binary** (`stewos-update-review`,
+`src/bin/review.rs`), sharing `src/lib.rs` with the daemon and nothing else.
+
+Things that are the way they are on purpose:
+
+- **A separate process, not a window in the daemon.** The tray keeps its
+  current footprint, GTK is resident only while the window is up, and a GUI
+  crash cannot take the tray down. The daemon writes one line of JSON
+  (`ReviewRequest`) to the child's stdin and reads one line back
+  (`ReviewChoice`) on a **detached thread**, then sends an ordinary
+  `Command::Apply` — the same shape `notify.rs` already uses for the "Apply
+  now" button. The stdin write is on that thread, not the worker: a large
+  update exceeds the pipe buffer and would deadlock the worker against a child
+  that has not started reading.
+- **The dialog carries no authority.** Its entire outbound vocabulary is
+  `ApplyMode`, exactly what the tray submenu already sends, and `Worker::apply`
+  / `do_apply` re-check the pending state, `main_rev` and the out-links as
+  usual. So a request that goes stale while the window is open produces an
+  apply the daemon refuses, and `ReviewRequest` needs no rev echoed back —
+  which also keeps `Command` `Copy`, as `tray.rs`'s `Fn` closures require.
+- **The wire spellings are pinned by tests** (`lib.rs`). They are the only
+  contract between two binaries, so a rename that compiles on both sides would
+  otherwise fail silently at runtime. `PROTOCOL_VERSION` exists because a home
+  activation can leave an old daemon running against a new dialog until the
+  unit restarts.
+- **GTK4, not Qt.** The Rust bindings are C-ABI and mature, so there is no
+  `cxx-qt` C++ glue and none of the `gcc16Stdenv`/libstdc++ hazard that
+  `pkgs/hyprqt6engine` exists to work around. `theme.nix` already generates
+  libadwaita named colours from `config.colorScheme`, so the dialog is themed
+  with no new plumbing.
+- **The window floats via a "ghost parent".** Wayland has no
+  `_NET_WM_WINDOW_TYPE_DIALOG`; the only signal is `xdg_toplevel.set_parent()`,
+  and GTK emits it only for a parent that has actually been *mapped*. So the
+  dialog maps one that cannot be seen — 1×1, non-resizable (so a tiling
+  compositor floats it rather than tiling it), undecorated and
+  `opacity 0` — and keeps it for its lifetime. Measured on Hyprland: a plain
+  toplevel is tiled full-height, `set_modal(true)` alone does nothing, and
+  hiding the parent *before* presenting the child does not float it either.
+  Every hide-it-afterwards variant is a timing race with a visible flash; this
+  one has no race. Close the ghost with the window or the process never exits.
+- **`nix flake update`'s output is on stderr**, not stdout — nix prints the
+  lock diff through its *warning* logger — and the entries are multi-line.
+  `updater/inputs.rs` parses it, leniently: this is decoration, so a nix format
+  change must yield an empty list rather than break update checking.
+- **`diff.rs` keeps what it used to throw away.** It parsed versions and the
+  size delta only to classify a line; both are now retained. A row with **no
+  versions on either side is normal** — nix prints only a size delta when a
+  package is rebuilt at the same version (6 of 33 rows in a real check) — and
+  renders as "same version, rebuilt". That is also why the size delta is shown
+  despite not being version information: it is the only thing those rows have.
+- **`PendingUpdate`'s new fields are `#[serde(default)]`.** `load_pending`
+  swallows deserialize errors and returns None, so without the default an
+  existing `state.json` would be silently discarded on upgrade — which reads to
+  the user as the tray forgetting a pending update.
+- **`dontWrapGApps` plus a manual `wrapProgram`.** `wrapGAppsHook4` would wrap
+  both binaries and fight the existing `postFixup`; taking `gappsWrapperArgs`
+  by hand gives each binary only what it needs. The daemon finds the dialog as
+  a *sibling* of its own executable, which survives makeWrapper because both
+  wrappers stay in `$out/bin`.
+
 ### update-manager failure reports
 
 A failed check or apply records an `ErrorReport` on the worker and grows two
@@ -421,9 +485,9 @@ Things that are the way they are on purpose:
 ### update-manager icons
 
 The update-manager daemon borrows no freedesktop icon names at all. It ships
-eleven of its own: six status badges (idle, checking, up-to-date,
-updates-available, applying, error) and five menu glyphs (search, apply, report,
-troubleshoot, quit).
+twelve of its own: six status badges (idle, checking, up-to-date,
+updates-available, applying, error) and six menu glyphs (search, apply, review,
+report, troubleshoot, quit).
 Nothing is looked up by name, which is also why they survive the Qt
 platform-theme failure described under "Qt apps lose every themed icon":
 

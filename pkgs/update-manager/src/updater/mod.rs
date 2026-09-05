@@ -1,5 +1,6 @@
 mod diff;
 mod git;
+mod inputs;
 mod nix;
 
 use std::collections::BTreeMap;
@@ -7,13 +8,42 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use anyhow::{anyhow, bail, Context, Result};
+use stewos_update_manager::{PackageChange, Scope};
 
 use crate::config::Config;
 use crate::notify::Notifier;
+use crate::review::Reviewer;
 use crate::state::{self, PendingUpdate, State, Summary};
 use crate::tray::UpdateTray;
 use crate::troubleshoot::{self, Action, ErrorReport, Operation};
 use crate::ApplyMode;
+
+/// Strip SGR escapes from one line of nix output. Nix colours its diffs and
+/// its lock-file log, and both parsers want the text underneath.
+///
+/// Nix omits colour when stderr is not a tty, which it is not under
+/// `Command::output()`, but a future nix could change its mind and the cost of
+/// being wrong is a parser that silently matches nothing.
+pub(super) fn strip_ansi(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\u{1b}' {
+            if chars.peek() == Some(&'[') {
+                chars.next();
+                while let Some(&n) = chars.peek() {
+                    chars.next();
+                    if n.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
 
 enum CheckOutcome {
     UpToDate,
@@ -28,7 +58,16 @@ enum SystemAction {
     Boot,
 }
 
-impl ApplyMode {
+/// `ApplyMode` now lives in the shared library (the dialog needs it too), and
+/// an inherent impl has to be in the defining crate -- so what is private to
+/// the updater hangs off an extension trait instead. `describe()` moved to the
+/// library with the type.
+trait ApplyModeExt {
+    fn system_action(self) -> SystemAction;
+    fn includes_home(self) -> bool;
+}
+
+impl ApplyModeExt for ApplyMode {
     fn system_action(self) -> SystemAction {
         match self {
             ApplyMode::Full | ApplyMode::SystemOnly => SystemAction::Switch,
@@ -40,15 +79,21 @@ impl ApplyMode {
     fn includes_home(self) -> bool {
         !matches!(self, ApplyMode::SystemOnly)
     }
+}
 
-    pub(crate) fn describe(self) -> &'static str {
-        match self {
-            ApplyMode::Full => "system + home",
-            ApplyMode::HomeOnly => "home only",
-            ApplyMode::HomeAndBoot => "home now, system on next boot",
-            ApplyMode::SystemOnly => "system only",
-        }
-    }
+/// Turn one parsed diff into the wire rows the dialog renders.
+fn flatten(
+    diffs: &BTreeMap<String, diff::PackageDiff>,
+    scope: Scope,
+) -> impl Iterator<Item = PackageChange> + '_ {
+    diffs.iter().map(move |(name, d)| PackageChange {
+        name: name.clone(),
+        change: d.change,
+        before: d.before.clone(),
+        after: d.after.clone(),
+        size: d.size.clone(),
+        scope,
+    })
 }
 
 enum ApplyOutcome {
@@ -72,16 +117,47 @@ pub struct Worker {
     /// persisted alongside `PendingUpdate`: the report quotes this boot's
     /// journal, which would not survive a restart to describe.
     last_error: Option<ErrorReport>,
+    /// None when no dialog binary was found, in which case the tray also omits
+    /// the Review entry.
+    review: Option<Reviewer>,
 }
 
 impl Worker {
-    pub fn new(cfg: Config, notifier: Notifier, tray: ksni::Handle<UpdateTray>) -> Self {
+    pub fn new(
+        cfg: Config,
+        notifier: Notifier,
+        tray: ksni::Handle<UpdateTray>,
+        review: Option<Reviewer>,
+    ) -> Self {
         Self {
             cfg,
             notifier,
             tray,
             state: State::Idle,
             last_error: None,
+            review,
+        }
+    }
+
+    /// Open the review window on the pending update.
+    ///
+    /// Read-only: the dialog's answer comes back as a `Command::Apply` like any
+    /// other and goes through the same guards as a tray click.
+    pub fn review(&self) {
+        let State::UpdatesAvailable(pending) = &self.state else {
+            log::info!("review requested but no update is pending");
+            return;
+        };
+        let Some(reviewer) = &self.review else {
+            log::info!("review requested but no dialog is configured");
+            return;
+        };
+        if let Err(err) = reviewer.open(&pending.review_request(&self.cfg.host)) {
+            log::error!("review dialog failed: {err:#}");
+            // Plain error(), like troubleshoot(): offering to troubleshoot the
+            // review window is not a useful thing to do here.
+            self.notifier
+                .error("Could not open the review window", &format!("{err:#}"));
         }
     }
 
@@ -186,11 +262,16 @@ impl Worker {
         }
 
         git::ensure_worktree(flake, &worktree, &self.cfg.branch)?;
-        nix::flake_update(&worktree)?;
+        let update_log = nix::flake_update(&worktree)?;
 
         if !git::lock_changed(&worktree)? {
             return Ok(CheckOutcome::UpToDate);
         }
+
+        // Parsed only past the up-to-date return, so the no-op path stays free.
+        // `ensure_worktree` hard-resets onto main every check, so this log is
+        // always the complete main→new diff even on a re-check.
+        let input_changes = inputs::parse(&update_log);
 
         let system_path = nix::build(&self.cfg.system_installable(), &self.cfg.result_system())?;
         let home_path = nix::build(&self.cfg.home_installable(), &self.cfg.result_home())?;
@@ -213,11 +294,19 @@ impl Worker {
             home: diff::counts(&home_diff),
         };
 
+        // Flattened here rather than merged: the dialog groups by scope, so a
+        // package touched by both closures is legitimately two rows.
+        let packages = flatten(&system_diff, Scope::System)
+            .chain(flatten(&home_diff, Scope::Home))
+            .collect();
+
         Ok(CheckOutcome::Updates(PendingUpdate {
             summary,
             system_path: system_path.display().to_string(),
             home_path: home_path.display().to_string(),
             main_rev,
+            packages,
+            inputs: input_changes,
         }))
     }
 
