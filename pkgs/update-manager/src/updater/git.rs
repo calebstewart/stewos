@@ -31,6 +31,12 @@ pub fn path_dirty(repo: &Path, path: &str) -> Result<bool> {
     Ok(!git(repo, &["status", "--porcelain", "--", path])?.is_empty())
 }
 
+/// The blob hash of `path` as it is on disk in `dir`, committed or not. It
+/// identifies an updated lock file without committing it.
+pub fn hash_object(dir: &Path, path: &str) -> Result<String> {
+    git(dir, &["hash-object", "--", path])
+}
+
 /// The currently checked-out branch of `repo`, or None when detached.
 pub fn current_branch(repo: &Path) -> Result<Option<String>> {
     let output = Command::new("git")
@@ -105,4 +111,89 @@ pub fn merge_back(flake: &Path, branch: &str) -> Result<()> {
         git(flake, &["fetch", ".", &refspec])?;
     }
     Ok(())
+}
+
+/// Everything `git status --porcelain` reports for `repo`, untracked files
+/// included. Ignored files are not: they are invisible to a build either way.
+///
+/// Not through [`git`]: that trims stdout, and the first line's status
+/// columns can begin with a space (` M flake.lock`).
+pub fn status_porcelain(repo: &Path) -> Result<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .args(["status", "--porcelain", "--untracked-files=all"])
+        .output()
+        .context("failed to run git status")?;
+    if !output.status.success() {
+        bail!(
+            "git status failed in {}:\n{}",
+            repo.display(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// Why an update cannot proceed, from a porcelain status; `None` when the
+/// checkout is clean.
+///
+/// Any change at all blocks, not only `flake.lock`: the worktree builds from
+/// committed `main`, so uncommitted work would be invisible to the build and
+/// then fought over when the lock bump is fast-forwarded back.
+pub fn blocked_reason(porcelain: &str, flake: &Path) -> Option<String> {
+    let names: Vec<&str> = porcelain
+        .lines()
+        .filter(|line| line.len() > 3)
+        .map(|line| line[3..].trim())
+        .filter(|name| !name.is_empty())
+        .collect();
+    if names.is_empty() {
+        return None;
+    }
+    let shown = names.iter().take(3).copied().collect::<Vec<_>>().join(", ");
+    let more = names.len().saturating_sub(3);
+    let suffix = if more > 0 {
+        format!(" (+{more} more)")
+    } else {
+        String::new()
+    };
+    Some(format!("Local changes in {}: {shown}{suffix}", flake.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_clean_checkout_is_not_blocked() {
+        assert_eq!(blocked_reason("", Path::new("/f")), None);
+        assert_eq!(blocked_reason("\n\n", Path::new("/f")), None);
+    }
+
+    #[test]
+    fn tracked_and_untracked_changes_both_block() {
+        assert_eq!(
+            blocked_reason(" M flake.lock\n", Path::new("/home/u/git/stewos")).as_deref(),
+            Some("Local changes in /home/u/git/stewos: flake.lock")
+        );
+        assert_eq!(
+            blocked_reason("?? modules/new.nix\n", Path::new("/f")).as_deref(),
+            Some("Local changes in /f: modules/new.nix")
+        );
+    }
+
+    #[test]
+    fn many_changes_are_summarised() {
+        let status = " M a\nA  b\n?? c\nD  d\nR  e -> f\n";
+        assert_eq!(
+            blocked_reason(status, Path::new("/f")).as_deref(),
+            Some("Local changes in /f: a, b, c (+2 more)")
+        );
+    }
+
+    #[test]
+    fn odd_lines_never_panic() {
+        assert_eq!(blocked_reason("M\n??\n x", Path::new("/f")), None);
+    }
 }

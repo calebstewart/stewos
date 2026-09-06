@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Bumped whenever [`ReviewRequest`] changes shape. A home activation can leave
 /// an old daemon running against a new dialog binary until the unit restarts,
 /// so the dialog checks this rather than misparsing.
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 
 /// What an apply should cover. Only the variants that touch the OS need
 /// privileged execution (via run0); a home-only apply runs entirely as the
@@ -223,11 +223,75 @@ impl Summary {
     }
 }
 
+/// What building the update would do, as `nix build --dry-run` reported it.
+///
+/// `paths` are substitutions and `derivations` local builds; together they are
+/// the denominator of the build's progress, because nix's own aggregate
+/// counters (`copyPaths` and `builds` activities) count exactly these. The byte
+/// figures are for display only: a single path can be 500 MiB, so bytes make
+/// a smoother bar, but they arrive through a different set of activities and
+/// are not what the plan promised.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BuildPlan {
+    pub paths: u32,
+    pub derivations: u32,
+    pub download_bytes: u64,
+    pub unpacked_bytes: u64,
+}
+
+impl BuildPlan {
+    /// Units of work: one per path fetched, one per derivation built.
+    pub fn units(&self) -> u32 {
+        self.paths + self.derivations
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.units() == 0
+    }
+
+    /// One sentence for the tooltip, the notification and the dialog's banner:
+    /// "386 paths to fetch (445.1 MiB), 3 to build locally".
+    pub fn describe(&self) -> String {
+        let fetch = match self.paths {
+            0 => "Nothing to fetch".to_string(),
+            1 => format!("1 path to fetch ({})", human_bytes(self.download_bytes)),
+            n => format!("{n} paths to fetch ({})", human_bytes(self.download_bytes)),
+        };
+        let build = match self.derivations {
+            0 => "nothing to build locally".to_string(),
+            1 => "1 derivation to build locally".to_string(),
+            n => format!("{n} derivations to build locally"),
+        };
+        format!("{fetch}, {build}")
+    }
+}
+
+/// "445.1 MiB", in the binary units nix itself prints.
+pub fn human_bytes(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    let mut value = bytes as f64;
+    let mut unit = 0;
+    while value >= 1024.0 && unit < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes} B")
+    } else {
+        format!("{value:.1} {}", UNITS[unit])
+    }
+}
+
 /// What the daemon hands the dialog on stdin, as one line of JSON.
 ///
 /// This is a *snapshot*. The daemon re-validates everything at apply time, so a
 /// request that has gone stale simply produces an apply the daemon refuses --
 /// the dialog is never the authority on what is pending.
+///
+/// The dialog is opened twice per update: before the build, with `built` false,
+/// `roots` and `plan` filled and `packages` empty, where its one action is
+/// [`ReviewChoice::Build`]; and after it, with `built` true and `packages`
+/// carrying the closure diff, where it offers the apply modes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReviewRequest {
     pub version: u32,
@@ -240,6 +304,18 @@ pub struct ReviewRequest {
     /// The apply modes to offer, in the order to offer them. Render exactly
     /// these; the daemon may narrow the list later without a protocol bump.
     pub modes: Vec<ApplyMode>,
+    /// Whether the closures have been built. Picks the dialog's view.
+    #[serde(default)]
+    pub built: bool,
+    /// What the build will do. `None` when the dry run failed; the dialog says
+    /// so rather than guessing.
+    #[serde(default)]
+    pub plan: Option<BuildPlan>,
+    /// Changes to the packages the configuration installs directly
+    /// (`environment.systemPackages`, `home.packages`), known before anything
+    /// is built. Never carries a size.
+    #[serde(default)]
+    pub roots: Vec<PackageChange>,
 }
 
 /// What the dialog prints on stdout, as one line of JSON -- or nothing at all
@@ -248,6 +324,8 @@ pub struct ReviewRequest {
 #[serde(rename_all = "kebab-case")]
 pub enum ReviewChoice {
     Apply(ApplyMode),
+    /// Build the pending update. Exactly what the tray's "Build update" sends.
+    Build,
     Dismiss,
 }
 
@@ -269,15 +347,71 @@ mod tests {
             serde_json::to_string(&ReviewChoice::Dismiss).unwrap(),
             r#""dismiss""#
         );
+        assert_eq!(
+            serde_json::to_string(&ReviewChoice::Build).unwrap(),
+            r#""build""#
+        );
     }
 
     #[test]
     fn choices_round_trip() {
-        for mode in ApplyMode::MENU_ORDER {
-            let choice = ReviewChoice::Apply(mode);
+        let mut choices: Vec<ReviewChoice> =
+            ApplyMode::MENU_ORDER.iter().map(|m| ReviewChoice::Apply(*m)).collect();
+        choices.extend([ReviewChoice::Build, ReviewChoice::Dismiss]);
+        for choice in choices {
             let encoded = serde_json::to_string(&choice).unwrap();
             assert_eq!(serde_json::from_str::<ReviewChoice>(&encoded).unwrap(), choice);
         }
+    }
+
+    /// A v1 daemon never sends the pre-build fields; they default rather than
+    /// fail to parse, so the dialog's version check is what rejects it, with
+    /// its own message.
+    #[test]
+    fn a_v1_request_still_parses() {
+        let old = r#"{"version":1,"host":"h","summary":{"total":{"upgraded":0,"added":0,"removed":0},
+            "system":{"upgraded":0,"added":0,"removed":0},"home":{"upgraded":0,"added":0,"removed":0}},
+            "modes":["full"]}"#;
+        let request: ReviewRequest = serde_json::from_str(old).unwrap();
+        assert!(!request.built);
+        assert!(request.plan.is_none());
+        assert!(request.roots.is_empty());
+    }
+
+    #[test]
+    fn describes_a_plan_in_one_sentence() {
+        let plan = BuildPlan {
+            paths: 386,
+            derivations: 3,
+            download_bytes: 466_616_320,
+            unpacked_bytes: 0,
+        };
+        assert_eq!(
+            plan.describe(),
+            "386 paths to fetch (445.0 MiB), 3 derivations to build locally"
+        );
+        assert_eq!(
+            BuildPlan::default().describe(),
+            "Nothing to fetch, nothing to build locally"
+        );
+        assert_eq!(
+            BuildPlan {
+                paths: 1,
+                derivations: 1,
+                download_bytes: 512,
+                unpacked_bytes: 0
+            }
+            .describe(),
+            "1 path to fetch (512 B), 1 derivation to build locally"
+        );
+    }
+
+    #[test]
+    fn human_bytes_uses_binary_units() {
+        assert_eq!(human_bytes(0), "0 B");
+        assert_eq!(human_bytes(1023), "1023 B");
+        assert_eq!(human_bytes(1024), "1.0 KiB");
+        assert_eq!(human_bytes(1_825_361_101), "1.7 GiB");
     }
 
     #[test]

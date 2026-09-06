@@ -32,6 +32,7 @@ const MAX_LOG: usize = 24 * 1024;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operation {
     Check,
+    Build,
     Apply(ApplyMode),
 }
 
@@ -39,6 +40,7 @@ impl Operation {
     fn describe(self) -> String {
         match self {
             Operation::Check => "update check".to_string(),
+            Operation::Build => "build".to_string(),
             Operation::Apply(mode) => format!("apply ({})", mode.describe()),
         }
     }
@@ -48,13 +50,21 @@ impl Operation {
     fn guidance(self) -> &'static str {
         match self {
             Operation::Check => {
-                "The check runs entirely in the worktree above: it fast-forwards the \
-                 branch onto `main`, runs `nix flake update`, then builds the system \
-                 and home closures and diffs them against what is running. Nothing \
-                 was applied and `main` was not touched, so the failure is either in \
-                 the git bookkeeping or in evaluating/building one of the two \
-                 installables listed above -- try building the one that failed by \
-                 hand from the worktree."
+                "The check runs entirely in the worktree above and builds nothing: it \
+                 fast-forwards the branch onto `main`, runs `nix flake update`, \
+                 evaluates the old and new `environment.systemPackages` and \
+                 `home.packages`, and dry-runs a build of the two installables listed \
+                 above. Nothing was applied and `main` was not touched, so the failure \
+                 is either in the git bookkeeping or in evaluating one of those -- try \
+                 `nix eval` or `nix build --dry-run` on the one that failed by hand \
+                 from the worktree."
+            }
+            Operation::Build => {
+                "The build runs in the worktree above, against the updated lock file, \
+                 and writes its result to the two out-links under the cache directory. \
+                 Nothing was applied and `main` was not touched. The error above ends \
+                 with the last lines nix printed; try building the installable that \
+                 failed by hand from the worktree, which also shows the full build log."
             }
             Operation::Apply(_) => {
                 "The apply is idempotent by design: the OS half is skipped when the \
@@ -351,6 +361,8 @@ mod tests {
             editor: "nvim".to_string(),
             claude: "claude".to_string(),
             review_dialog: None,
+            check_interval: None,
+            auto_build: false,
         }
     }
 

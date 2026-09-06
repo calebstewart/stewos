@@ -1,6 +1,7 @@
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
+use crate::cancel::{CancelReason, Canceller};
 use crate::icons::{Icon, Icons, MenuIcon};
 use crate::state::State;
 use crate::troubleshoot::Action;
@@ -10,6 +11,10 @@ pub struct UpdateTray {
     state: State,
     tx: Sender<Command>,
     icons: Arc<Icons>,
+    /// Cancelling is the one request that does not go through `tx`: the
+    /// worker is blocked in the build it would be cancelling, so the menu
+    /// signals the build's process directly.
+    canceller: Canceller,
     /// Whether the worker is holding a failure worth reporting on. The report
     /// itself stays with the worker; the menu only needs to know it exists.
     has_error: bool,
@@ -25,6 +30,7 @@ impl UpdateTray {
     pub fn new(
         tx: Sender<Command>,
         icons: Arc<Icons>,
+        canceller: Canceller,
         troubleshoot_available: bool,
         review_available: bool,
     ) -> Self {
@@ -32,6 +38,7 @@ impl UpdateTray {
             state: State::Idle,
             tx,
             icons,
+            canceller,
             has_error: false,
             troubleshoot_available,
             review_available,
@@ -44,8 +51,10 @@ impl UpdateTray {
             State::Checking => Icon::Checking,
             State::UpToDate { .. } => Icon::UpToDate,
             State::UpdatesAvailable(_) => Icon::UpdatesAvailable,
+            State::Building(progress) => Icon::building(progress.fraction()),
             State::Applying => Icon::Applying,
             State::Error { .. } => Icon::Error,
+            State::Blocked { .. } => Icon::Blocked,
         }
     }
 
@@ -69,14 +78,21 @@ impl UpdateTray {
             State::Idle => "No check performed yet".to_string(),
             State::Checking => "Checking for updates\u{2026}".to_string(),
             State::UpToDate { checked_at } => format!("Up to date (checked {checked_at})"),
-            State::UpdatesAvailable(p) => p.summary.short(),
+            State::UpdatesAvailable(p) => p.status_line(),
+            State::Building(progress) => progress.line(),
             State::Applying => "Applying updates\u{2026}".to_string(),
             State::Error { .. } => "Error \u{2014} see tooltip".to_string(),
+            State::Blocked { .. } => "Blocked by local changes".to_string(),
         }
     }
 
+    /// The worker runs everything on one thread, so while any of these is in
+    /// progress a click would sit in the queue until it finished.
     fn busy(&self) -> bool {
-        matches!(self.state, State::Checking | State::Applying)
+        matches!(
+            self.state,
+            State::Checking | State::Building(_) | State::Applying
+        )
     }
 }
 
@@ -101,8 +117,6 @@ fn troubleshoot_item(
         label: label.to_string(),
         icon_name: tray.icons.menu_name(icon),
         icon_data: tray.icons.menu_data(icon),
-        // The worker runs everything on one thread, so a click during a check
-        // would sit in the queue for as long as the build takes.
         enabled: !tray.busy(),
         activate: Box::new(move |tray: &mut UpdateTray| {
             let _ = tray.tx.send(Command::Troubleshoot(action));
@@ -138,8 +152,19 @@ impl ksni::Tray for UpdateTray {
 
     fn tool_tip(&self) -> ksni::ToolTip {
         let description = match &self.state {
-            State::UpdatesAvailable(p) => p.summary.breakdown(),
+            State::UpdatesAvailable(p) if p.built() => p.summary.breakdown(),
+            State::UpdatesAvailable(p) => {
+                let plan = p
+                    .plan
+                    .map(|plan| plan.describe())
+                    .unwrap_or_else(|| "Build plan unavailable".to_string());
+                format!("{}\n{plan}", p.summary.breakdown())
+            }
+            State::Building(progress) => progress.detail(),
             State::Error { message } => message.clone(),
+            State::Blocked { reason } => {
+                format!("{reason}\nCommit or discard them; the tray clears itself.")
+            }
             _ => self.status_line(),
         };
         ksni::ToolTip {
@@ -150,9 +175,13 @@ impl ksni::Tray for UpdateTray {
     }
 
     /// Contextual: between "Check for updates" and "Quit" there is at most one
-    /// block, and only when there is something to act on. A recorded failure
-    /// wins over a pending update, so a failed apply trades its retry entry for
-    /// the troubleshooting ones until the next successful check.
+    /// block, and only when there is something to act on. In order of
+    /// precedence: a blocked checkout says so and offers nothing else (Check
+    /// stays, as the manual re-poll); a running build offers only its cancel;
+    /// a recorded failure wins over a pending update, so a failed build or
+    /// apply trades its entries for the troubleshooting ones until the next
+    /// successful check; and a pending update offers Review plus either Build
+    /// or Apply, depending on whether it has been built.
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
         use ksni::menu::*;
 
@@ -177,7 +206,29 @@ impl ksni::Tray for UpdateTray {
             .into(),
         ];
 
-        if self.troubleshootable() {
+        if let State::Blocked { reason } = &self.state {
+            items.push(
+                StandardItem {
+                    label: reason.clone(),
+                    enabled: false,
+                    ..Default::default()
+                }
+                .into(),
+            );
+        } else if matches!(self.state, State::Building(_)) {
+            items.push(
+                StandardItem {
+                    label: "Cancel build".to_string(),
+                    icon_name: self.icons.menu_name(MenuIcon::Cancel),
+                    icon_data: self.icons.menu_data(MenuIcon::Cancel),
+                    activate: Box::new(|tray: &mut Self| {
+                        tray.canceller.cancel(CancelReason::User);
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+            );
+        } else if self.troubleshootable() {
             items.push(troubleshoot_item(
                 self,
                 "Open failure report",
@@ -190,11 +241,9 @@ impl ksni::Tray for UpdateTray {
                 MenuIcon::Troubleshoot,
                 Action::Claude,
             ));
-        } else if matches!(self.state, State::UpdatesAvailable(_)) {
-            // Inside the UpdatesAvailable block and above Apply: the
-            // contextual/exclusive invariant is untouched (still at most one
-            // block, and a recorded failure still hides both), and the order
-            // matches the workflow -- look, then apply.
+        } else if let State::UpdatesAvailable(pending) = &self.state {
+            // Review first, then the one action that applies to this stage of
+            // the update: the order matches the workflow -- look, then act.
             if self.review_available {
                 items.push(
                     StandardItem {
@@ -210,21 +259,37 @@ impl ksni::Tray for UpdateTray {
                     .into(),
                 );
             }
-            items.push(
-                SubMenu {
-                    label: "Apply".to_string(),
-                    icon_name: self.icons.menu_name(MenuIcon::Apply),
-                    icon_data: self.icons.menu_data(MenuIcon::Apply),
-                    submenu: vec![
-                        apply_item("System + home now", ApplyMode::Full),
-                        apply_item("Home only", ApplyMode::HomeOnly),
-                        apply_item("Home now, system on next boot", ApplyMode::HomeAndBoot),
-                        apply_item("System only", ApplyMode::SystemOnly),
-                    ],
-                    ..Default::default()
-                }
-                .into(),
-            );
+            if pending.built() {
+                items.push(
+                    SubMenu {
+                        label: "Apply".to_string(),
+                        icon_name: self.icons.menu_name(MenuIcon::Apply),
+                        icon_data: self.icons.menu_data(MenuIcon::Apply),
+                        submenu: vec![
+                            apply_item("System + home now", ApplyMode::Full),
+                            apply_item("Home only", ApplyMode::HomeOnly),
+                            apply_item("Home now, system on next boot", ApplyMode::HomeAndBoot),
+                            apply_item("System only", ApplyMode::SystemOnly),
+                        ],
+                        ..Default::default()
+                    }
+                    .into(),
+                );
+            } else {
+                items.push(
+                    StandardItem {
+                        label: "Build update".to_string(),
+                        icon_name: self.icons.menu_name(MenuIcon::Build),
+                        icon_data: self.icons.menu_data(MenuIcon::Build),
+                        enabled: !self.busy(),
+                        activate: Box::new(|tray: &mut Self| {
+                            let _ = tray.tx.send(Command::Build);
+                        }),
+                        ..Default::default()
+                    }
+                    .into(),
+                );
+            }
         }
 
         items.push(MenuItem::Separator);
@@ -234,6 +299,9 @@ impl ksni::Tray for UpdateTray {
                 icon_name: self.icons.menu_name(MenuIcon::Quit),
                 icon_data: self.icons.menu_data(MenuIcon::Quit),
                 activate: Box::new(|tray: &mut Self| {
+                    // A build in progress would otherwise hold the worker
+                    // until it finished; stop it first, silently.
+                    tray.canceller.cancel(CancelReason::Quit);
                     let _ = tray.tx.send(Command::Quit);
                 }),
                 ..Default::default()

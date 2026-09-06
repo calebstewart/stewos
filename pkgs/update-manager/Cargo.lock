@@ -1616,6 +1616,7 @@ dependencies = [
  "gtk4",
  "ksni",
  "libadwaita",
+ "libc",
  "log",
  "notify-rust",
  "png",

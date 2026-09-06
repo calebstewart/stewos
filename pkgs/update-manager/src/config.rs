@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -57,6 +58,51 @@ pub struct Args {
     /// generations. Without one, the Review entry is not offered.
     #[arg(long, env = "STEWOS_UPDATE_REVIEW_DIALOG")]
     review_dialog: Option<PathBuf>,
+
+    /// Check for updates on this interval without being asked ("6h", "30m",
+    /// "1h30m"). A check evaluates only; it downloads and builds nothing
+    /// unless --auto-build is also given. Off when absent.
+    #[arg(long, env = "STEWOS_UPDATE_CHECK_INTERVAL", value_parser = parse_span)]
+    check_interval: Option<Duration>,
+
+    /// Build an update as soon as a scheduled check finds one. Applying is
+    /// never automatic.
+    #[arg(long, env = "STEWOS_UPDATE_AUTO_BUILD")]
+    auto_build: bool,
+}
+
+/// "6h", "30m", "90s", "1h30m", "2d": a run of `<number><unit>` pairs. Rejects
+/// zero, so an interval is always a real one.
+pub fn parse_span(text: &str) -> Result<Duration, String> {
+    let mut total = Duration::ZERO;
+    let mut number = String::new();
+    let mut any = false;
+    for c in text.trim().chars() {
+        if c.is_ascii_digit() {
+            number.push(c);
+            continue;
+        }
+        let value: u64 = number
+            .parse()
+            .map_err(|_| format!("expected a number before '{c}' in {text:?}"))?;
+        number.clear();
+        let unit = match c {
+            's' => 1,
+            'm' => 60,
+            'h' => 3600,
+            'd' => 86_400,
+            other => return Err(format!("unknown unit '{other}' in {text:?}; use s, m, h or d")),
+        };
+        total += Duration::from_secs(value * unit);
+        any = true;
+    }
+    if !number.is_empty() {
+        return Err(format!("{text:?} ends without a unit; use s, m, h or d"));
+    }
+    if !any || total.is_zero() {
+        return Err(format!("{text:?} is not a positive time span"));
+    }
+    Ok(total)
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +121,9 @@ pub struct Config {
     pub claude: String,
     /// None disables the Review entry: there is no dialog to open.
     pub review_dialog: Option<PathBuf>,
+    /// None means checks happen only when asked from the tray.
+    pub check_interval: Option<Duration>,
+    pub auto_build: bool,
 }
 
 /// Find the review dialog next to our own executable.
@@ -140,7 +189,35 @@ impl Args {
             editor,
             claude: self.claude,
             review_dialog: self.review_dialog.or_else(sibling_dialog),
+            check_interval: self.check_interval,
+            auto_build: self.auto_build,
         })
+    }
+}
+
+#[cfg(test)]
+mod span_tests {
+    use super::*;
+
+    #[test]
+    fn parses_spans() {
+        assert_eq!(parse_span("6h"), Ok(Duration::from_secs(6 * 3600)));
+        assert_eq!(parse_span("30m"), Ok(Duration::from_secs(1800)));
+        assert_eq!(parse_span("90s"), Ok(Duration::from_secs(90)));
+        assert_eq!(parse_span("1h30m"), Ok(Duration::from_secs(5400)));
+        assert_eq!(parse_span(" 2d "), Ok(Duration::from_secs(2 * 86_400)));
+    }
+
+    /// A rejected flag makes the daemon exit 2 in a restart loop, which the
+    /// user sees as the tray icon vanishing -- so be precise about why.
+    #[test]
+    fn rejects_what_is_not_a_positive_span() {
+        assert!(parse_span("").is_err());
+        assert!(parse_span("0h").is_err());
+        assert!(parse_span("15").is_err());
+        assert!(parse_span("h").is_err());
+        assert!(parse_span("6 hours").is_err());
+        assert!(parse_span("1w").unwrap_err().contains("unknown unit"));
     }
 }
 
@@ -179,6 +256,25 @@ impl Config {
     pub fn home_installable(&self) -> String {
         format!(
             "{}#homeConfigurations.\"{}@{}\".activationPackage",
+            self.worktree().display(),
+            self.user,
+            self.host
+        )
+    }
+
+    /// The package lists a check compares by evaluation alone, before anything
+    /// is built.
+    pub fn system_roots_installable(&self) -> String {
+        format!(
+            "{}#nixosConfigurations.{}.config.environment.systemPackages",
+            self.worktree().display(),
+            self.host
+        )
+    }
+
+    pub fn home_roots_installable(&self) -> String {
+        format!(
+            "{}#homeConfigurations.\"{}@{}\".config.home.packages",
             self.worktree().display(),
             self.user,
             self.host

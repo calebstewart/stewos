@@ -33,8 +33,12 @@ in
     # pkgs.stewos.update-manager-icons.override because pkgs/ may not read
     # config and the module may: defaulting each colour out of the palette is
     # what makes the tray follow a colour-scheme change, the way theme.nix does
-    # for the rest of the desktop. Overriding one of them keeps the other five
+    # for the rest of the desktop. Overriding one of them keeps the rest
     # scheme-derived.
+    #
+    # The hues are chosen so the temperature says whose turn it is: cool while
+    # the daemon is working (0D checking, 0C building, 0E applying), warm when
+    # it is the user's (0A decide, 09 fix the checkout, 08 something broke).
     icons = {
       # base05 (the plain foreground) rather than one of the greys: this is the
       # state with nothing to say, and base03/base04 are surface colours that
@@ -42,9 +46,11 @@ in
       idle = mkIconColor "when no check has run yet" "base05";
       checking = mkIconColor "while checking for updates" "base0D";
       upToDate = mkIconColor "when up to date" "base0B";
-      updatesAvailable = mkIconColor "when updates are waiting to be applied" "base0A";
+      updatesAvailable = mkIconColor "when an update is waiting to be built or applied" "base0A";
       applying = mkIconColor "while applying updates" "base0E";
+      building = mkIconColor "while building the update" "base0C";
       error = mkIconColor "when the last operation failed" "base08";
+      blocked = mkIconColor "when uncommitted changes in the checkout block an update" "base09";
 
       # The menu glyphs are actions, so they take no meaning from their hue and
       # share one neutral colour.
@@ -120,6 +126,29 @@ in
         unit's PATH.
       '';
     };
+
+    checkInterval = lib.mkOption {
+      type = lib.types.nullOr (lib.types.strMatching "([0-9]+(s|m|h|d))+");
+      default = null;
+      example = "6h";
+      description = ''
+        How often the daemon checks for updates on its own, as a time span
+        ("30m", "6h", "1h30m", "1d"). Null means only when asked from the
+        tray. A check only evaluates -- it downloads and builds nothing
+        unless {option}`autoBuild` is set -- and the daemon never starts one
+        while a build or apply is running or the checkout has local changes.
+      '';
+    };
+
+    autoBuild = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Build an update as soon as a scheduled check finds one, instead of
+        waiting for "Build update" in the tray or the review dialog. Applying
+        is never automatic.
+      '';
+    };
   };
 
   config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
@@ -159,6 +188,11 @@ in
             "--terminal-arg"
             arg
           ]) (if cfg.terminalArgs == [ ] then [ "" ] else cfg.terminalArgs)
+          ++ lib.optionals (cfg.checkInterval != null) [
+            "--check-interval"
+            cfg.checkInterval
+          ]
+          ++ lib.optional cfg.autoBuild "--auto-build"
         );
         Restart = "on-failure";
         RestartSec = 5;

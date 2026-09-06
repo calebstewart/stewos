@@ -167,7 +167,7 @@ Enabled under `stewos.*` in a Home-Manager configuration.
 | `zsh` | Zsh with Oh-My-Posh, any-nix-shell and completion |
 | `git` | Git with SSH signing and per-directory identities |
 | `rofi` | Rofi launcher, themed through the RASI DSL |
-| `update-manager` | Tray daemon that checks for flake updates, prebuilds them on a branch and applies on request |
+| `update-manager` | Tray daemon that checks for flake updates (on demand or on a schedule), builds them on a branch with progress in the tray icon, and applies on request |
 | `alacritty` | Terminal emulator |
 | `firefox` | Firefox, with addons from NUR |
 | `bat` | Syntax-highlighted `cat` |

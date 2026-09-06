@@ -129,6 +129,10 @@ impl Reviewer {
                     // are not worth reporting.
                     let _ = tx.send(Command::Apply(mode));
                 }
+                Some(ReviewChoice::Build) => {
+                    log::info!("review dialog chose to build");
+                    let _ = tx.send(Command::Build);
+                }
                 Some(ReviewChoice::Dismiss) => log::info!("review dialog dismissed"),
                 // Closing the window without choosing prints nothing at all.
                 // That is the designed path, not an error.
@@ -163,6 +167,9 @@ mod tests {
             packages: Vec::new(),
             inputs: Vec::new(),
             modes: ApplyMode::MENU_ORDER.to_vec(),
+            built: true,
+            plan: None,
+            roots: Vec::new(),
         }
     }
 

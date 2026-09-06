@@ -9,6 +9,11 @@
 //! footprint, GTK is only resident while the window is up, and a crash here
 //! cannot take the tray down. It renders only what the daemon computed and
 //! derives nothing, so the two can never disagree about what is pending.
+//!
+//! The daemon opens it twice per update. Before the build (`built` false) it
+//! shows the inputs that moved, the installed packages that change and the
+//! download/build plan, and its one action answers `Build`. After the build it
+//! shows the closure diff and offers the apply modes, as it always has.
 
 use std::io::{BufRead, Write};
 
@@ -107,7 +112,8 @@ fn read_request() -> anyhow::Result<ReviewRequest> {
     if request.version != PROTOCOL_VERSION {
         bail!(
             "review protocol mismatch: daemon sent v{}, this dialog speaks v{}. \
-             Restart stewos-update-manager.",
+             The running daemon predates this build; run \
+             `systemctl --user restart stewos-update-manager` and review again.",
             request.version,
             PROTOCOL_VERSION
         );
@@ -145,9 +151,14 @@ fn ghost_parent(app: &adw::Application) -> adw::ApplicationWindow {
 fn build(app: &adw::Application, request: &ReviewRequest) {
     let parent = ghost_parent(app);
 
+    let title = if request.built {
+        "Pending changes"
+    } else {
+        "Available update"
+    };
     let window = adw::ApplicationWindow::builder()
         .application(app)
-        .title("Pending changes")
+        .title(title)
         .default_width(720)
         // Height follows the content; see the scroller below.
         .modal(true)
@@ -159,12 +170,22 @@ fn build(app: &adw::Application, request: &ReviewRequest) {
         let header = adw::HeaderBar::new();
         header.set_title_widget(Some(
             &adw::WindowTitle::builder()
-                .title("Pending changes")
+                .title(title)
                 .subtitle(request.summary.short())
                 .build(),
         ));
         header
     });
+    // The plan is the number the pre-build decision is actually made on, so
+    // it sits above the lists rather than among them.
+    if !request.built {
+        let text = match &request.plan {
+            Some(plan) => plan.describe(),
+            None => "Build plan unavailable \u{2014} the check could not dry-run the build"
+                .to_string(),
+        };
+        view.add_top_bar(&adw::Banner::builder().title(text).revealed(true).build());
+    }
 
     let group = adw::PreferencesGroup::new();
     let mut sections = Vec::new();
@@ -185,12 +206,16 @@ fn build(app: &adw::Application, request: &ReviewRequest) {
         sections.push((section, true));
     }
 
+    // Before the build the rows are the installed packages that change --
+    // short lists, so they open expanded; after it, the closure diff, which
+    // is long and stays collapsed behind its tally.
+    let (source, expanded): (&[PackageChange], bool) = if request.built {
+        (&request.packages, false)
+    } else {
+        (&request.roots, true)
+    };
     for (title, scope) in [("System", Scope::System), ("Home", Scope::Home)] {
-        let rows: Vec<&PackageChange> = request
-            .packages
-            .iter()
-            .filter(|p| p.scope == scope)
-            .collect();
+        let rows: Vec<&PackageChange> = source.iter().filter(|p| p.scope == scope).collect();
         if rows.is_empty() {
             continue;
         }
@@ -198,12 +223,29 @@ fn build(app: &adw::Application, request: &ReviewRequest) {
             Scope::System => request.summary.system,
             Scope::Home => request.summary.home,
         };
-        let section = make_section(title, &tally(counts));
+        let title = if request.built {
+            title.to_string()
+        } else {
+            format!("{title} packages")
+        };
+        let section = make_section(&title, &tally(counts));
         for package in &rows {
             section.add_row(&package_row(package));
         }
         group.add(&section);
-        sections.push((section, false));
+        sections.push((section, expanded));
+    }
+    if !request.built && request.roots.is_empty() && !request.inputs.is_empty() {
+        group.add(
+            &adw::ActionRow::builder()
+                .title("No installed package changes")
+                .subtitle(
+                    "Libraries underneath may still rebuild; the full closure diff \
+                     appears after the build.",
+                )
+                .activatable(false)
+                .build(),
+        );
     }
 
     // Applied only once every section is in the group: adding an ExpanderRow to
@@ -390,17 +432,22 @@ fn input_row(input: &InputChange) -> adw::ActionRow {
     row
 }
 
-/// Cancel plus an Apply split button whose menu picks the mode.
-///
-/// The menu is driven by a *stateful* action, so libadwaita renders the radio
-/// tick against the current selection and the button label stays in sync for
-/// free. Picking from the menu re-arms the button but does not apply: Apply
-/// stays a deliberate second click.
+/// The action bar: Cancel plus whichever action this stage of the update has.
 fn footer(
     request: &ReviewRequest,
     window: &adw::ApplicationWindow,
     parent: &adw::ApplicationWindow,
 ) -> gtk::Box {
+    if request.built {
+        apply_footer(request, window, parent)
+    } else {
+        build_footer(window, parent)
+    }
+}
+
+/// The bar with its spacer and Cancel, which both stages share. Cancel prints
+/// nothing: the daemon reads silence as "closed".
+fn bar_with_cancel(window: &adw::ApplicationWindow) -> gtk::Box {
     let bar = gtk::Box::builder()
         .orientation(gtk::Orientation::Horizontal)
         .spacing(6)
@@ -418,6 +465,41 @@ fn footer(
         cancel.connect_clicked(move |_| window.close());
     }
     bar.append(&cancel);
+    bar
+}
+
+/// Pre-build: one primary action. There is no mode to pick until there is
+/// something to apply, so a plain button rather than the split button.
+fn build_footer(window: &adw::ApplicationWindow, parent: &adw::ApplicationWindow) -> gtk::Box {
+    let bar = bar_with_cancel(window);
+
+    let build = gtk::Button::with_label("Build");
+    build.add_css_class("suggested-action");
+    {
+        let window = window.clone();
+        let parent = parent.clone();
+        build.connect_clicked(move |_| {
+            answer(ReviewChoice::Build);
+            window.close();
+            parent.close();
+        });
+    }
+    bar.append(&build);
+    bar
+}
+
+/// Post-build: Cancel plus an Apply split button whose menu picks the mode.
+///
+/// The menu is driven by a *stateful* action, so libadwaita renders the radio
+/// tick against the current selection and the button label stays in sync for
+/// free. Picking from the menu re-arms the button but does not apply: Apply
+/// stays a deliberate second click.
+fn apply_footer(
+    request: &ReviewRequest,
+    window: &adw::ApplicationWindow,
+    parent: &adw::ApplicationWindow,
+) -> gtk::Box {
+    let bar = bar_with_cancel(window);
 
     // The daemon decides which modes exist; fall back so the dialog is never
     // unusable if it sends an empty list.
