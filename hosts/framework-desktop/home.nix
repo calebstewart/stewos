@@ -84,6 +84,12 @@
 
   services.nixos-update-manager.enable = true;
 
+  # Enable automatically checking for updates
+  services.nixos-update-manager = {
+    checkInterval = "1h";
+    autoBuild = false;
+  };
+
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
   # caelestia's idle chain ends in `suspendThenHibernate`, which is what walked
