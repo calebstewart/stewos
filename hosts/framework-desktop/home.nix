@@ -16,6 +16,7 @@
       opencode
       nixfmt
       github-cli
+      glow
     ])
     ++ [
       # From llm-agents.nix rather than nixpkgs, which lags upstream releases.
