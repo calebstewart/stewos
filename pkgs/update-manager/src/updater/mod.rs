@@ -115,7 +115,9 @@ enum ApplyOutcome {
     Applied {
         os_done: bool,
         home_done: bool,
-        merge_note: Option<String>,
+        /// Things that went wrong without undoing the apply: a switch that
+        /// finished with failed units, a lock bump that could not be merged.
+        caveats: Vec<String>,
     },
     /// The authentication dialog was declined; nothing changed.
     Cancelled,
@@ -818,7 +820,7 @@ impl Worker {
             Ok(ApplyOutcome::Applied {
                 os_done,
                 home_done,
-                merge_note,
+                caveats,
             }) => {
                 if os_done && home_done {
                     state::clear_pending(&self.cfg.state_file());
@@ -831,9 +833,11 @@ impl Worker {
                     } else {
                         pending.summary.short()
                     };
-                    match merge_note {
-                        None => self.notifier.info("Update applied", &body),
-                        Some(note) => self.notifier.error("Update applied with a caveat", &note),
+                    if caveats.is_empty() {
+                        self.notifier.info("Update applied", &body);
+                    } else {
+                        self.notifier
+                            .error("Update applied with a caveat", &caveats.join("\n\n"));
                     }
                     self.set_state(State::Idle);
                 } else {
@@ -845,7 +849,12 @@ impl Worker {
                     } else {
                         "The system was updated. The home update is still pending."
                     };
-                    self.notifier.info("Update partially applied", body);
+                    if caveats.is_empty() {
+                        self.notifier.info("Update partially applied", body);
+                    } else {
+                        let body = format!("{body}\n\n{}", caveats.join("\n\n"));
+                        self.notifier.error("Update partially applied", &body);
+                    }
                     self.set_state(State::UpdatesAvailable(pending));
                 }
             }
@@ -928,45 +937,49 @@ impl Worker {
 
         let mut os_done = self.os_done(&system_path);
         let mut home_done = self.home_done(&home_path);
+        let mut caveats = Vec::new();
 
         // The OS part first: run0 escalates through polkit, so the
         // authentication dialog comes from the session's agent and no setuid
         // binary is involved. `switch` activates now; `boot` only sets the
         // profile and boot entry. Both are skipped when already done.
-        match mode.system_action() {
+        let helper_action = match mode.system_action() {
             SystemAction::Switch
                 if std::fs::canonicalize("/run/current-system")
                     .context("resolving /run/current-system")?
                     != system_path =>
             {
-                match self.run_system_helper("switch", system_str)? {
-                    true => os_done = true,
-                    false => return Ok(ApplyOutcome::Cancelled),
-                }
+                Some("switch")
             }
-            SystemAction::Boot if !os_done => {
-                match self.run_system_helper("boot", system_str)? {
-                    true => os_done = true,
-                    false => return Ok(ApplyOutcome::Cancelled),
-                }
+            SystemAction::Boot if !os_done => Some("boot"),
+            SystemAction::None => None,
+            _ => {
+                log::info!("system part already applied, skipping");
+                None
             }
-            SystemAction::None => {}
-            _ => log::info!("system part already applied, skipping"),
+        };
+        if let Some(action) = helper_action {
+            match self.run_system_helper(action, system_str)? {
+                HelperOutcome::Done { warning } => {
+                    os_done = true;
+                    caveats.extend(warning);
+                }
+                HelperOutcome::Declined => return Ok(ApplyOutcome::Cancelled),
+            }
         }
 
         // Merge the lock bump back into main as soon as both parts are done
         // or about to be — and *before* home activation, because the new home
         // generation contains a new daemon binary, so activating it can
         // restart this very service, and the merge must not be lost.
-        let mut merge_note = None;
         if os_done && (home_done || mode.includes_home()) {
-            merge_note = self.merge_back(&p.main_rev).err().map(|err| {
-                format!(
+            if let Err(err) = self.merge_back(&p.main_rev) {
+                caveats.push(format!(
                     "The update was applied, but flake.lock could not be fast-forwarded into \
                      main ({err:#}). Merge branch '{}' manually.",
                     self.cfg.branch
-                )
-            });
+                ));
+            }
         }
 
         // The home part, unprivileged, skipped if the profile already points
@@ -989,7 +1002,7 @@ impl Worker {
         Ok(ApplyOutcome::Applied {
             os_done,
             home_done,
-            merge_note,
+            caveats,
         })
     }
 
@@ -1014,9 +1027,17 @@ impl Worker {
             == Some(home_path)
     }
 
-    /// Run the privileged helper via run0. Returns Ok(false) when the
-    /// authentication dialog was declined.
-    fn run_system_helper(&self, action: &str, system_path: &str) -> Result<bool> {
+    /// Run the privileged helper via run0.
+    ///
+    /// The helper `exec`s `switch-to-configuration`, so its exit status is
+    /// that program's. Status 4 is not a failed switch: the profile, the
+    /// boot entry and the activation are all done, and it only means some
+    /// unit was in the `failed` state afterwards -- any unit on the system,
+    /// whether or not the switch touched it. Treating that as a failure
+    /// would leave the lock unmerged and home stale while the new system is
+    /// already running, which is exactly what the retry guards would then
+    /// skip. So it counts as done, with the warning carried as a caveat.
+    fn run_system_helper(&self, action: &str, system_path: &str) -> Result<HelperOutcome> {
         let helper = apply_helper()?;
         log::info!("running system {action} via run0: {system_path}");
         let output = Command::new("run0")
@@ -1026,15 +1047,22 @@ impl Worker {
             .arg(system_path)
             .output()
             .context("failed to run run0")?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            if auth_declined(&stderr) {
-                log::warn!("run0 authentication declined: {}", stderr.trim());
-                return Ok(false);
-            }
-            bail!("system {action} failed:\n{}", stderr.trim());
+        if output.status.success() {
+            return Ok(HelperOutcome::Done { warning: None });
         }
-        Ok(true)
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if output.status.code() == Some(SWITCH_UNITS_FAILED) {
+            let warning = units_failed_warning(&stderr);
+            log::warn!("system {action} finished with failed units: {warning}");
+            return Ok(HelperOutcome::Done {
+                warning: Some(warning),
+            });
+        }
+        if auth_declined(&stderr) {
+            log::warn!("run0 authentication declined: {}", stderr.trim());
+            return Ok(HelperOutcome::Declined);
+        }
+        bail!("system {action} failed:\n{}", stderr.trim());
     }
 
     fn merge_back(&self, main_rev: &str) -> Result<()> {
@@ -1055,6 +1083,43 @@ impl Worker {
             bail!("main moved during the apply");
         }
         git::merge_back(flake, &self.cfg.branch)
+    }
+}
+
+/// What the privileged helper came back with.
+enum HelperOutcome {
+    /// The profile and boot entry are set and, for `switch`, the activation
+    /// ran. `warning` is set when it exited with [`SWITCH_UNITS_FAILED`].
+    Done { warning: Option<String> },
+    /// The authentication dialog was declined; nothing changed.
+    Declined,
+}
+
+/// `switch-to-configuration`'s exit status when the activation completed but
+/// some units are in the `failed` state afterwards.
+const SWITCH_UNITS_FAILED: i32 = 4;
+
+/// The user-facing caveat for a switch that exited [`SWITCH_UNITS_FAILED`].
+/// Quotes switch-to-configuration's own list of failed units when it can be
+/// found in `stderr`, and the last few lines otherwise.
+fn units_failed_warning(stderr: &str) -> String {
+    const PREFIX: &str = "warning: the following units failed: ";
+    let units = stderr
+        .lines()
+        .rev()
+        .find_map(|line| line.trim().strip_prefix(PREFIX))
+        .map(str::trim)
+        .filter(|units| !units.is_empty());
+    match units {
+        Some(units) => format!(
+            "The system was activated, but these units failed during the switch: {units}. \
+             Check them with `systemctl --failed`."
+        ),
+        None => format!(
+            "The system was activated, but some units failed during the switch. Check them \
+             with `systemctl --failed`.\n{}",
+            tail(stderr.trim(), 3)
+        ),
     }
 }
 
@@ -1101,6 +1166,25 @@ fn truncate(message: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_failed_units_warning_quotes_switch_to_configurations_list() {
+        let stderr = "activating the configuration...\n\
+                      starting the following units: polkit.service\n\
+                      warning: the following units failed: fwupd-refresh.service\n\
+                      \u{d7} fwupd-refresh.service - Refresh fwupd metadata and update motd\n";
+        let warning = units_failed_warning(stderr);
+        assert!(warning.starts_with("The system was activated, but these units failed"));
+        assert!(warning.contains("fwupd-refresh.service."));
+        assert!(!warning.contains("Refresh fwupd metadata"));
+    }
+
+    #[test]
+    fn the_failed_units_warning_falls_back_to_the_tail() {
+        let warning = units_failed_warning("one\ntwo\nthree\nfour\n");
+        assert!(warning.starts_with("The system was activated, but some units failed"));
+        assert!(warning.ends_with("two\nthree\nfour"));
+    }
 
     #[test]
     fn no_interval_means_no_scheduled_check() {

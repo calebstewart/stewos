@@ -436,6 +436,17 @@ Things that are the way they are on purpose:
 - **A failed build leaves the update pending and unbuilt**, hidden behind the
   failure block until the next successful check -- the same convention as a
   failed apply.
+- **Exit status 4 from `switch-to-configuration` is a finished switch, not a
+  failed one.** The profile, boot entry and activation are all done by then;
+  the status only says some unit is `failed` afterwards, and it lists *every*
+  failed unit on the system, whether the switch touched it or not. It was
+  once treated as a failure and the result was the worst of both worlds: the
+  new system already running, `flake.lock` unmerged and home stale -- the
+  very things a retry would then skip. (The trigger was `fwupd-refresh.timer`
+  elapsing in the window where activation had `polkit.service` stopped.) The
+  daemon now counts the OS half as done and carries the warning as a caveat
+  on the "Update applied" notification, next to a failed lock merge. Every
+  other non-zero status is still a failure.
 
 ### update-manager review dialog
 
