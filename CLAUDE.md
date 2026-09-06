@@ -436,6 +436,18 @@ Things that are the way they are on purpose:
 - **A failed build leaves the update pending and unbuilt**, hidden behind the
   failure block until the next successful check -- the same convention as a
   failed apply.
+- **Home activation runs in a transient unit** (`systemd-run --user --wait
+  --pipe --collect`), never as a child of the daemon. The new generation
+  nearly always carries a changed `stewos-update-manager.service`, and
+  sd-switch stops every changed unit before it starts any -- so when the
+  `activate` script sat in the daemon's cgroup, stopping the daemon killed the
+  activation between those two phases and left caelestia, hyprpolkitagent and
+  the daemon itself stopped with nothing to start them. The daemon can still
+  be stopped before the script returns; the lock merge already happens before
+  activation for that reason, and `restore()` treats a persisted update whose
+  two paths are what the system runs as *applied* -- checked before
+  `main_rev`, which the merge has legitimately moved -- and sends the "Update
+  applied" notification the old daemon never got to.
 - **Exit status 4 from `switch-to-configuration` is a finished switch, not a
   failed one.** The profile, boot entry and activation are all done by then;
   the status only says some unit is `failed` afterwards, and it lists *every*

@@ -111,6 +111,17 @@ fn flatten(
     })
 }
 
+/// What a `state.json` left by a previous daemon means on startup.
+enum Persisted {
+    /// Still pending; restore it.
+    Pending,
+    /// Both parts are what the system runs: the previous daemon finished the
+    /// apply but was stopped before it could report it.
+    Applied,
+    /// Does not match reality any more; discard it.
+    Stale,
+}
+
 enum ApplyOutcome {
     Applied {
         os_done: bool,
@@ -426,24 +437,44 @@ impl Worker {
         let Some(pending) = state::load_pending(&state_file) else {
             return;
         };
-        let valid = self.pending_still_valid(&pending).unwrap_or_else(|err| {
+        let persisted = self.classify_persisted(&pending).unwrap_or_else(|err| {
             log::warn!("could not validate persisted state: {err:#}");
-            false
+            Persisted::Stale
         });
-        if valid {
-            log::info!("restored pending update from {}", state_file.display());
-            self.set_state(State::UpdatesAvailable(pending));
-        } else {
-            log::info!("persisted state is stale, discarding");
-            state::clear_pending(&state_file);
+        match persisted {
+            Persisted::Pending => {
+                log::info!("restored pending update from {}", state_file.display());
+                self.set_state(State::UpdatesAvailable(pending));
+            }
+            // The apply finished, but the daemon running it was stopped by
+            // the home activation (the new generation restarts this unit)
+            // before it could say so. Say so now: without this the user
+            // sees the tray go quiet and nothing else.
+            Persisted::Applied => {
+                log::info!("pending update was applied before this restart");
+                state::clear_pending(&state_file);
+                self.notifier
+                    .info("Update applied", &pending.summary.short());
+            }
+            Persisted::Stale => {
+                log::info!("persisted state is stale, discarding");
+                state::clear_pending(&state_file);
+            }
         }
     }
 
-    fn pending_still_valid(&self, p: &PendingUpdate) -> Result<bool> {
-        if git::rev_parse(&self.cfg.flake, "main")? != p.main_rev {
-            return Ok(false);
+    fn classify_persisted(&self, p: &PendingUpdate) -> Result<Persisted> {
+        // Applied is checked before `main_rev`: a finished apply has merged
+        // the lock bump, so `main` has moved on purpose.
+        if let (Some(system_path), Some(home_path)) = (&p.system_path, &p.home_path) {
+            if self.os_done(Path::new(system_path)) && self.home_done(Path::new(home_path)) {
+                return Ok(Persisted::Applied);
+            }
         }
-        match (&p.system_path, &p.home_path) {
+        if git::rev_parse(&self.cfg.flake, "main")? != p.main_rev {
+            return Ok(Persisted::Stale);
+        }
+        let pending = match (&p.system_path, &p.home_path) {
             (Some(system_path), Some(home_path)) => {
                 let system_ok = std::fs::canonicalize(self.cfg.result_system())
                     .map(|path| path == Path::new(system_path))
@@ -451,9 +482,7 @@ impl Worker {
                 let home_ok = std::fs::canonicalize(self.cfg.result_home())
                     .map(|path| path == Path::new(home_path))
                     .unwrap_or(false);
-                let fully_applied = self.os_done(Path::new(system_path))
-                    && self.home_done(Path::new(home_path));
-                Ok(system_ok && home_ok && !fully_applied)
+                system_ok && home_ok
             }
             // Unbuilt: the updated lock exists only in the worktree. If it is
             // gone, the honest answer is a fresh check -- not another `flake
@@ -461,12 +490,15 @@ impl Worker {
             // user reviewed.
             _ => {
                 let worktree = self.cfg.worktree();
-                if !worktree.join("flake.lock").is_file() {
-                    return Ok(false);
-                }
-                Ok(git::hash_object(&worktree, "flake.lock")? == p.lock_hash)
+                worktree.join("flake.lock").is_file()
+                    && git::hash_object(&worktree, "flake.lock")? == p.lock_hash
             }
-        }
+        };
+        Ok(if pending {
+            Persisted::Pending
+        } else {
+            Persisted::Stale
+        })
     }
 
     pub fn check(&mut self, trigger: Trigger) {
@@ -986,16 +1018,7 @@ impl Worker {
         // at the new generation.
         if mode.includes_home() && !home_done {
             log::info!("activating home generation: {home_str}");
-            let output = Command::new(home_path.join("activate"))
-                .output()
-                .context("failed to run home activation")?;
-            if !output.status.success() {
-                bail!(
-                    "home activation failed (retry an apply that includes home; completed \
-                     parts are skipped):\n{}",
-                    String::from_utf8_lossy(&output.stderr).trim()
-                );
-            }
+            self.run_home_activation(&home_path)?;
             home_done = true;
         }
 
@@ -1004,6 +1027,48 @@ impl Worker {
             home_done,
             caveats,
         })
+    }
+
+    /// Run the new home generation's `activate` script.
+    ///
+    /// It runs as a transient user unit, not as a child of this process. The
+    /// generation being activated usually carries a changed
+    /// `stewos-update-manager.service` (a new daemon binary at the least),
+    /// and sd-switch stops every changed unit before it starts any. Stopping
+    /// this unit kills its whole cgroup, and with the script in it the
+    /// activation died between those two phases: caelestia, the polkit agent
+    /// and the daemon itself were stopped and nothing started them again.
+    ///
+    /// In its own unit the script outlives the daemon. This process may still
+    /// be stopped before it returns, in which case the outcome is lost here
+    /// and reported by `restore()` when the new daemon comes up.
+    ///
+    /// `systemd-run` is resolved from PATH, not the wrapper, for the same
+    /// reason `run0` is: it has to match the running systemd. The unit gets
+    /// the user manager's environment, which on NixOS carries the profile
+    /// PATH the script needs for `nix-env`, `nix` and `systemctl`.
+    fn run_home_activation(&self, home_path: &Path) -> Result<()> {
+        let output = Command::new("systemd-run")
+            .args([
+                "--user",
+                "--wait",
+                "--pipe",
+                "--collect",
+                "--quiet",
+                "--unit=stewos-update-manager-activate",
+                "--description=StewOS update-manager home activation",
+            ])
+            .arg(home_path.join("activate"))
+            .output()
+            .context("failed to run home activation")?;
+        if !output.status.success() {
+            bail!(
+                "home activation failed (retry an apply that includes home; completed \
+                 parts are skipped):\n{}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+        }
+        Ok(())
     }
 
     /// Has the OS part been applied? True when the system profile (which both
