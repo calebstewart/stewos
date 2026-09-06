@@ -86,6 +86,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixos-update-manager = {
+      url = "github:calebstewart/nixos-update-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Packages the LLM coding agents, tracking their upstream releases more
     # closely than nixpkgs manages to.
     llm-agents = {

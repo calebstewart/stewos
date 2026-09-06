@@ -23,8 +23,6 @@ self: {
   lucas-chess = self.callPackage ./lucas-chess { };
   macfetch = self.callPackage ./macfetch { };
   shortcut-cli = self.callPackage ./shortcut-cli { };
-  update-manager = self.callPackage ./update-manager { };
-  update-manager-icons = self.callPackage ./update-manager-icons { };
   wl-gen-uuid = self.callPackage ./wl-gen-uuid { };
 
   # Rofi theme and script modes.

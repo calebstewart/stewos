@@ -1508,6 +1508,26 @@
         "type": "github"
       }
     },
+    "nixos-update-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788720490,
+        "narHash": "sha256-ZQKYcoxHyVZdy8ObuImxb7J4DtXvoebw/UrL/qEQZ84=",
+        "owner": "calebstewart",
+        "repo": "nixos-update-manager",
+        "rev": "7215f839107eaa508aeb1178d520320f8037a9c1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "calebstewart",
+        "repo": "nixos-update-manager",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1788316716,
@@ -1946,6 +1966,7 @@
         "nix-std": "nix-std",
         "nixcord": "nixcord",
         "nixos-hardware": "nixos-hardware",
+        "nixos-update-manager": "nixos-update-manager",
         "nixpkgs": "nixpkgs_10",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixvim": "nixvim",

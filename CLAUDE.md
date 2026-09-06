@@ -148,6 +148,8 @@ Things that are the way they are on purpose:
   properly and improves the module's error messages too. Re-declaring the
   offending option with a `defaultText` does *not* work -- `mergeOptionDecls`
   folds with `opt.options // res`, so upstream's declaration wins.
+  `nixos-update-manager` is the counter-example: its flake sets `_file` on
+  the exported module itself, so `update-manager.nix` imports it bare.
 - **Host pages are the reference's worked examples**, built from
   `definitionsWithLocations`, one entry per defining file so shared policy stays
   distinct from what a machine asked for itself. Definitions from `modules/` are
@@ -273,7 +275,7 @@ running it on top of the filter chain processes the signal twice.
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
-| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand or periodic eval-only update checks on a worktree branch that yield a download/build plan, an explicit (or `autoBuild`) build with a progress bar in the tray icon itself, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Refuses to touch a checkout with local changes (a Blocked state with its own icon). Ships its own status icons, opens a GTK4 review dialog before and after the build, and opens a failure report in a terminal -- see below |
+| `services.nixos-update-manager` | Update tray daemon from the `nixos-update-manager` flake (external, not a `stewos.*` module). `update-manager.nix` imports the upstream module and only fills in StewOS defaults -- `flakePath`, the desktop terminal, `nvim`, Claude from `llm-agents`, palette-derived icon colours -- each as `mkDefault`; hosts enable and customise it at the upstream namespace. See "update-manager" below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -378,269 +380,43 @@ unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
 is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
 return a package.
 
-### update-manager check, build and apply
+### update-manager
 
-An update goes through three explicit stages, and the tray menu shows exactly
-the action for the stage it is in:
+The update tray daemon is **not in this repository**. It lives at
+`github:calebstewart/nixos-update-manager` (a flake input) and is consumed
+only through its `homeModules.default`, which declares
+`services.nixos-update-manager.*`. That repository's own `CLAUDE.md` carries
+the design notes -- the check/build/apply stages, the review dialog, failure
+reports, the icon grammar -- so look there before changing daemon behaviour;
+nothing about how it works is decided here.
 
-1. **Check** is evaluation only. It bumps the lock in the worktree, diffs
-   `environment.systemPackages` and `home.packages` old-vs-new by name and
-   version (`builtins.parseDrvName`, in the `--apply`, so the split is nix's
-   own), and dry-runs a build of both toplevels for the plan: *N paths to
-   fetch (X MiB), M derivations to build locally*. Seconds, and nothing lands
-   in the store -- which is what makes `checkInterval` viable.
-2. **Build** (`Build update` in the tray, `Build` in the notification and the
-   dialog, or `autoBuild`) runs the two `nix build`s with `--log-format
-   internal-json` and streams progress. The fraction is *(paths fetched +
-   derivations built) / the dry run's totals* and nothing else: nix's
-   `copyPaths` and `builds` activities count exactly what the dry run promised,
-   so it is exact, monotonic and ends at 100 %. Nix's own `setExpected` byte
-   totals are parsed and deliberately ignored -- they grow while substituters
-   are queried, and a bar built on them runs backwards. Bytes are shown, never
-   used. A cancel sends SIGINT to the child from the *tray thread* (the worker
-   is blocked reading the pipe) and is checked before the exit status, since an
-   interrupted nix exits non-zero.
-3. **Review / Apply** is the previous flow, unchanged: `diff-closures` against
-   what is running, the four modes, `run0`.
+What StewOS adds is `modules/home-manager/update-manager.nix`, which declares
+no options. It imports the upstream module and supplies, as `mkDefault`, the
+values upstream leaves null or required: `flakePath` (`~/git/stewos`),
+`terminal` (`config.stewos.desktop.terminal`), `editor` (`nvim`, a PATH name
+so it is the nixvim-wrapped one), `claudePackage` (from `llm-agents`, which
+tracks releases nixpkgs lags), and the nine `icons.*` colours from
+`config.colorScheme.palette` -- cool slots while the daemon works (0D
+checking, 0C building, 0E applying), warm when it is the user's turn (0A
+decide, 09 fix the checkout, 08 broke). Those defaults live here rather than
+upstream because upstream may not know about `stewos.desktop`, nix-colors or
+`llm-agents`, and they are `mkDefault` so a host overrides any of them at
+`services.nixos-update-manager.*` directly. Both Framework hosts set only
+`enable`.
 
-Things that are the way they are on purpose:
+Names to know: the unit is `nixos-update-manager.service`, state lives in
+`~/.cache/nixos-update-manager`, and the update branch is upstream's default
+`nixos-update`. The daemon refuses to check, build or apply while the checkout
+has uncommitted changes (its *Blocked* state), so after editing this repo it
+stays quiet until the work is committed -- that is the intended behaviour, not
+a fault. `packages.<system>` here no longer carries the daemon or its icons;
+they come from the input's own outputs, built against our nixpkgs through
+`follows`.
 
-- **The roots diff, not the derivation graph.** Diffing the `.drv` closures
-  needs no build either, and was measured across two generations: 752
-  "changed" names against 141 real ones, because build-time inputs (patches,
-  crate sources, hooks, compilers) dominate. Restricting to installed names
-  still gave ~70 % recall. The roots diff is exact for what the user asked to
-  install; the closure diff after the build is the complete picture.
-- **`Unchanged` is a check outcome.** The same `main` rev with the same
-  `flake.lock` blob (`lock_hash`) is the same update, so a re-check leaves a
-  pending update alone -- including a *built* one. That is also what lets a
-  scheduled check stay silent: it notifies only on something new.
-- **Progress is throttled at the source.** A five-path build emits ~7000
-  records and every `tray.update` makes ksni re-hash every pixmap, so the tray
-  and notification are refreshed on a whole-percent change and at most once a
-  second, with the boundaries (start, between the two builds, end) forced.
-- **Blocked is a state, not an error.** Any `git status --porcelain
-  --untracked-files=all` output blocks check, build and apply: the worktree
-  builds from committed `main`, so uncommitted work would be invisible to the
-  build and then fought over when the lock bump is fast-forwarded back. The
-  daemon refuses rather than stashing, says so once (notification on the
-  transition only), and re-polls every 30 s so the tray clears itself after a
-  commit. It is checked in `restore()` *before* state.json is validated, because
-  validation discards the file on failure and a dirty checkout is no reason to
-  lose a pending update.
-- **The scheduler lives in the daemon, not a systemd timer.** It has to know
-  daemon state (never during a build or apply, not while blocked, reset by a
-  manual check), the daemon has no control socket a timer could poke, and its
-  lifetime already is the session. The loop is `recv_timeout` over the worker's
-  own schedule, capped at an hour because `Instant + Duration::MAX` panics.
-- **A failed build leaves the update pending and unbuilt**, hidden behind the
-  failure block until the next successful check -- the same convention as a
-  failed apply.
-- **Home activation runs in a transient unit** (`systemd-run --user --wait
-  --pipe --collect`), never as a child of the daemon. The new generation
-  nearly always carries a changed `stewos-update-manager.service`, and
-  sd-switch stops every changed unit before it starts any -- so when the
-  `activate` script sat in the daemon's cgroup, stopping the daemon killed the
-  activation between those two phases and left caelestia, hyprpolkitagent and
-  the daemon itself stopped with nothing to start them. The daemon can still
-  be stopped before the script returns; the lock merge already happens before
-  activation for that reason, and `restore()` treats a persisted update whose
-  two paths are what the system runs as *applied* -- checked before
-  `main_rev`, which the merge has legitimately moved -- and sends the "Update
-  applied" notification the old daemon never got to.
-- **Exit status 4 from `switch-to-configuration` is a finished switch, not a
-  failed one.** The profile, boot entry and activation are all done by then;
-  the status only says some unit is `failed` afterwards, and it lists *every*
-  failed unit on the system, whether the switch touched it or not. It was
-  once treated as a failure and the result was the worst of both worlds: the
-  new system already running, `flake.lock` unmerged and home stale -- the
-  very things a retry would then skip. (The trigger was `fwupd-refresh.timer`
-  elapsing in the window where activation had `polkit.service` stopped.) The
-  daemon now counts the OS half as done and carries the warning as a caveat
-  on the "Update applied" notification, next to a failed lock merge. Every
-  other non-zero status is still a failure.
-
-### update-manager review dialog
-
-"Review changes…" opens a GTK4/libadwaita window listing the flake inputs that
-moved and the per-package `old → new` versions. It is opened twice per update:
-before the build (`built: false`) it shows the installed-package changes and
-the plan as a banner, and its one action is `Build`; after the build it shows
-the closure diff with the four apply modes on an `AdwSplitButton`. It is the
-crate's **second binary** (`stewos-update-review`, `src/bin/review.rs`),
-sharing `src/lib.rs` with the daemon and nothing else.
-
-Things that are the way they are on purpose:
-
-- **A separate process, not a window in the daemon.** The tray keeps its
-  current footprint, GTK is resident only while the window is up, and a GUI
-  crash cannot take the tray down. The daemon writes one line of JSON
-  (`ReviewRequest`) to the child's stdin and reads one line back
-  (`ReviewChoice`) on a **detached thread**, then sends an ordinary
-  `Command::Apply` — the same shape `notify.rs` already uses for the "Apply
-  now" button. The stdin write is on that thread, not the worker: a large
-  update exceeds the pipe buffer and would deadlock the worker against a child
-  that has not started reading.
-- **The dialog carries no authority.** Its entire outbound vocabulary is
-  `ApplyMode` plus `Build`, exactly what the tray already sends, and
-  `Worker::build` / `Worker::apply` re-check the pending state, `main_rev`, the
-  lock hash and the out-links as usual. So a request that goes stale while the window is open produces an
-  apply the daemon refuses, and `ReviewRequest` needs no rev echoed back —
-  which also keeps `Command` `Copy`, as `tray.rs`'s `Fn` closures require.
-- **The wire spellings are pinned by tests** (`lib.rs`). They are the only
-  contract between two binaries, so a rename that compiles on both sides would
-  otherwise fail silently at runtime. `PROTOCOL_VERSION` exists because a home
-  activation can leave an old daemon running against a new dialog until the
-  unit restarts.
-- **GTK4, not Qt.** The Rust bindings are C-ABI and mature, so there is no
-  `cxx-qt` C++ glue and none of the `gcc16Stdenv`/libstdc++ hazard that
-  `pkgs/hyprqt6engine` exists to work around. `theme.nix` already generates
-  libadwaita named colours from `config.colorScheme`, so the dialog is themed
-  with no new plumbing.
-- **The window floats via a "ghost parent".** Wayland has no
-  `_NET_WM_WINDOW_TYPE_DIALOG`; the only signal is `xdg_toplevel.set_parent()`,
-  and GTK emits it only for a parent that has actually been *mapped*. So the
-  dialog maps one that cannot be seen — 1×1, non-resizable (so a tiling
-  compositor floats it rather than tiling it), undecorated and
-  `opacity 0` — and keeps it for its lifetime. Measured on Hyprland: a plain
-  toplevel is tiled full-height, `set_modal(true)` alone does nothing, and
-  hiding the parent *before* presenting the child does not float it either.
-  Every hide-it-afterwards variant is a timing race with a visible flash; this
-  one has no race. Close the ghost with the window or the process never exits.
-- **`nix flake update`'s output is on stderr**, not stdout — nix prints the
-  lock diff through its *warning* logger — and the entries are multi-line.
-  `updater/inputs.rs` parses it, leniently: this is decoration, so a nix format
-  change must yield an empty list rather than break update checking.
-- **`diff.rs` keeps what it used to throw away.** It parsed versions and the
-  size delta only to classify a line; both are now retained. A row with **no
-  versions on either side is normal** — nix prints only a size delta when a
-  package is rebuilt at the same version (6 of 33 rows in a real check) — and
-  renders as "same version, rebuilt". That is also why the size delta is shown
-  despite not being version information: it is the only thing those rows have.
-- **`PendingUpdate`'s new fields are `#[serde(default)]`.** `load_pending`
-  swallows deserialize errors and returns None, so without the default an
-  existing `state.json` would be silently discarded on upgrade — which reads to
-  the user as the tray forgetting a pending update.
-- **`dontWrapGApps` plus a manual `wrapProgram`.** `wrapGAppsHook4` would wrap
-  both binaries and fight the existing `postFixup`; taking `gappsWrapperArgs`
-  by hand gives each binary only what it needs. The daemon finds the dialog as
-  a *sibling* of its own executable, which survives makeWrapper because both
-  wrappers stay in `$out/bin`.
-
-### update-manager failure reports
-
-A failed check or apply records an `ErrorReport` on the worker and grows two
-menu entries -- "Open failure report" and "Troubleshoot with Claude" -- which
-also appear as buttons on the error notification. Both write the same
-deterministic Markdown to `<cache_dir>/troubleshoot.md` and open it in the
-user's terminal: one in `$EDITOR`, the other as the opening prompt of a Claude
-Code session cwd'd to the flake checkout. One writer, two ways to open it.
-
-The tray menu is **contextual and exclusive**: between "Check for updates" and
-"Quit" there is at most one block, and a recorded failure beats a pending
-update. The consequence is deliberate -- a failed apply leaves `State::
-UpdatesAvailable` so its idempotence guards can resume it, but the Apply
-submenu is hidden until the next successful check clears the failure.
-
-Things that are the way they are on purpose:
-
-- **The report is written on click, not on failure.** It quotes `git status`,
-  the branch revs and the daemon's own journal, and those are only worth having
-  as of the moment someone is about to debug them. `last_error` is likewise
-  in-memory only, unlike `PendingUpdate`: it quotes this boot's journal.
-- **The journal comes from `INVOCATION_ID`**, falling back to `-t
-  stewos-update-manager` for a bare `cargo run`. `journalctl` is deliberately
-  not in the `makeWrapper` PATH, for the same reason `run0` is not: it has to
-  match the running system.
-- **Both quoting sections are capped** (32 KiB of error, 24 KiB of log, tails
-  kept). A failed `nix build` puts its entire log into the anyhow chain *and*
-  the journal, and an unbounded report is one nobody reads.
-- **Claude gets the path in prose plus `--add-dir <cache_dir> -- <prompt>`**,
-  not an `@` reference: `@` is CLAUDE.md import syntax, and the report lives
-  outside the checkout the session is rooted in. The positional prompt (no
-  `-p`) is what starts an interactive session with it already submitted, and
-  the `--` is load-bearing -- `--add-dir` takes `<directories...>`, so without
-  it the prompt is read as another directory and the session opens empty.
-- **`editor` is a PATH-resolved string, `claudePackage` an absolute store
-  path.** The editor should be whichever `nvim` the home profile installs, not
-  a second one from the store; Claude should not depend on the unit's PATH.
-- `terminal` defaults to `config.stewos.desktop.terminal`, and with no terminal
-  configured at all the entries are never shown rather than shown broken.
-
-### update-manager icons
-
-The update-manager daemon borrows no freedesktop icon names at all. It ships
-sixteen source SVGs of its own: eight status badges (idle, checking,
-up-to-date, updates-available, applying, building, error, blocked) and eight
-menu glyphs (search, apply, review, report, troubleshoot, quit, build, cancel),
-with `building` rendered as 21 frames (`building-000` … `building-100`, one per
-5 %) that the daemon picks between by rounding the build's fraction.
-Nothing is looked up by name, which is also why they survive the Qt
-platform-theme failure described under "Qt apps lose every themed icon":
-
-- the tray icon goes out as an SNI **pixmap** (ARGB32, big-endian), with
-  `IconName` deliberately left empty -- a host prefers the name whenever it can
-  resolve one, so setting both would mean our art is never drawn;
-- menu entries go out as dbusmenu **`icon-data`** (raw PNG), with `icon-name`
-  empty for the same reason;
-- notifications get an **absolute path** to the 64px PNG.
-
-**The status icons share one silhouette: an arrow landing on a baseline.**
-That mark is the identity and must stay in every state -- a tray icon's first
-job is to say *which daemon* it belongs to, and an earlier draft that used a
-plain ring as the constant element failed at exactly that (a ring plus a
-checkmark is indistinguishable from any VPN or sync indicator). State is carried
-by three channels layered on top:
-
-| Channel | Values |
-|---|---|
-| arrowhead | stroked (settled) / solid (wants attention, or data moving) |
-| baseline | solid (settled) / `4 2` dashed (busy) / gapped under the tip (blocked: the arrow cannot land) / faint track with a solid segment growing left to right (building) |
-| colour | one `base16` slot per state -- cool while the daemon works (0D checking, 0C building, 0E applying), warm when it is the user's turn (0A decide, 09 fix the checkout, 08 broke) |
-
-Two consequences worth knowing before editing the art. The baseline sits at the
-same `y` in every state on purpose, so the glyph does not visibly jump when the
-daemon changes state -- including across the 21 building frames. And `idle` and
-`up-to-date` are deliberately the same shape, separated only by hue -- both mean
-"nothing to do", and `idle` only exists until the first check runs. `error` is
-still the single state that breaks the pattern: the arrow shrinks to ~70% to
-make room for an exclamation, which is worth the lost size there and nowhere
-else; `blocked` and `building` keep the full-size arrow and vary only the
-baseline.
-
-`pkgs/update-manager-icons/` holds the SVG sources -- one 24px grid, all strokes
-`currentColor` -- and rasterizes them with `resvg --stylesheet`, one colour per
-argument (the states are `Status` context, the menu glyphs are `Actions`):
-
-```nix
-pkgs.stewos.update-manager-icons.override { error = "#ff0000"; }
-```
-
-The building frames come out of that same stylesheet: `building.svg` draws the
-bar as a second copy of the baseline with `stroke-linecap="butt"` (a round cap
-on a zero-length dash renders as a dot, so 0 % would not be empty), and each
-frame's CSS sets `#progress { stroke-dasharray: <L> 100 }` with `L` the first
-`16·p/100` units of the 16-unit baseline. Verified on resvg 0.48 to render
-byte-identically to an explicit `h<L>` path. Lengths are absolute because resvg
-does **not** honour `pathLength`; the derivation computes them in tenths, exact
-for multiples of 5. The plain `building.png` is the 0 % frame, so the state has
-a name without a fraction; a frame the daemon cannot load falls back to
-`applying`'s pixmaps (and `blocked` to `error`'s), so an icons derivation that
-predates a state still keeps the tray on our own art.
-
-It is a **separate derivation from the daemon on purpose**. The daemon takes the
-rendered tree as a runtime path (`--icon-dir`), so a recolour re-realizes one
-`runCommand`; folding the store path into `pkgs/update-manager`'s wrapper would
-put it in that derivation's `postFixup` and make every palette change -- every
-host on a different scheme -- recompile the Rust crate.
-
-The colours themselves are module options
-(`stewos.update-manager.icons.<state>`), each defaulting to a `base16` slot of
-`config.colorScheme.palette`, because `pkgs/` may not read `config` and the
-module may. `stewos.update-manager.iconPackage` is the escape hatch, and it is
-the one that matters while the module is enabled: the unit always passes
-`--icon-dir`, so overriding `update-manager-icons` on `package` only changes the
-binary's standalone default.
+The option reference documents nothing for it: upstream's declarations sit
+outside `self.outPath`, so the declaration-path filter hides them, and there
+is no `stewos.*` option to show. The host pages still list each host's
+`services.nixos-update-manager.enable`.
 
 Stylix is imported (`modules/home-manager/default.nix`, and the NixOS and
 Darwin equivalents) but **deliberately never configured**. Adopting it would
@@ -694,6 +470,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
 
 ### Personal Flakes (github:calebstewart)
 - `embermug-tray` - Ember Mug system tray app
+- `nixos-update-manager` - Update tray daemon; consumed through its
+  `homeModules.default` (`services.nixos-update-manager`), never as a package
+  here. Its own `CLAUDE.md` holds the design notes
 
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed
