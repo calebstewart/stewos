@@ -6,7 +6,8 @@
     purpose. Dots keep roughly a quarter of the baseline's ink and the glyph
     reads as unfinished; 4-on-2-off keeps most of it, so the weight matches the
     settled states and the difference reads as motion. Two long dashes with a
-    gap in the middle would instead read as "broken", which is error's job.
+    gap in the middle would instead read as "broken"; a single central gap is instead
+    blocked.svg's signal.
     applying.svg reuses this pattern.
   -->
   <path d="M12 3v10"/>

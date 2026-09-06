@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     color="#cdd6f4" fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <!-- Menu: "Build update". apply.svg's arrow lands on the ground; this one
+       lands in a tray: fetched and kept, not yet installed. Same arrow, so
+       the two read as stages of one thing, and the tray's floor sits at y=20
+       where apply's baseline is. -->
+  <path d="M12 3v11"/>
+  <path d="m7 9.5 5 5 5-5"/>
+  <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+</svg>

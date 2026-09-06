@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
+     color="#94e2d5" fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <!--
+    Real data moving (solid head), and the baseline is a progress bar: the
+    full baseline as a faint track, with a solid segment growing left to
+    right. The segment is the same path with a dasharray, which the builder
+    sets per frame through the stylesheet: "L 100" draws the first L of the
+    baseline's 16 units and then a gap longer than the path. Butt caps on
+    purpose: a round cap on a zero-length dash renders as a dot, so 0 % would
+    not be empty. The track keeps round caps so the silhouette matches every
+    other state exactly. Rendered as it stands, this is the 0 % frame.
+  -->
+  <path d="M12 3v6"/>
+  <path d="M6.5 9h11L12 15.5Z" fill="currentColor" stroke="none"/>
+  <path d="M4 18.5h16" stroke-opacity="0.3"/>
+  <path id="progress" d="M4 18.5h16" stroke-linecap="butt" stroke-dasharray="0 100"/>
+</svg>
