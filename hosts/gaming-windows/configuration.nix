@@ -3,17 +3,17 @@
 # halves. The user's half is home.nix. See mkWindowsHost in flake.nix.
 { ... }:
 {
-  winpkgs.developer.developerMode = true;
+  windows.developer.developerMode = true;
 
   # Machine-wide policy; the per-user privacy settings are in home.nix.
-  winpkgs.privacy = {
+  windows.privacy = {
     activityFeed = false;
     telemetry = "required";
   };
 
   # The distro is winpkgs' slim base (NixOS-WSL, flakes, git) plus whatever goes
   # here. Only the state version so far.
-  winpkgs.wsl.modules = [
+  wsl.modules = [
     { system.stateVersion = "26.05"; }
   ];
 }

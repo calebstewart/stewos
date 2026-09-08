@@ -201,7 +201,7 @@
       # The distro is deliberately slim -- just what winpkgs needs to evaluate
       # and apply -- not a StewOS workstation; the StewOS modules are for the
       # machines people sit at. A host adds anything more through
-      # winpkgs.wsl.modules in its own configuration.nix.
+      # wsl.modules in its own configuration.nix.
       #
       # `homes` are the machine's windowsHomeConfigurations. A package a home
       # declares whose winget installer is machine-wide (Alacritty, LLVM) is
@@ -221,9 +221,9 @@
 
           modules = [
             {
-              winpkgs.name = hostname;
+              networking.hostName = hostname;
               winpkgs.homes = homes;
-              winpkgs.wsl = {
+              wsl = {
                 enable = true;
                 specialArgs = { inherit inputs; };
               };
@@ -332,7 +332,7 @@
       };
 
       wslHosts = lib.mapAttrs (_name: host: host.config.system.build.wsl) (
-        lib.filterAttrs (_name: host: host.config.winpkgs.wsl.enable) windowsHosts
+        lib.filterAttrs (_name: host: host.config.wsl.enable) windowsHosts
       );
 
       # ----------------------------------------------------------------------

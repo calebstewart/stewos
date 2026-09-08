@@ -21,11 +21,11 @@
     "XDG_CONFIG_HOME" = "${config.home.homeDirectory}/.config";
   };
 
-  winpkgs.theme.mode = "dark";
-  winpkgs.keyboard.stickyKeysShortcut = false;
+  windows.theme.mode = "dark";
+  windows.keyboard.stickyKeysShortcut = false;
 
   # Configure the task bar
-  winpkgs.taskbar = {
+  windows.taskbar = {
     alignment = "left";
     searchBox = "hidden";
     widgets = false;
@@ -36,7 +36,7 @@
   };
 
   # Configure Windows Explorer
-  winpkgs.explorer = {
+  windows.explorer = {
     contextMenu = "classic";
     showHiddenFiles = true;
     showFileExtensions = true;
@@ -55,7 +55,7 @@
   };
 
   # Configure Windows "privacy" options; the machine-wide ones are in configuration.nix.
-  winpkgs.privacy = {
+  windows.privacy = {
     advertisingId = false;
     suggestedContent = false;
     suggestedApps = false;

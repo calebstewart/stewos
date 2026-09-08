@@ -92,7 +92,7 @@ NixOS + home-manager are:
   (NixOS-WSL, flakes, `git`; *not* a StewOS workstation, it does not import
   `modules/nixos`) and exposes it as `config.system.build.wsl`, which `flake.nix`
   also surfaces under `nixosConfigurations.<host>`. Extend it through
-  `winpkgs.wsl.modules`.
+  `wsl.modules`.
 - `windowsHomeConfigurations."<Windows user>@<host>"` (`mkHome` with a
   `*-windows` system and `hostname`, `hosts/<host>/home.nix`) is the *home*
   configuration -- `HKCU`, `%USERPROFILE%`, user-scope packages, the shell --

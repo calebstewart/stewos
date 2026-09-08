@@ -135,7 +135,7 @@ They are thin wrappers that attach the StewOS modules, the shared `pkgs` instanc
 for that system, and `inputs` via `specialArgs`. `mkHome` derives the home
 directory from the username, so the two cannot disagree. `mkWindowsHost` wraps
 the `winpkgs` input's `windowsSystem` -- the machine, plus its slim NixOS-WSL
-distro (extend it with `winpkgs.wsl.modules`) -- and `mkHome` with a
+distro (extend it with `wsl.modules`) -- and `mkHome` with a
 `*-windows` system and a `hostname` makes the matching
 `windowsHomeConfigurations."<Windows user>@<host>"`, so one builder covers every
 user@host. On the machine, `winpkgs switch` applies the distro, then the system
