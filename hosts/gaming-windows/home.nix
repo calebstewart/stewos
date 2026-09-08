@@ -16,11 +16,6 @@
   # The same palette as every other host; stewos.neovim renders it.
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
-  # This makes neovim use the correct configuration path instead of Windows AppData bullshit
-  home.sessionVariables = {
-    "XDG_CONFIG_HOME" = "${config.home.homeDirectory}/.config";
-  };
-
   windows.theme.mode = "dark";
   windows.keyboard.stickyKeysShortcut = false;
 
