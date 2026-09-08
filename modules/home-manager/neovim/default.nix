@@ -1,4 +1,4 @@
-# Neovim, configured the ordinary way. The Lua under ./neovim *is* the
+# Neovim, configured the ordinary way. The Lua under ./config *is* the
 # configuration, shipped verbatim to NixOS, nix-darwin and winpkgs; plugins are
 # lazy.nvim's. Nix contributes exactly two things: the tools on Neovim's PATH
 # (language servers, ripgrep, a C compiler, node) and
@@ -89,7 +89,7 @@ in
     lib.mkMerge [
       {
         xdg.configFile."nvim" = {
-          source = ./neovim;
+          source = ./config;
           recursive = true;
         };
         xdg.configFile."nvim/lua/stewos/generated.lua".text =

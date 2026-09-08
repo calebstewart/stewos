@@ -1,7 +1,7 @@
 -- What Nix decided for this machine, with defaults so the directory also works
 -- copied by hand onto a machine without Nix.
 --
--- lua/stewos/generated.lua is written by modules/home-manager/neovim.nix and
+-- lua/stewos/generated.lua is written by modules/home-manager/neovim/default.nix and
 -- looks like:
 --   return {
 --     palette = { base00 = "1e1e2e", ... },   -- nix-colors base16, no '#'
