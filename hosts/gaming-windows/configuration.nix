@@ -1,11 +1,10 @@
 # Windows 11 desktop, and the NixOS-WSL distro on it that evaluates and applies
 # this configuration. See mkWindowsHost in flake.nix.
-{ ... }:
+{ pkgs, ... }:
 {
-  # Bare minimum to prove the pipeline. (PowerShell 7 is not listed: winpkgs
-  # ensures and upgrades it itself, since its runtime depends on it.)
-  winpkgs.packages.winget = [
-    "Git.Git"
+  home.packages = with pkgs; [
+    git
+    ripgrep
   ];
 
   winpkgs.theme.mode = "dark";
