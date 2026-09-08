@@ -16,6 +16,7 @@
       opencode
       nixfmt
       github-cli
+      glow
     ])
     ++ [
       # From llm-agents.nix rather than nixpkgs, which lags upstream releases.
@@ -68,7 +69,6 @@
     };
 
     embermug-tray.enable = true;
-    update-manager.enable = true;
 
     git.enable = true;
     delta.enable = true;
@@ -81,6 +81,14 @@
     neovim.enable = true;
     zoxide.enable = true;
     direnv.enable = true;
+  };
+
+  services.nixos-update-manager.enable = true;
+
+  # Enable automatically checking for updates
+  services.nixos-update-manager = {
+    checkInterval = "1h";
+    autoBuild = false;
   };
 
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;

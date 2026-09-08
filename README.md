@@ -130,10 +130,16 @@ homeConfigurations."caleb@my-host" = mkHome {
 };
 ```
 
-`mkNixOSHost`, `mkDarwinHost` and `mkHome` live in `flake.nix`. They are thin
-wrappers that attach the StewOS modules, the shared `pkgs` instance for that
-system, and `inputs` via `specialArgs`. `mkHome` derives the home directory from
-the username, so the two cannot disagree.
+`mkNixOSHost`, `mkDarwinHost`, `mkWindowsHost` and `mkHome` live in `flake.nix`.
+They are thin wrappers that attach the StewOS modules, the shared `pkgs` instance
+for that system, and `inputs` via `specialArgs`. `mkHome` derives the home
+directory from the username, so the two cannot disagree. `mkWindowsHost` wraps
+the `winpkgs` input's `windowsSystem` -- the machine, plus its slim NixOS-WSL
+distro (extend it with `wsl.modules`) -- and `mkHome` with a
+`*-windows` system and a `hostname` makes the matching
+`windowsHomeConfigurations."<Windows user>@<host>"`, so one builder covers every
+user@host. On the machine, `winpkgs switch` applies the distro, then the system
+half (one UAC prompt), then the home half.
 
 ## NixOS Modules
 
@@ -163,11 +169,11 @@ Enabled under `stewos.*` in a Home-Manager configuration.
 | Module | Description |
 |--------|-------------|
 | `desktop` | Hyprland (Linux) or Aerospace (macOS), and everything around them |
-| `neovim` | Neovim via nixvim, with LSP, completion and a full keymap set |
+| `neovim` | Neovim with a plain Lua configuration (lazy.nvim), LSP, completion and a full keymap set, the same on every platform |
 | `zsh` | Zsh with Oh-My-Posh, any-nix-shell and completion |
 | `git` | Git with SSH signing and per-directory identities |
 | `rofi` | Rofi launcher, themed through the RASI DSL |
-| `update-manager` | Tray daemon that checks for flake updates, prebuilds them on a branch and applies on request |
+| `services.nixos-update-manager` | Update tray daemon from the [nixos-update-manager](https://github.com/calebstewart/nixos-update-manager) flake; `update-manager.nix` here only supplies StewOS defaults (palette colours, desktop terminal, Claude) |
 | `alacritty` | Terminal emulator |
 | `firefox` | Firefox, with addons from NUR |
 | `bat` | Syntax-highlighted `cat` |

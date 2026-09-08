@@ -28,7 +28,8 @@ stewos/
 │   ├── common/        # Policy shared between machines
 │   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework 16 laptop
-│   └── huntress-mbp/       # Apple Silicon MacBook (work)
+│   ├── huntress-mbp/       # Apple Silicon MacBook (work)
+│   └── gaming-windows/     # Windows 11 desktop, via winpkgs: configuration.nix (system) + home.nix
 └── templates/         # Flake templates for new systems
 ```
 
@@ -77,8 +78,34 @@ the relevant `modules/{platform}/default.nix`; to add a package, add a line to
 ### Host Configuration
 
 `hosts/{hostname}/` holds configuration only. The outputs are declared in
-`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkHome` helpers defined
-there, so the full set of configurations is visible in one file.
+`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkWindowsHost` / `mkHome`
+helpers defined there, so the full set of configurations is visible in one file.
+
+Windows hosts come from the `winpkgs` input (`github:calebstewart/winpkgs`,
+nix-darwin-shaped: Nix evaluates, PowerShell applies) and are split the way
+NixOS + home-manager are:
+
+- `windowsConfigurations.<host>` (`mkWindowsHost`, `hosts/<host>/configuration.nix`)
+  is the *system* configuration -- `HKLM`, `%ProgramData%`, machine-scope
+  packages -- applied elevated, plus the NixOS-WSL distro that evaluates and
+  applies everything. winpkgs builds the distro as a deliberately slim system
+  (NixOS-WSL, flakes, `git`; *not* a StewOS workstation, it does not import
+  `modules/nixos`) and exposes it as `config.system.build.wsl`, which `flake.nix`
+  also surfaces under `nixosConfigurations.<host>`. Extend it through
+  `wsl.modules`.
+- `windowsHomeConfigurations."<Windows user>@<host>"` (`mkHome` with a
+  `*-windows` system and `hostname`, `hosts/<host>/home.nix`) is the *home*
+  configuration -- `HKCU`, `%USERPROFILE%`, user-scope packages, the shell --
+  applied as the user, never elevated. It speaks home-manager's names
+  (`home.file`, `xdg.configFile`, `home.packages`, `home.sessionVariables`),
+  so `mkHome` is one builder for every user@host. Kept out of
+  `homeConfigurations` on purpose: it is not a home-manager object.
+
+A resource in the wrong tree (an `HKLM` key in `home.nix`) is an evaluation
+error naming the other tree. Both halves are applied from a Windows terminal
+with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
+or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
+generations. The docs generator does not yet build host pages for either half.
 
 `hosts/common/workstation.nix` carries the policy the two Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move
@@ -148,6 +175,8 @@ Things that are the way they are on purpose:
   properly and improves the module's error messages too. Re-declaring the
   offending option with a `defaultText` does *not* work -- `mergeOptionDecls`
   folds with `opt.options // res`, so upstream's declaration wins.
+  `nixos-update-manager` is the counter-example: its flake sets `_file` on
+  the exported module itself, so `update-manager.nix` imports it bare.
 - **Host pages are the reference's worked examples**, built from
   `definitionsWithLocations`, one entry per defining file so shared policy stays
   distinct from what a machine asked for itself. Definitions from `modules/` are
@@ -268,12 +297,12 @@ running it on top of the filter chain processes the signal twice.
 | Module | Purpose |
 |--------|---------|
 | `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) and surrounding services |
-| `stewos.neovim` | Nixvim configuration with LSP |
+| `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/config/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
-| `stewos.update-manager` | Tray daemon (`pkgs/update-manager`, Rust): on-demand flake update checks on a worktree branch, prebuilt switch via run0 (system now / next boot / home only), lock bump fast-forwarded into `main`. Ships its own status icons, and opens a failure report in a terminal -- see below |
+| `services.nixos-update-manager` | Update tray daemon from the `nixos-update-manager` flake (external, not a `stewos.*` module). `update-manager.nix` imports the upstream module and only fills in StewOS defaults -- `flakePath`, the desktop terminal, `nvim`, Claude from `llm-agents`, palette-derived icon colours -- each as `mkDefault`; hosts enable and customise it at the upstream namespace. See "update-manager" below |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -378,104 +407,43 @@ unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
 is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
 return a package.
 
-### update-manager failure reports
+### update-manager
 
-A failed check or apply records an `ErrorReport` on the worker and grows two
-menu entries -- "Open failure report" and "Troubleshoot with Claude" -- which
-also appear as buttons on the error notification. Both write the same
-deterministic Markdown to `<cache_dir>/troubleshoot.md` and open it in the
-user's terminal: one in `$EDITOR`, the other as the opening prompt of a Claude
-Code session cwd'd to the flake checkout. One writer, two ways to open it.
+The update tray daemon is **not in this repository**. It lives at
+`github:calebstewart/nixos-update-manager` (a flake input) and is consumed
+only through its `homeModules.default`, which declares
+`services.nixos-update-manager.*`. That repository's own `CLAUDE.md` carries
+the design notes -- the check/build/apply stages, the review dialog, failure
+reports, the icon grammar -- so look there before changing daemon behaviour;
+nothing about how it works is decided here.
 
-The tray menu is **contextual and exclusive**: between "Check for updates" and
-"Quit" there is at most one block, and a recorded failure beats a pending
-update. The consequence is deliberate -- a failed apply leaves `State::
-UpdatesAvailable` so its idempotence guards can resume it, but the Apply
-submenu is hidden until the next successful check clears the failure.
+What StewOS adds is `modules/home-manager/update-manager.nix`, which declares
+no options. It imports the upstream module and supplies, as `mkDefault`, the
+values upstream leaves null or required: `flakePath` (`~/git/stewos`),
+`terminal` (`config.stewos.desktop.terminal`), `editor` (`nvim`, a PATH name
+so it is the nixvim-wrapped one), `claudePackage` (from `llm-agents`, which
+tracks releases nixpkgs lags), and the nine `icons.*` colours from
+`config.colorScheme.palette` -- cool slots while the daemon works (0D
+checking, 0C building, 0E applying), warm when it is the user's turn (0A
+decide, 09 fix the checkout, 08 broke). Those defaults live here rather than
+upstream because upstream may not know about `stewos.desktop`, nix-colors or
+`llm-agents`, and they are `mkDefault` so a host overrides any of them at
+`services.nixos-update-manager.*` directly. Both Framework hosts set only
+`enable`.
 
-Things that are the way they are on purpose:
+Names to know: the unit is `nixos-update-manager.service`, state lives in
+`~/.cache/nixos-update-manager`, and the update branch is upstream's default
+`nixos-update`. The daemon refuses to check, build or apply while the checkout
+has uncommitted changes (its *Blocked* state), so after editing this repo it
+stays quiet until the work is committed -- that is the intended behaviour, not
+a fault. `packages.<system>` here no longer carries the daemon or its icons;
+they come from the input's own outputs, built against our nixpkgs through
+`follows`.
 
-- **The report is written on click, not on failure.** It quotes `git status`,
-  the branch revs and the daemon's own journal, and those are only worth having
-  as of the moment someone is about to debug them. `last_error` is likewise
-  in-memory only, unlike `PendingUpdate`: it quotes this boot's journal.
-- **The journal comes from `INVOCATION_ID`**, falling back to `-t
-  stewos-update-manager` for a bare `cargo run`. `journalctl` is deliberately
-  not in the `makeWrapper` PATH, for the same reason `run0` is not: it has to
-  match the running system.
-- **Both quoting sections are capped** (32 KiB of error, 24 KiB of log, tails
-  kept). A failed `nix build` puts its entire log into the anyhow chain *and*
-  the journal, and an unbounded report is one nobody reads.
-- **Claude gets the path in prose plus `--add-dir <cache_dir> -- <prompt>`**,
-  not an `@` reference: `@` is CLAUDE.md import syntax, and the report lives
-  outside the checkout the session is rooted in. The positional prompt (no
-  `-p`) is what starts an interactive session with it already submitted, and
-  the `--` is load-bearing -- `--add-dir` takes `<directories...>`, so without
-  it the prompt is read as another directory and the session opens empty.
-- **`editor` is a PATH-resolved string, `claudePackage` an absolute store
-  path.** The editor should be whichever `nvim` the home profile installs, not
-  a second one from the store; Claude should not depend on the unit's PATH.
-- `terminal` defaults to `config.stewos.desktop.terminal`, and with no terminal
-  configured at all the entries are never shown rather than shown broken.
-
-### update-manager icons
-
-The update-manager daemon borrows no freedesktop icon names at all. It ships
-eleven of its own: six status badges (idle, checking, up-to-date,
-updates-available, applying, error) and five menu glyphs (search, apply, report,
-troubleshoot, quit).
-Nothing is looked up by name, which is also why they survive the Qt
-platform-theme failure described under "Qt apps lose every themed icon":
-
-- the tray icon goes out as an SNI **pixmap** (ARGB32, big-endian), with
-  `IconName` deliberately left empty -- a host prefers the name whenever it can
-  resolve one, so setting both would mean our art is never drawn;
-- menu entries go out as dbusmenu **`icon-data`** (raw PNG), with `icon-name`
-  empty for the same reason;
-- notifications get an **absolute path** to the 64px PNG.
-
-**The six status icons share one silhouette: an arrow landing on a baseline.**
-That mark is the identity and must stay in every state -- a tray icon's first
-job is to say *which daemon* it belongs to, and an earlier draft that used a
-plain ring as the constant element failed at exactly that (a ring plus a
-checkmark is indistinguishable from any VPN or sync indicator). State is carried
-by three channels layered on top:
-
-| Channel | Values |
-|---|---|
-| arrowhead | stroked (settled) / solid (wants attention) |
-| baseline | solid (settled) / `4 2` dashed (busy) |
-| colour | one `base16` slot per state |
-
-Two consequences worth knowing before editing the art. The baseline sits at the
-same `y` in every state on purpose, so the glyph does not visibly jump when the
-daemon changes state. And `idle` and `up-to-date` are deliberately the same
-shape, separated only by hue -- both mean "nothing to do", and `idle` only
-exists until the first check runs. `error` is the single state that breaks the
-pattern: the arrow shrinks to ~70% to make room for an exclamation, which is
-worth the lost size there and nowhere else.
-
-`pkgs/update-manager-icons/` holds the SVG sources -- one 24px grid, all strokes
-`currentColor` -- and rasterizes them with `resvg --stylesheet`, one colour per
-argument (the six states are `Status` context, the menu glyphs are `Actions`):
-
-```nix
-pkgs.stewos.update-manager-icons.override { error = "#ff0000"; }
-```
-
-It is a **separate derivation from the daemon on purpose**. The daemon takes the
-rendered tree as a runtime path (`--icon-dir`), so a recolour re-realizes one
-`runCommand`; folding the store path into `pkgs/update-manager`'s wrapper would
-put it in that derivation's `postFixup` and make every palette change -- every
-host on a different scheme -- recompile the Rust crate.
-
-The colours themselves are module options
-(`stewos.update-manager.icons.<state>`), each defaulting to a `base16` slot of
-`config.colorScheme.palette`, because `pkgs/` may not read `config` and the
-module may. `stewos.update-manager.iconPackage` is the escape hatch, and it is
-the one that matters while the module is enabled: the unit always passes
-`--icon-dir`, so overriding `update-manager-icons` on `package` only changes the
-binary's standalone default.
+The option reference documents nothing for it: upstream's declarations sit
+outside `self.outPath`, so the declaration-path filter hides them, and there
+is no `stewos.*` option to show. The host pages still list each host's
+`services.nixos-update-manager.enable`.
 
 Stylix is imported (`modules/home-manager/default.nix`, and the NixOS and
 Darwin equivalents) but **deliberately never configured**. Adopting it would
@@ -518,7 +486,6 @@ the consumer's. `templates/nixos-single/` is a worked example.
 ### Desktop/Theming
 - `stylix` (release-26.05) - Unified theming engine
 - `nix-colors` - Color scheme management
-- `nixvim` - Neovim as Nix modules
 - `hyprsplit` - Hyprland workspace splitting plugin
 
 ### System Tools
@@ -529,6 +496,9 @@ the consumer's. `templates/nixos-single/` is a worked example.
 
 ### Personal Flakes (github:calebstewart)
 - `embermug-tray` - Ember Mug system tray app
+- `nixos-update-manager` - Update tray daemon; consumed through its
+  `homeModules.default` (`services.nixos-update-manager`), never as a package
+  here. Its own `CLAUDE.md` holds the design notes
 
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed

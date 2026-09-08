@@ -17,8 +17,6 @@
       keyboards."framework-laptop-16-keyboard-module---ansi-keyboard".capsLockEscape = true;
     };
 
-    update-manager.enable = true;
-
     git.enable = true;
     delta.enable = true;
     alacritty.enable = true;
@@ -31,6 +29,8 @@
     zoxide.enable = true;
     direnv.enable = true;
   };
+
+  services.nixos-update-manager.enable = true;
 
   home.packages = with pkgs; [
     discord

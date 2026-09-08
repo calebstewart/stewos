@@ -20,7 +20,7 @@
     ./firefox.nix
     ./ghostty.nix
     ./git.nix
-    ./neovim.nix
+    ./neovim
     ./rofi.nix
     ./update-manager.nix
     ./zoxide.nix
