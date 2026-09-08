@@ -67,6 +67,7 @@
     git.enable = true;
     git.forceSSH = true;
     neovim.enable = true;
+    alacritty.enable = true;
   };
 
   # Where this flake is checked out on the Windows side, so `winpkgs plan` etc.
