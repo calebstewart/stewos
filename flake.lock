@@ -299,11 +299,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1773553944,
-        "narHash": "sha256-/Go3jr9RsztgMNVx/JOZx7m8B2Io57X3F5ts+LjPkOg=",
+        "lastModified": 1788845323,
+        "narHash": "sha256-DUKzCoCw/rsJ72lLSOVGEVAukAY93Iwweq6WMR4/7Q4=",
         "owner": "calebstewart",
         "repo": "embermug-tray",
-        "rev": "351b87e9ab0906aba56651b0663acf76c42a7f79",
+        "rev": "edc8e276a3d25a8ae0971c82a2308c98b9dace05",
         "type": "github"
       },
       "original": {
@@ -2366,17 +2366,20 @@
     },
     "winpkgs": {
       "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1788843635,
-        "narHash": "sha256-4/BoCdLhtXzbhvSEOkjBd/kODj46AzeW5c2VBAmDjU4=",
+        "lastModified": 1788847275,
+        "narHash": "sha256-ncmwj98+3m66u8hvSCPKmDiuBBJN3ryyteIvpvH22hk=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "6ceceb7a6544eca201402ddc36fc5a2c4b2ecfad",
+        "rev": "54a5b1671e4885383df3d41948f9069cd9b0bd34",
         "type": "github"
       },
       "original": {

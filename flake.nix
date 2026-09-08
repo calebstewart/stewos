@@ -107,6 +107,7 @@
     winpkgs = {
       url = "github:calebstewart/winpkgs";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
     };
   };
 
@@ -245,9 +246,11 @@
             system = "x86_64-linux";
             specialArgs = { inherit inputs; };
             modules = [
+              ./modules/home-manager
               {
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
+		stewos.user = user;
               }
             ]
             ++ modules;

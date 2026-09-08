@@ -50,6 +50,13 @@
     webSearchInStart = false;
   };
 
+  stewos = {
+    git.enable = true;
+    git.forceSSH = true;
+
+    # neovim.enable = true;
+  };
+
   # Where this flake is checked out on the Windows side, so `winpkgs plan` etc.
   # work from any Windows terminal without naming it.
   winpkgs.cli.flake = ''%USERPROFILE%\git\stewos'';
