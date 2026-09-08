@@ -202,10 +202,16 @@
       # and apply -- not a StewOS workstation; the StewOS modules are for the
       # machines people sit at. A host adds anything more through
       # winpkgs.wsl.modules in its own configuration.nix.
+      #
+      # `homes` are the machine's windowsHomeConfigurations. A package a home
+      # declares whose winget installer is machine-wide (Alacritty, LLVM) is
+      # installed by the system on the home's behalf, since a home never
+      # elevates -- home-manager.useUserPackages, in effect.
       mkWindowsHost =
         {
           hostname,
           modules ? [ ],
+          homes ? [ ],
         }:
         inputs.winpkgs.lib.windowsSystem {
           # The system that *evaluates* -- the WSL distro on the host -- not the
@@ -216,6 +222,7 @@
           modules = [
             {
               winpkgs.name = hostname;
+              winpkgs.homes = homes;
               winpkgs.wsl = {
                 enable = true;
                 specialArgs = { inherit inputs; };
@@ -320,6 +327,7 @@
         gaming-windows = mkWindowsHost {
           hostname = "gaming-windows";
           modules = [ ./hosts/gaming-windows/configuration.nix ];
+          homes = [ self.windowsHomeConfigurations."Caleb Stewart@gaming-windows" ];
         };
       };
 

@@ -108,11 +108,11 @@ in
       })
 
       (lib.mkIf isWindows {
-        # winget, per user. Servers come through mason. treesitter builds its
-        # parsers with the tree-sitter CLI and a C compiler; the compiler is
-        # the *system* configuration's job (LLVM has only a machine-wide
-        # installer, and a home configuration never elevates) -- see
-        # hosts/gaming-windows/configuration.nix. No make, so
+        # winget. Servers come through mason. treesitter builds its parsers
+        # with the tree-sitter CLI and clang from LLVM; LLVM's installer is
+        # machine-wide, so the host's system configuration installs it on this
+        # home's behalf (winpkgs.homes), and it leaves PATH alone, so the bin
+        # directory goes on the user PATH here. No make, so
         # telescope-fzf-native is skipped and telescope uses its Lua sorter.
         home.packages = with pkgs; [
           neovim
@@ -120,7 +120,12 @@ in
           fd
           nodejs
           (winpkgs.fromWinget "tree-sitter.tree-sitter-cli")
+          (winpkgs.fromWinget {
+            id = "LLVM.LLVM";
+            scope = "machine";
+          })
         ];
+        home.sessionPath = [ ''C:\Program Files\LLVM\bin'' ];
       })
     ]
   );
