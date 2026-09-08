@@ -100,6 +100,14 @@
 
     # Discord with Vencord, configured declaratively through home-manager.
     nixcord.url = "github:4evy/nixcord";
+
+    # Declarative Windows configuration: Nix evaluates a module tree into a
+    # desired-state document, a PowerShell runtime applies it. Evaluated from
+    # the NixOS-WSL distro on the Windows machine itself.
+    winpkgs = {
+      url = "github:calebstewart/winpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -183,6 +191,38 @@
           ++ modules;
         };
 
+      # A Windows machine and the NixOS-WSL distro living on it, as one
+      # configuration. winpkgs evaluates the distro itself and exposes it as
+      # config.system.build.wsl, a full nixosConfiguration; building the Windows
+      # toplevel builds the distro too, and "activate switch" activates both.
+      #
+      # The distro is deliberately slim -- just what winpkgs needs to evaluate
+      # and apply -- not a StewOS workstation; the StewOS modules are for the
+      # machines people sit at. A host adds anything more through
+      # winpkgs.wsl.modules in its own configuration.nix.
+      mkWindowsHost =
+        {
+          hostname,
+          modules ? [ ],
+        }:
+        inputs.winpkgs.lib.windowsSystem {
+          # The system that *evaluates* -- the WSL distro on the host -- not the
+          # target, which is always Windows.
+          system = "x86_64-linux";
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            {
+              winpkgs.name = hostname;
+              winpkgs.wsl = {
+                enable = true;
+                specialArgs = { inherit inputs; };
+              };
+            }
+          ]
+          ++ modules;
+        };
+
       mkHome =
         {
           system,
@@ -228,6 +268,25 @@
       };
 
       # ----------------------------------------------------------------------
+      # Windows machines
+      #
+      # Declared here rather than inline below because each one also yields a
+      # NixOS configuration (its WSL distro), which is surfaced under
+      # nixosConfigurations so nixos-rebuild and the docs see it too.
+      # ----------------------------------------------------------------------
+
+      windowsHosts = {
+        gaming-windows = mkWindowsHost {
+          hostname = "gaming-windows";
+          modules = [ ./hosts/gaming-windows/configuration.nix ];
+        };
+      };
+
+      wslHosts = lib.mapAttrs (_name: host: host.config.system.build.wsl) (
+        lib.filterAttrs (_name: host: host.config.winpkgs.wsl.enable) windowsHosts
+      );
+
+      # ----------------------------------------------------------------------
       # Documentation
       # ----------------------------------------------------------------------
 
@@ -270,6 +329,7 @@
           name = "stewos-docs";
           runtimeInputs = [ pkgs.miniserve ];
           text = ''
+
             port="''${1:-8080}"
             echo "StewOS documentation on http://localhost:$port/"
             exec miniserve --index index.html --port "$port" ${docs}
@@ -346,7 +406,10 @@
             ./hosts/framework16/configuration.nix
           ];
         };
-      };
+      }
+      # The WSL distros of the Windows machines, under their machine's name, so
+      # "nixos-rebuild switch --flake ." inside one picks itself by hostname.
+      // wslHosts;
 
       darwinConfigurations = {
         huntress-mbp = mkDarwinHost {
@@ -355,6 +418,11 @@
           modules = [ ./hosts/huntress-mbp/configuration.nix ];
         };
       };
+
+      # Applied from the machine's own WSL distro; "switch" activates the distro
+      # and then converges Windows:
+      #   nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch
+      windowsConfigurations = windowsHosts;
 
       homeConfigurations = {
         "caleb@framework-desktop" = mkHome {

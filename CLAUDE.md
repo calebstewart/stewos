@@ -28,7 +28,8 @@ stewos/
 │   ├── common/        # Policy shared between machines
 │   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework 16 laptop
-│   └── huntress-mbp/       # Apple Silicon MacBook (work)
+│   ├── huntress-mbp/       # Apple Silicon MacBook (work)
+│   └── gaming-windows/     # Windows 11 desktop, via winpkgs (applied from its WSL distro)
 └── templates/         # Flake templates for new systems
 ```
 
@@ -77,8 +78,21 @@ the relevant `modules/{platform}/default.nix`; to add a package, add a line to
 ### Host Configuration
 
 `hosts/{hostname}/` holds configuration only. The outputs are declared in
-`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkHome` helpers defined
-there, so the full set of configurations is visible in one file.
+`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkWindowsHost` / `mkHome`
+helpers defined there, so the full set of configurations is visible in one file.
+
+`windowsConfigurations` come from the `winpkgs` input (`github:calebstewart/winpkgs`,
+nix-darwin-shaped: Nix evaluates, PowerShell applies). A Windows host is one
+configuration covering both the Windows desktop and the NixOS-WSL distro that
+lives on it: winpkgs evaluates the distro -- a deliberately slim system (NixOS-WSL,
+flakes, `git`) that is *not* a StewOS workstation and does not import
+`modules/nixos` -- and exposes it as `config.system.build.wsl`, which `flake.nix`
+also surfaces under `nixosConfigurations.<host>` for `nixos-rebuild` and the
+docs. A host extends the distro through `winpkgs.wsl.modules` in its
+`configuration.nix`. Both halves are built by one `nix build` and applied from
+the distro itself with
+`nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch`.
+The docs generator does not yet build host pages for the Windows half.
 
 `hosts/common/workstation.nix` carries the policy the two Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move
