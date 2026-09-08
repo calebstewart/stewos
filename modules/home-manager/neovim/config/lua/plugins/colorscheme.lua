@@ -1,7 +1,7 @@
 -- The system's colour scheme, as nix-colors chose it. The palette arrives
 -- through generated.lua rather than by scheme name, so a non-standard base16
--- scheme works too. Without a palette (no Nix), base16-nvim's built-in
--- catppuccin-mocha stands in.
+-- scheme works too. Without a palette (no Nix, or a home that set no
+-- colorScheme), base16-nvim's built-in catppuccin-mocha stands in.
 return {
   {
     "RRethy/base16-nvim",

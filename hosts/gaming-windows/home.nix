@@ -1,12 +1,25 @@
 # Windows 11 desktop: the *home* configuration -- this user, applied as the
 # user, never elevated. The machine's half is configuration.nix. See mkHome in
 # flake.nix.
-{ pkgs, ... }:
+{
+  inputs,
+  pkgs,
+  config,
+  ...
+}:
 {
   home.packages = with pkgs; [
     git
     ripgrep
   ];
+
+  # The same palette as every other host; stewos.neovim renders it.
+  colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
+
+  # This makes neovim use the correct configuration path instead of Windows AppData bullshit
+  home.sessionVariables = {
+    "XDG_CONFIG_HOME" = "${config.home.homeDirectory}/.config";
+  };
 
   winpkgs.theme.mode = "dark";
   winpkgs.keyboard.stickyKeysShortcut = false;
@@ -53,7 +66,6 @@
   stewos = {
     git.enable = true;
     git.forceSSH = true;
-
     neovim.enable = true;
   };
 

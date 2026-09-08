@@ -19,7 +19,12 @@ M.windows = vim.fn.has("win32") == 1
 M.mac = vim.fn.has("mac") == 1
 M.linux = not M.windows and not M.mac
 
+-- A home that never chose a colorScheme generates an empty table; treat it
+-- as no palette rather than handing base16-nvim sixteen nils.
 M.palette = generated.palette
+if M.palette and next(M.palette) == nil then
+  M.palette = nil
+end
 M.servers = generated.servers or {
   "lua_ls",
   "gopls",
