@@ -297,7 +297,7 @@ running it on top of the filter chain processes the signal twice.
 | Module | Purpose |
 |--------|---------|
 | `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) and surrounding services |
-| `stewos.neovim` | Nixvim configuration with LSP |
+| `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
@@ -486,7 +486,6 @@ the consumer's. `templates/nixos-single/` is a worked example.
 ### Desktop/Theming
 - `stylix` (release-26.05) - Unified theming engine
 - `nix-colors` - Color scheme management
-- `nixvim` - Neovim as Nix modules
 - `hyprsplit` - Hyprland workspace splitting plugin
 
 ### System Tools

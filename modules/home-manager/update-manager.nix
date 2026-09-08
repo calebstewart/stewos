@@ -27,7 +27,7 @@ in
 
       # Follows the desktop's terminal, which is the option a host already
       # sets. The editor is a PATH name on purpose, so it picks up the editor
-      # the home profile installs (the nixvim-wrapped `nvim`) instead of a
+      # the home profile installs (programs.neovim's `nvim`) instead of a
       # second one; Claude is a store path so it does not depend on the unit's
       # PATH, and comes from llm-agents rather than nixpkgs because nixpkgs
       # lags its releases.

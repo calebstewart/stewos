@@ -119,7 +119,7 @@
   programs.rbenv.enable = true;
 
   # This fails in MacOS
-  programs.nixvim.plugins.lsp.servers.mesonlsp.enable = lib.mkForce false;
+  stewos.neovim.servers.mesonlsp = false;
 
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 }

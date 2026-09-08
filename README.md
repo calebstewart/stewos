@@ -169,7 +169,7 @@ Enabled under `stewos.*` in a Home-Manager configuration.
 | Module | Description |
 |--------|-------------|
 | `desktop` | Hyprland (Linux) or Aerospace (macOS), and everything around them |
-| `neovim` | Neovim via nixvim, with LSP, completion and a full keymap set |
+| `neovim` | Neovim with a plain Lua configuration (lazy.nvim), LSP, completion and a full keymap set, the same on every platform |
 | `zsh` | Zsh with Oh-My-Posh, any-nix-shell and completion |
 | `git` | Git with SSH signing and per-directory identities |
 | `rofi` | Rofi launcher, themed through the RASI DSL |

@@ -54,10 +54,14 @@
     git.enable = true;
     git.forceSSH = true;
 
-    # neovim.enable = true;
+    neovim.enable = true;
   };
 
   # Where this flake is checked out on the Windows side, so `winpkgs plan` etc.
   # work from any Windows terminal without naming it.
   winpkgs.cli.flake = ''%USERPROFILE%\git\stewos'';
+
+  # Sets XDG_CONFIG_HOME, so Neovim (and git, starship, ...) read ~/.config on
+  # Windows too, where winpkgs puts xdg.configFile.
+  xdg.enable = true;
 }

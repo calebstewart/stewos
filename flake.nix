@@ -8,7 +8,6 @@
     nur.url = "github:nix-community/NUR";
     nix-std.url = "github:chessai/nix-std";
     nixos-hardware.url = "github:nixos/nixos-hardware";
-    nixvim.url = "github:nix-community/nixvim";
     hyprsplit.url = "github:shezdy/hyprsplit";
 
     nix-darwin = {
@@ -250,7 +249,7 @@
               {
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
-		stewos.user = user;
+                stewos.user = user;
               }
             ]
             ++ modules;
