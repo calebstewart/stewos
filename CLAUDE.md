@@ -29,7 +29,7 @@ stewos/
 │   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework 16 laptop
 │   ├── huntress-mbp/       # Apple Silicon MacBook (work)
-│   └── gaming-windows/     # Windows 11 desktop, via winpkgs (applied from its WSL distro)
+│   └── gaming-windows/     # Windows 11 desktop, via winpkgs: configuration.nix (system) + home.nix
 └── templates/         # Flake templates for new systems
 ```
 
@@ -81,18 +81,31 @@ the relevant `modules/{platform}/default.nix`; to add a package, add a line to
 `flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkWindowsHost` / `mkHome`
 helpers defined there, so the full set of configurations is visible in one file.
 
-`windowsConfigurations` come from the `winpkgs` input (`github:calebstewart/winpkgs`,
-nix-darwin-shaped: Nix evaluates, PowerShell applies). A Windows host is one
-configuration covering both the Windows desktop and the NixOS-WSL distro that
-lives on it: winpkgs evaluates the distro -- a deliberately slim system (NixOS-WSL,
-flakes, `git`) that is *not* a StewOS workstation and does not import
-`modules/nixos` -- and exposes it as `config.system.build.wsl`, which `flake.nix`
-also surfaces under `nixosConfigurations.<host>` for `nixos-rebuild` and the
-docs. A host extends the distro through `winpkgs.wsl.modules` in its
-`configuration.nix`. Both halves are built by one `nix build` and applied from
-the distro itself with
-`nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch`.
-The docs generator does not yet build host pages for the Windows half.
+Windows hosts come from the `winpkgs` input (`github:calebstewart/winpkgs`,
+nix-darwin-shaped: Nix evaluates, PowerShell applies) and are split the way
+NixOS + home-manager are:
+
+- `windowsConfigurations.<host>` (`mkWindowsHost`, `hosts/<host>/configuration.nix`)
+  is the *system* configuration -- `HKLM`, `%ProgramData%`, machine-scope
+  packages -- applied elevated, plus the NixOS-WSL distro that evaluates and
+  applies everything. winpkgs builds the distro as a deliberately slim system
+  (NixOS-WSL, flakes, `git`; *not* a StewOS workstation, it does not import
+  `modules/nixos`) and exposes it as `config.system.build.wsl`, which `flake.nix`
+  also surfaces under `nixosConfigurations.<host>`. Extend it through
+  `winpkgs.wsl.modules`.
+- `windowsHomeConfigurations."<Windows user>@<host>"` (`mkHome` with a
+  `*-windows` system and `hostname`, `hosts/<host>/home.nix`) is the *home*
+  configuration -- `HKCU`, `%USERPROFILE%`, user-scope packages, the shell --
+  applied as the user, never elevated. It speaks home-manager's names
+  (`home.file`, `xdg.configFile`, `home.packages`, `home.sessionVariables`),
+  so `mkHome` is one builder for every user@host. Kept out of
+  `homeConfigurations` on purpose: it is not a home-manager object.
+
+A resource in the wrong tree (an `HKLM` key in `home.nix`) is an evaluation
+error naming the other tree. Both halves are applied from a Windows terminal
+with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
+or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
+generations. The docs generator does not yet build host pages for either half.
 
 `hosts/common/workstation.nix` carries the policy the two Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move

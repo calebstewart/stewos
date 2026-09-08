@@ -134,10 +134,12 @@ homeConfigurations."caleb@my-host" = mkHome {
 They are thin wrappers that attach the StewOS modules, the shared `pkgs` instance
 for that system, and `inputs` via `specialArgs`. `mkHome` derives the home
 directory from the username, so the two cannot disagree. `mkWindowsHost` wraps
-the `winpkgs` input's `windowsSystem`, which also builds the machine's slim
-NixOS-WSL distro (extend it with `winpkgs.wsl.modules`), so one host declaration
-covers both; the result is applied from that distro with
-`nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch`.
+the `winpkgs` input's `windowsSystem` -- the machine, plus its slim NixOS-WSL
+distro (extend it with `winpkgs.wsl.modules`) -- and `mkHome` with a
+`*-windows` system and a `hostname` makes the matching
+`windowsHomeConfigurations."<Windows user>@<host>"`, so one builder covers every
+user@host. On the machine, `winpkgs switch` applies the distro, then the system
+half (one UAC prompt), then the home half.
 
 ## NixOS Modules
 

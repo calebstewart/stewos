@@ -191,10 +191,12 @@
           ++ modules;
         };
 
-      # A Windows machine and the NixOS-WSL distro living on it, as one
-      # configuration. winpkgs evaluates the distro itself and exposes it as
+      # A Windows machine's *system* configuration -- the machine, applied
+      # elevated -- and the NixOS-WSL distro living on it, as one configuration.
+      # winpkgs evaluates the distro itself and exposes it as
       # config.system.build.wsl, a full nixosConfiguration; building the Windows
-      # toplevel builds the distro too, and "activate switch" activates both.
+      # toplevel builds the distro too, and "winpkgs system switch" activates
+      # both. The user's half is a windowsHomeConfiguration, made by mkHome.
       #
       # The distro is deliberately slim -- just what winpkgs needs to evaluate
       # and apply -- not a StewOS workstation; the StewOS modules are for the
@@ -223,7 +225,39 @@
           ++ modules;
         };
 
+      # One user's home configuration. home-manager on Linux and macOS; on a
+      # Windows system it is a winpkgs home configuration, which speaks
+      # home-manager's names for files, variables and packages and is applied as
+      # the user by "winpkgs home switch". Windows needs the hostname too: the
+      # configuration is named "<Windows user name>@<host>", which is how the
+      # winpkgs command finds it.
       mkHome =
+        {
+          system,
+          user,
+          modules ? [ ],
+          hostname ? null,
+        }:
+        if lib.hasSuffix "windows" system then
+          assert lib.assertMsg (hostname != null) "mkHome: a Windows home configuration needs `hostname`";
+          inputs.winpkgs.lib.homeConfiguration {
+            # The system that evaluates -- the WSL distro -- not the target.
+            system = "x86_64-linux";
+            specialArgs = { inherit inputs; };
+            modules = [
+              {
+                winpkgs.name = "${user.username}@${hostname}";
+                home.username = user.username;
+              }
+            ]
+            ++ modules;
+          }
+        else
+          mkHomeManager {
+            inherit system user modules;
+          };
+
+      mkHomeManager =
         {
           system,
           user,
@@ -265,6 +299,11 @@
         fullname = "Caleb Stewart";
         email = "caleb.stewart94@gmail.com";
         aliases.personal.email = "caleb.stewart94@gmail.com";
+      };
+
+      # The Windows account name is the display name, spaces included.
+      calebWindows = caleb // {
+        username = "Caleb Stewart";
       };
 
       # ----------------------------------------------------------------------
@@ -419,10 +458,20 @@
         };
       };
 
-      # Applied from the machine's own WSL distro; "switch" activates the distro
-      # and then converges Windows:
-      #   nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch
+      # The machine half of each Windows host, applied elevated from its own WSL
+      # distro: `winpkgs system switch` (or, the first time,
+      # nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch).
       windowsConfigurations = windowsHosts;
+
+      # The user half: `winpkgs home switch`. Named <Windows user>@<host>.
+      windowsHomeConfigurations = {
+        "Caleb Stewart@gaming-windows" = mkHome {
+          system = "x86_64-windows";
+          hostname = "gaming-windows";
+          user = calebWindows;
+          modules = [ ./hosts/gaming-windows/home.nix ];
+        };
+      };
 
       homeConfigurations = {
         "caleb@framework-desktop" = mkHome {
