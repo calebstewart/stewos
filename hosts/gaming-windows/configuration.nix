@@ -6,6 +6,7 @@
   # Windows system settings
   windows = {
     developer.developerMode = true;
+    userChoiceProtection.enable = false;
 
     # Machine-wide policy; the per-user privacy settings are in home.nix.
     privacy = {
