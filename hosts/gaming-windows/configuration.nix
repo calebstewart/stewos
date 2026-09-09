@@ -31,6 +31,24 @@
     fastStartup = false;
   };
 
+  time = {
+    timeZone = "America/Chicago";
+    hardwareClockInLocalTime = false;
+    autoTimeZone = false;
+
+    ntp = {
+      enable = true;
+      servers = ["time.cloudflare.com" "time.nist.gov"];
+      pollInterval = 3600;
+      maxCorrection = "unlimited";
+    };
+  };
+
+  security.sudo = {
+    enable = true;
+    mode = "normal";
+  };
+
   # The distro is winpkgs' slim base (NixOS-WSL, flakes, git) plus whatever goes
   # here. Only the state version so far.
   wsl.modules = [

@@ -94,6 +94,8 @@ in {
     git.forceSSH = true;
     neovim.enable = true;
     alacritty.enable = true;
+    eza.enable = true;
+    zoxide.enable = true;
   };
 
   # Sets XDG_CONFIG_HOME, so Neovim (and git, starship, ...) read ~/.config on
@@ -242,6 +244,8 @@ in {
 
   # Focus follows the mouse; masir only focuses windows komorebi manages.
   programs.masir.enable = true;
+
+  programs.gh.enable = true;
 
   programs.komorebi = {
     enable = true;
