@@ -11,20 +11,20 @@ in
 
       settings = {
         window = {
-          opacity = 0.9;
-          blur = true;
-          dynamic_title = true;
-          decorations = "None";
+          opacity = lib.mkDefault 0.9;
+          blur = lib.mkDefault true;
+          dynamic_title = lib.mkDefault true;
+          decorations = lib.mkDefault "none";
 
-          padding.x = 10;
-          padding.y = 10;
+          padding.x = lib.mkDefault 10;
+          padding.y = lib.mkDefault 10;
         };
 
         font = {
-          normal.family = "JetBrainsMono Nerd Font Mono";
+          normal.family = lib.mkDefault "JetBrainsMono Nerd Font Mono";
         };
 
-        colors = with config.colorScheme.palette; {
+        colors = lib.mkDefault (with config.colorScheme.palette; {
           transparent_background_colors = true;
 
           primary = {
@@ -42,7 +42,7 @@ in
             cyan = "#${base0C}";
             white = "#${base05}";
           };
-        };
+        });
       };
     };
   };
