@@ -75,6 +75,12 @@ in {
       tips = false;
       webSearchInStart = false;
     };
+
+    # Pointer/Cursor
+    pointer = {
+      style = "black";
+      size = "normal";
+    };
   };
 
   # Shared StewOS configurations we opt into
@@ -104,5 +110,12 @@ in {
   programs.alacritty.settings = {
     window.decorations = "Buttonless";
     window.startup_mode = "windowed";
+  };
+
+  programs.windows-terminal = {
+    enable = true;
+    settings.profiles.defaults.font.face = "JetBrainsMono Nerd Font Mono";
+    settings.copyOnSelect = true;
+    base16 = { palette = config.colorScheme.palette; name = "Catppuccin Mocha"; };
   };
 }

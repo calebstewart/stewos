@@ -19,6 +19,16 @@
     };
   };
 
+  power = {
+    plan = "balanced";
+    sleep.computer = "never";
+    sleep.display =  30;
+    sleep.harddisk = "never";
+    buttons.power = "shutdown";
+    hibernation = false;
+    fastStartup = false;
+  };
+
   # The distro is winpkgs' slim base (NixOS-WSL, flakes, git) plus whatever goes
   # here. Only the state version so far.
   wsl.modules = [
