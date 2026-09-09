@@ -17,6 +17,8 @@
       # AMD User Experience Program
       StartAUEP = null;
     };
+
+    keyboard.lockShortcut = false;
   };
 
   power = {

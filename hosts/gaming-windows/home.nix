@@ -12,8 +12,6 @@ in {
   home.packages = with pkgs; [
     git
     ripgrep
-    # The terminal font stewos.alacritty asks for; a font in home.packages is
-    # installed for this user from its files, as on the Linux hosts.
     nerd-fonts.jetbrains-mono
   ];
 
@@ -117,5 +115,54 @@ in {
     settings.profiles.defaults.font.face = "JetBrainsMono Nerd Font Mono";
     settings.copyOnSelect = true;
     base16 = { palette = config.colorScheme.palette; name = "Catppuccin Mocha"; };
+  };
+
+  programs.whkd = {
+    enable = true;
+    shell = "pwsh";                  # your current file says powershell; pwsh is on the machine
+    pause = "alt + shift + p";       # toggles every other binding
+
+    keybindings = {
+      # whkd reads whkdrc once: after a `winpkgs home switch`, press this.
+      "alt + o" = "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
+      "alt + shift + o" = "komorebic reload-configuration";
+      "alt + i" = "komorebic toggle-shortcuts";
+
+      # focus a window if open, else launch ($wshell is whkd's WScript.Shell)
+      "alt + return" = ''Start-Process "C:\Program Files\Alacritty\alacritty.exe"'';
+
+      "alt + q" = "komorebic close";
+      "alt + m" = "komorebic minimize";
+
+      # focus
+      "alt + h" = "komorebic focus left";
+      "alt + j" = "komorebic focus down";
+      "alt + k" = "komorebic focus up";
+      "alt + l" = "komorebic focus right";
+      "alt + shift + oem_4" = "komorebic cycle-focus previous";   # oem_4 is [
+      "alt + shift + oem_6" = "komorebic cycle-focus next";       # oem_6 is ]
+
+      # move
+      "alt + shift + h" = "komorebic move left";
+      "alt + shift + j" = "komorebic move down";
+      "alt + shift + k" = "komorebic move up";
+      "alt + shift + l" = "komorebic move right";
+      "alt + shift + return" = "komorebic promote";
+
+      # stack
+      "alt + left" = "komorebic stack left";
+      "alt + down" = "komorebic stack down";
+      "alt + up" = "komorebic stack up";
+      "alt + right" = "komorebic stack right";
+      "alt + oem_1" = "komorebic unstack";                # oem_1 is ;
+      "alt + oem_4" = "komorebic cycle-stack previous";
+      "alt + oem_6" = "komorebic cycle-stack next";
+
+      # per application: close everything with alt+q except Chrome, which keeps the keys
+      "alt + w" = {
+        Default = "komorebic close";
+        "Google Chrome" = "Ignore";
+      };
+    };
   };
 }
