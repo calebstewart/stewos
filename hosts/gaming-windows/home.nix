@@ -6,8 +6,9 @@
   pkgs,
   config,
   ...
-}:
-{
+}: let
+  winpkgs = inputs.winpkgs;
+in {
   home.packages = with pkgs; [
     git
     ripgrep
@@ -21,8 +22,20 @@
 
   # Windows system settings
   windows = {
-    theme.mode = "dark";
     keyboard.stickyKeysShortcut = false;
+
+    theme = {
+      mode = "dark";
+      wallpaper.image = config.stewos.desktop.wallpaper;
+      accentColor = "#${config.colorScheme.palette.base0D}";
+      background = "#${config.colorScheme.palette.base00}";
+      accentColorInactive = "#${config.colorScheme.palette.base02}";
+      accentOnStartAndTaskbar = true;
+      accentOnTitleBars = true;
+    };
+    
+    # Set the default console (ConHost) color scheme
+    console.base16 = config.colorScheme.palette;
 
     # Configure the task bar
     taskbar = {
