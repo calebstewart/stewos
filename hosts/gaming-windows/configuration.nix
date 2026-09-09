@@ -12,6 +12,11 @@
       activityFeed = false;
       telemetry = "required";
     };
+
+    startup = {
+      # AMD User Experience Program
+      StartAUEP = null;
+    };
   };
 
   # The distro is winpkgs' slim base (NixOS-WSL, flakes, git) plus whatever goes

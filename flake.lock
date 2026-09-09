@@ -2300,11 +2300,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788930898,
-        "narHash": "sha256-aCJGTpU2bINqY5N54h60+cI0x7U+AQp+Tj+sorauqJ4=",
+        "lastModified": 1788931310,
+        "narHash": "sha256-R9yVsqApkkBV4gbL0/c5hEH3xUMxPVnONguT/CSzYHA=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "ccf748364a733e2f9683c822af85be3d0c74f2fd",
+        "rev": "0e478f0cb0ffe08729fed51c417f51b2b8e48f04",
         "type": "github"
       },
       "original": {

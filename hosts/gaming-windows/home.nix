@@ -37,6 +37,12 @@ in {
     # Set the default console (ConHost) color scheme
     console.base16 = config.colorScheme.palette;
 
+    # Disable some default or unwanted auto-start entries
+    startup = {
+      OneDrive = null;
+      "MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
+    };
+
     # Configure the task bar
     taskbar = {
       alignment = "left";
