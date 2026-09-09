@@ -75,6 +75,13 @@
       flake = false;
     };
 
+    # komorebi's community list of applications that need special handling
+    # (ignore rules for overlays and installers, tray and layered apps).
+    komorebi-asc = {
+      url = "github:LGUG2Z/komorebi-application-specific-configuration";
+      flake = false;
+    };
+
     nh = {
       url = "github:nix-community/nh";
       inputs.nixpkgs.follows = "nixpkgs";

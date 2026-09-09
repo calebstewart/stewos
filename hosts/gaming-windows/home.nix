@@ -17,6 +17,9 @@ in {
     thide # hides the taskbar; alt + b brings it back
   ];
 
+  # Install packages explicitly from winget
+  winget.packages = [ "Fastfetch-cli.Fastfetch" ];
+
   # The same palette as every other host; stewos.neovim renders it.
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
@@ -197,6 +200,7 @@ in {
         "alt + return" = ''Start-Process "C:\Program Files\Alacritty\alacritty.exe" -WorkingDirectory $Env:USERPROFILE'';
 
         "alt + d" = config.programs.flow-launcher.showCommand;
+        "alt + shift + r" = "Start-Process ms-screenclip:";   # rectangular screen capture, as Print Screen does
         "alt + b" = ''& "$Env:LOCALAPPDATA\Programs\thide\thide.exe" toggle'';   # show or hide the taskbar
         "alt + q" = "komorebic close";
         "alt + m" = "komorebic minimize";
@@ -243,6 +247,10 @@ in {
     enable = true;
 
     base16.palette = config.colorScheme.palette;
+
+    # The community application rules (a pinned flake input): what makes the
+    # Snipping Tool overlay, installers and tray apps float or be ignored.
+    applications = "${inputs.komorebi-asc}/applications.json";
 
     settings = {
       # Focus follows the mouse instead (programs.masir, above).

@@ -1274,6 +1274,22 @@
         "type": "github"
       }
     },
+    "komorebi-asc": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784218402,
+        "narHash": "sha256-C5JzxCXeT/YLy6Cc+JHo9pmqbgOMJ7NPN+TITqOMfEQ=",
+        "owner": "LGUG2Z",
+        "repo": "komorebi-application-specific-configuration",
+        "rev": "e647fc15970964777dedbb4ba79d5e8547d722fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "LGUG2Z",
+        "repo": "komorebi-application-specific-configuration",
+        "type": "github"
+      }
+    },
     "lanzaboote": {
       "inputs": {
         "crane": "crane",
@@ -1938,6 +1954,7 @@
         "hyprpolkitagent": "hyprpolkitagent",
         "hyprqt6engine": "hyprqt6engine",
         "hyprsplit": "hyprsplit",
+        "komorebi-asc": "komorebi-asc",
         "lanzaboote": "lanzaboote",
         "llm-agents": "llm-agents",
         "mac-app-util": "mac-app-util",
@@ -2300,11 +2317,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788944886,
-        "narHash": "sha256-IAey5N9Nh6vxOifGuzqmZm/Pq3H9tIOuhX8JKKS4YqM=",
+        "lastModified": 1788947550,
+        "narHash": "sha256-9Nya7QIDl2n+qiv9G28THaT3JvCkVW+NjMgGDLKLGjo=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "eb7c36734b742998fe8705c2dcc61ece57faea60",
+        "rev": "5e424ce96cdf4bad3f2123d2e65ec05e964372d0",
         "type": "github"
       },
       "original": {
