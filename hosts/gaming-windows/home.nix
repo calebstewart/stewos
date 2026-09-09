@@ -109,9 +109,33 @@ in {
     };
   };
 
-  programs.alacritty.settings = {
-    window.decorations = "Buttonless";
-    window.startup_mode = "windowed";
+  # Alacritty's built-in default shell on Windows is Windows PowerShell 5.1;
+  # run pwsh 7, which programs.powershell below configures.
+  programs.alacritty.settings.terminal.shell = {
+    program = "pwsh";
+    args = [ "-NoLogo" ];
+  };
+
+  # The prompt: home-manager's own module; winpkgs installs it from winget and
+  # hooks it into the PowerShell profile below.
+  programs.oh-my-posh = {
+    enable = true;
+    useTheme = "catppuccin_mocha";
+  };
+
+  programs.powershell = {
+    enable = true;
+    psReadLine.options = {
+      EditMode = "Emacs";
+      PredictionSource = "History";
+      PredictionViewStyle = "ListView";
+      HistoryNoDuplicates = true;
+    };
+    shellAliases = {
+      g = "git";
+      ll = "Get-ChildItem -Force";
+      vim = "nvim";
+    };
   };
 
   programs.windows-terminal = {
@@ -170,7 +194,7 @@ in {
         "alt + i" = "komorebic toggle-shortcuts";
 
         # focus a window if open, else launch ($wshell is whkd's WScript.Shell)
-        "alt + return" = ''Start-Process "C:\Program Files\Alacritty\alacritty.exe"'';
+        "alt + return" = ''Start-Process "C:\Program Files\Alacritty\alacritty.exe" -WorkingDirectory $Env:USERPROFILE'';
 
         "alt + d" = config.programs.flow-launcher.showCommand;
         "alt + b" = ''& "$Env:LOCALAPPDATA\Programs\thide\thide.exe" toggle'';   # show or hide the taskbar
