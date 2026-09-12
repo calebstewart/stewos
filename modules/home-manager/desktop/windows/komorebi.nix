@@ -29,20 +29,40 @@ in
         # ignored.
         applications = lib.mkDefault "${inputs.komorebi-asc}/applications.json";
 
-        settings = lib.mapAttrs (_: lib.mkDefault) {
-          # Focus follows the mouse instead (masir, ./default.nix).
-          mouse_follows_focus = false;
-          window_hiding_behaviour = "Cloak";
-          cross_monitor_move_behaviour = "Insert";
+        settings = lib.mkMerge [
+          (lib.mapAttrs (_: lib.mkDefault) {
+            # Focus follows the mouse instead (masir, ./default.nix).
+            mouse_follows_focus = false;
+            window_hiding_behaviour = "Cloak";
+            cross_monitor_move_behaviour = "Insert";
 
-          # The same gaps as Aerospace's.
-          default_workspace_padding = 5;
-          default_container_padding = 5;
+            # The same gaps as Aerospace's.
+            default_workspace_padding = 5;
+            default_container_padding = 5;
 
-          border = true;
-          border_width = 1;
-          border_offset = -1;
-        };
+            border = true;
+            border_width = 1;
+            border_offset = -1;
+          })
+
+          {
+            # Flow Launcher (./default.nix), which the community rules have no
+            # entry for. Its confirmations (log off, restart, ...) are WPF
+            # windows titled with their own prompt text and sharing an
+            # HwndWrapper class with everything else it opens, so nothing
+            # narrower than the exe picks them out. The launcher itself is
+            # never managed; the settings window floats too. Not mkDefault, so
+            # a host's own floating_applications add to this rather than
+            # replace it.
+            floating_applications = lib.mkIf config.programs.flow-launcher.enable [
+              {
+                kind = "Exe";
+                id = "Flow.Launcher.exe";
+                matching_strategy = "Equals";
+              }
+            ];
+          }
+        ];
 
         bar = {
           enable = lib.mkDefault true;
