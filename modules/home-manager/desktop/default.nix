@@ -1,10 +1,10 @@
 # Graphical desktop.
 #
 # ./options.nix declares the whole settings surface and says nothing about how
-# it is delivered; ./linux and ./darwin each implement that surface for their
-# platform. This file holds only what is genuinely common to both, plus the
-# checks that a binding is well formed before either backend tries to render
-# it.
+# it is delivered; ./linux, ./darwin and ./windows each implement that surface
+# for their platform. This file holds only what is genuinely common to all of
+# them, plus the checks that a binding is well formed before any backend tries
+# to render it.
 {
   pkgs,
   lib,
@@ -48,6 +48,7 @@ in
 
     ./linux
     ./darwin
+    ./windows
   ];
 
   config = lib.mkIf cfg.enable {
@@ -61,12 +62,14 @@ in
       }
     ];
 
+    # OpenMoji is built with nanoemoji, an hours-long job winpkgs will not
+    # cross-build for Windows, which has an emoji font of its own anyway.
     home.packages = [
       cfg.fonts.ui.package
       cfg.fonts.monospace.package
-      pkgs.openmoji-color
-      pkgs.nerd-fonts.jetbrains-mono
-    ];
+    ]
+    ++ lib.optional (!pkgs.stdenv.hostPlatform.isWindows) pkgs.openmoji-color
+    ++ [ pkgs.nerd-fonts.jetbrains-mono ];
 
     fonts.fontconfig = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
       enable = true;

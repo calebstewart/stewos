@@ -296,7 +296,7 @@ running it on top of the filter chain processes the signal twice.
 
 | Module | Purpose |
 |--------|---------|
-| `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) and surrounding services |
+| `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) / komorebi (Windows) and surrounding services |
 | `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/config/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
 | `stewos.zsh` | Shell with Oh-My-Posh |
 | `stewos.git` | Git with SSH signing and per-directory identities |
@@ -316,13 +316,23 @@ desktop/
 ├── vocabulary.nix# the modifier/action/direction lists the options are typed against
 ├── default.nix   # imports + cross-platform config + binding shape assertions
 ├── linux/        # hyprland, style, bindings, theme, polkit, xdg
-└── darwin/       # aerospace, karabiner, autoraise, raycast
+├── darwin/       # aerospace, karabiner, autoraise, raycast
+└── windows/      # komorebi, bindings (whkd), theme; flow-launcher, masir
 ```
 
-Both platform directories are imported unconditionally and every file guards
-its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin}`. Do not switch
-this to conditional `imports` -- deciding what to import from `pkgs.stdenv`
-risks a recursion the module system cannot see through.
+All three platform directories are imported unconditionally and every file
+guards its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin,Windows}`.
+Do not switch this to conditional `imports` -- deciding what to import from
+`pkgs.stdenv` risks a recursion the module system cannot see through.
+
+`windows/` carries one guard more: `lib.optionalAttrs (options ? windows)`
+around the whole `config`. `programs.komorebi`, `programs.whkd`, `windows.*` and
+the rest are winpkgs' options and exist only in a winpkgs home, and a definition
+of an undeclared option is an error even under a false `mkIf` -- without the
+guard the Linux and macOS homes stop evaluating. Test `options`, never `pkgs`,
+for the same recursion reason as above. A winpkgs home does evaluate
+home-manager's own modules, so `pkgs.stdenv.hostPlatform.isWindows` is true
+there and the Linux/macOS backends switch themselves off without help.
 
 Options at `stewos.desktop`:
 - `monitors` - List of monitor configs (description, resolution, position, scale); Linux
@@ -331,9 +341,13 @@ Options at `stewos.desktop`:
 - `modifier` - Global keybinding modifier prefix, enum `SUPER`/`ALT`/`CTRL`/`SHIFT` (default `SUPER`)
 - `terminal` - Terminal package (default Alacritty)
 - `wallpaper` - Path to wallpaper image
-- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit
+- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit.
+  `monospace` defaults to `nerd-fonts.jetbrains-mono` on Windows: nixpkgs builds
+  plain `jetbrains-mono` from source, which winpkgs cannot install
 - `startLocked` - Bring the session up locked; Linux
-- `capsLockEscape` - Send Escape when Caps Lock is pressed
+- `capsLockEscape` - Send Escape when Caps Lock is pressed; Linux and macOS.
+  Windows asserts: its only remap is the machine-wide `windows.keyboard.remap`,
+  which belongs in the host's `configuration.nix`
 - `swapCommandAlt` - Swap left Command and left Alt; macOS
 
 `lockCommand` still exists but is `internal` -- the platform backend sets it,
@@ -342,20 +356,46 @@ no host should.
 **The option surface deliberately names no compositor.** A binding is
 `{key, modifiers, useModifier, platforms, action | command}` where `key` and
 `action` are neutral names. Each backend (`linux/bindings.nix`,
-`darwin/aerospace.nix`) owns three tables -- modifiers, keys, actions --
-translating those names into its own vocabulary, and asserts on any it does not
-implement. Adding an action means adding it to `vocabulary.nix` plus at least
-one backend's `actions` table. Keep Hyprland and Rofi vocabulary out of
-`options.nix`.
+`darwin/aerospace.nix`, `windows/bindings.nix`) owns three tables -- modifiers,
+keys, actions -- translating those names into its own vocabulary, and asserts
+on any it does not implement. Adding an action means adding it to
+`vocabulary.nix` plus at least one backend's `actions` table. Keep Hyprland,
+Rofi, whkd and komorebi vocabulary out of `options.nix`.
 
 Each backend contributes its default keymap *through* `stewos.desktop.bindings`
 with per-field `mkDefault`, which is what lets a host retarget or disable a
 StewOS-provided binding by name. Do not go back to merging a private
 `defaultBindings` in at render time.
 
-The two keymaps genuinely diverge on `h/j/k/l`: Linux focuses/moves a *window*,
-macOS focuses/moves between *monitors*. That is why the vocabulary has separate
-window-directional and monitor-directional actions -- it is not redundancy.
+The keymaps genuinely diverge on `h/j/k/l`: Linux and Windows focus/move a
+*window*, macOS focuses/moves between *monitors*. That is why the vocabulary has
+separate window-directional and monitor-directional actions -- it is not
+redundancy.
+
+The Windows keymap (`windows/bindings.nix`) keeps the Linux keys wherever both
+mean the same thing -- workspaces on the digits, `h/j/k/l`, `q`, `d`, `enter`,
+`shift+r` -- and adds komorebi's stacks, cycling and "send" (move without
+following) on keys Linux leaves free. Things to know:
+
+- **Workspaces stop at 5**, not 10: komorebi keeps five per monitor
+  (`hosts/gaming-windows/home.nix` declares them), and `workspace = N` means
+  the Nth on the *focused* monitor, as hyprsplit and Aerospace do it.
+- **A `command` is found through `pkgs.winpkgs.getExe`**, not `mkCommandLine`:
+  there is no store, so the package must say where its installer puts it
+  (winpkgs' `programDir`). One that does not fails evaluation by name; add a
+  `programDir` in winpkgs rather than hand-writing a path here. Commands go
+  through `Start-Process` because whkd feeds every binding to one long-lived
+  pwsh session, where anything that did not return at once would stall every
+  binding after it.
+- **The whkd restart binding (`reload-hotkeys`) is only contributed while whkd
+  runs from the Run key.** Under `programs.whkd.service.enable` a changed whkdrc
+  restarts it already, and killing it by hand would race the service manager
+  into running two.
+- **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
+  directive, not a binding; it is counted by the duplicate-combination
+  assertion all the same.
+- Win+L never reaches a hotkey daemon; `windows.keyboard.lockShortcut = false`
+  in the system configuration frees it, if a host wants `SUPER`.
 
 The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
 otherwise wire up individually: the locker, idle handling, notifications, the
