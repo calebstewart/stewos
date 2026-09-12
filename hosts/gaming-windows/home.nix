@@ -30,9 +30,8 @@
     # Disable some default or unwanted auto-start entries
     startup = {
       OneDrive = null;
-      # thide in tray mode hides the taskbar as it starts; the "taskbar"
-      # binding below toggles it.
-      THide = ''"%LOCALAPPDATA%\Programs\thide\thide.exe"'';
+      # steward runs thide now (systemd.user.services.thide, below).
+      THide = null;
       "MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
     };
 
@@ -158,10 +157,17 @@
 
   programs.gh.enable = true;
 
+  # steward (installed by configuration.nix) runs the tiling daemons instead
+  # of the Run key; see the tiling group below.
+  programs.whkd.service.enable = true;
+  programs.masir.service.enable = true;
+
   # What the desktop leaves to the machine: its two monitors. Five workspaces
   # on each, which the workspace keys reach by position on whichever monitor
   # has focus, and a bar on each (komorebi's monitor indices).
   programs.komorebi = {
+    service.enable = true; # komorebi and each bar, run by steward
+
     settings = {
       monitors =
         let
@@ -192,4 +198,45 @@
       "1" = { };
     };
   };
+
+  # The daemons steward runs (installed by configuration.nix), from sign-in
+  # until sign-out, brought back when they die. Written to
+  # %APPDATA%\steward\units; an apply that changes them switches.
+  #
+  # komorebi, its bars, whkd and masir are one group: `stewctl stop
+  # tiling.target` puts them all away -- komorebi giving back the windows it
+  # hid -- and `stewctl start tiling.target` brings them back.
+  systemd.user.targets.tiling = {
+    Unit.Description = "Tiling window management: komorebi and its bars, whkd, masir";
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services =
+    lib.genAttrs [ "komorebi" "whkd" "masir" ] (_: {
+      Unit.PartOf = [ "tiling.target" ];
+      Install.WantedBy = [ "tiling.target" ];
+    })
+    // {
+      # thide in tray mode hides the taskbar while it runs; the "taskbar"
+      # binding toggles it, and `thide stop` gives the taskbar back.
+      # home.homeDirectory is the real profile directory once winpkgs writes
+      # the unit.
+      thide =
+        let
+          exe = "${config.home.homeDirectory}/AppData/Local/Programs/thide/thide.exe";
+        in
+        {
+          Unit = {
+            Description = "thide, hides the taskbar";
+            After = [ "tray.target" ];
+            # A new thide is installed over the running one: restart onto it.
+            X-Restart-Triggers = [ pkgs.thide ];
+          };
+          Service = {
+            ExecStart = ''"${exe}"'';
+            ExecStop = ''"${exe}" stop'';
+          };
+          Install.WantedBy = [ "tray.target" ];
+        };
+    };
 }
