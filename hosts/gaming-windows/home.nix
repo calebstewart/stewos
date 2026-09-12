@@ -43,8 +43,8 @@ in {
     # Disable some default or unwanted auto-start entries
     startup = {
       OneDrive = null;
-      # thide in tray mode hides the taskbar as it starts; alt + b toggles it.
-      THide = ''"%LOCALAPPDATA%\Programs\thide\thide.exe"'';
+      # steward runs thide now (systemd.user.services.thide, below).
+      THide = null;
       "MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
     };
 
@@ -152,6 +152,7 @@ in {
 
   programs.whkd = {
     enable = true;
+    service.enable = true;           # steward runs it; see the tiling group below
     shell = "pwsh";                  # your current file says powershell; pwsh is on the machine
     pause = "alt + shift + p";       # game mode: silences every other binding ...
     pauseHook = "komorebic toggle-pause";  # ... and pauses tiling; again to resume both
@@ -193,8 +194,9 @@ in {
         "alt + w" = "komorebic cycle-monitor next";
         "alt + shift + w" = "komorebic cycle-move-to-monitor next";
 
-        # whkd reads whkdrc once: after a `winpkgs home switch`, press this.
-        "alt + o" = "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
+        # whkd reads whkdrc once; an apply that changes it restarts whkd, and
+        # this does it by hand.
+        "alt + o" = "stewctl restart whkd";
         "alt + shift + o" = "komorebic reload-configuration";
         "alt + i" = "komorebic toggle-shortcuts";
 
@@ -243,12 +245,16 @@ in {
   };
 
   # Focus follows the mouse; masir only focuses windows komorebi manages.
-  programs.masir.enable = true;
+  programs.masir = {
+    enable = true;
+    service.enable = true;
+  };
 
   programs.gh.enable = true;
 
   programs.komorebi = {
     enable = true;
+    service.enable = true;           # komorebi and each bar, run by steward
 
     base16.palette = config.colorScheme.palette;
 
@@ -336,4 +342,44 @@ in {
       };
     };
   };
+
+  # The daemons steward runs (installed by configuration.nix), from sign-in
+  # until sign-out, brought back when they die. Written to
+  # %APPDATA%\steward\units; an apply that changes them switches.
+  #
+  # komorebi, its bars, whkd and masir are one group: `stewctl stop
+  # tiling.target` puts them all away -- komorebi giving back the windows it
+  # hid -- and `stewctl start tiling.target` brings them back.
+  systemd.user.targets.tiling = {
+    Unit.Description = "Tiling window management: komorebi and its bars, whkd, masir";
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.services =
+    lib.genAttrs [ "komorebi" "whkd" "masir" ] (_: {
+      Unit.PartOf = [ "tiling.target" ];
+      Install.WantedBy = [ "tiling.target" ];
+    })
+    // {
+      # thide in tray mode hides the taskbar while it runs; alt + b toggles
+      # it, and `thide stop` gives the taskbar back. home.homeDirectory is
+      # the real profile directory once winpkgs writes the unit.
+      thide =
+        let
+          exe = "${config.home.homeDirectory}/AppData/Local/Programs/thide/thide.exe";
+        in
+        {
+          Unit = {
+            Description = "thide, hides the taskbar";
+            After = [ "tray.target" ];
+            # A new thide is installed over the running one: restart onto it.
+            X-Restart-Triggers = [ pkgs.thide ];
+          };
+          Service = {
+            ExecStart = ''"${exe}"'';
+            ExecStop = ''"${exe}" stop'';
+          };
+          Install.WantedBy = [ "tray.target" ];
+        };
+    };
 }
