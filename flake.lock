@@ -1968,6 +1968,7 @@
         "nixpkgs": "nixpkgs_10",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nur": "nur",
+        "steward": "steward",
         "stylix": "stylix",
         "vfio-hooks": "vfio-hooks",
         "winpkgs": "winpkgs"
@@ -1991,6 +1992,29 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "steward": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "winpkgs": [
+          "winpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789233127,
+        "narHash": "sha256-eJl//RMIsu2cWCZU5ZegQT3kG7ypiPgkGbKYnnjqNB4=",
+        "owner": "calebstewart",
+        "repo": "steward",
+        "rev": "056c685b6153232822ed6205c4f6a7740b1d3824",
+        "type": "github"
+      },
+      "original": {
+        "owner": "calebstewart",
+        "repo": "steward",
         "type": "github"
       }
     },
@@ -2317,11 +2341,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788991510,
-        "narHash": "sha256-DfcHkDVr8/fbrEg0ANVhFzSrcdanhfC/ftyJuX78XP8=",
+        "lastModified": 1789233081,
+        "narHash": "sha256-3knqIeDrAwPuH56wxGZq4mxyru4lcOOsuWsAqU3C0/w=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "3a56485020e66428cefa392a2b4ee6c8ffad5700",
+        "rev": "b24768f061d8e73e3ecd517ef27bc81adcf2256f",
         "type": "github"
       },
       "original": {

@@ -115,6 +115,16 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+
+    # A per-user service manager for Windows, in the spirit of systemd --user:
+    # started at sign-in, it keeps the desktop's daemons running. Its winpkgs
+    # modules install it (system) and write each user's units from
+    # home-manager's systemd.user.services (home).
+    steward = {
+      url = "github:calebstewart/steward";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.winpkgs.follows = "winpkgs";
+    };
   };
 
   outputs =
@@ -227,6 +237,8 @@
           specialArgs = { inherit inputs; };
 
           modules = [
+            # Inert until a host sets services.steward.enable.
+            inputs.steward.windowsModules.system
             {
               networking.hostName = hostname;
               winpkgs.homes = homes;
@@ -260,6 +272,9 @@
             specialArgs = { inherit inputs; };
             modules = [
               ./modules/home-manager
+              # systemd.user.services become steward's units, which the
+              # system's steward runs; an apply that changes them switches.
+              inputs.steward.windowsModules.home
               {
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
