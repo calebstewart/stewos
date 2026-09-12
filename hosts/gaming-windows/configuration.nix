@@ -22,14 +22,10 @@
     keyboard.lockShortcut = false;
   };
 
-  # steward in C:\Program Files\steward, registered as a per-user service:
-  # every sign-in starts a manager that runs the units home.nix declares.
-  services.steward.enable = true;
-
   power = {
     plan = "balanced";
     sleep.computer = "never";
-    sleep.display =  30;
+    sleep.display = 30;
     sleep.harddisk = "never";
     buttons.power = "shutdown";
     hibernation = false;
@@ -43,7 +39,10 @@
 
     ntp = {
       enable = true;
-      servers = ["time.cloudflare.com" "time.nist.gov"];
+      servers = [
+        "time.cloudflare.com"
+        "time.nist.gov"
+      ];
       pollInterval = 3600;
       maxCorrection = "unlimited";
     };
