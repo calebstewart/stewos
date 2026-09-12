@@ -288,6 +288,19 @@ in {
           matching_strategy = "Equals";
         }
       ];
+
+      # Flow Launcher's confirmations (log off, restart, ...) are WPF windows
+      # titled with their own prompt text and sharing an HwndWrapper class with
+      # everything else it opens, so nothing narrower than the exe picks them
+      # out. The launcher itself is never managed, so this also floats the
+      # settings window. The community rules have no Flow Launcher entry.
+      floating_applications = [
+        {
+          kind = "Exe";
+          id = "Flow.Launcher.exe";
+          matching_strategy = "Equals";
+        }
+      ];
     };
 
     bar = {
