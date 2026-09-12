@@ -1,9 +1,10 @@
 # The whole "stewos.desktop" settings surface, in one file.
 #
 # Nothing here names a compositor or a window manager. Hyprland runs the show
-# on Linux and Aerospace on macOS, but that is an implementation detail of
-# ./linux and ./darwin -- a host describes what it wants, and the backend for
-# the platform it is built for works out how to ask for it.
+# on Linux, Aerospace on macOS and komorebi on Windows, but that is an
+# implementation detail of ./linux, ./darwin and ./windows -- a host describes
+# what it wants, and the backend for the platform it is built for works out
+# how to ask for it.
 {
   pkgs,
   lib,
@@ -53,9 +54,9 @@ let
           platform: a letter ("h"), a digit ("1"), a function key ("f5"), an
           arrow ("left", "right", "up", "down"), a named key ("enter",
           "space", "tab", "escape", "backspace", "delete", "minus", "equal",
-          "slash", "comma", "period", "semicolon"), or a media key
-          ("volume-up", "volume-down", "volume-mute", "brightness-up",
-          "brightness-down").
+          "slash", "comma", "period", "semicolon", "bracketleft",
+          "bracketright"), or a media key ("volume-up", "volume-down",
+          "volume-mute", "brightness-up", "brightness-down").
 
           A name the platform's backend does not recognise fails the build,
           rather than producing a binding that silently never fires.
@@ -91,16 +92,8 @@ let
           command only exists on one operating system can live in
           configuration shared between machines.
         '';
-        type = lib.types.listOf (
-          lib.types.enum [
-            "linux"
-            "darwin"
-          ]
-        );
-        default = [
-          "linux"
-          "darwin"
-        ];
+        type = lib.types.listOf (lib.types.enum vocabulary.platforms);
+        default = vocabulary.platforms;
       };
 
       action = lib.mkOption {
@@ -143,6 +136,11 @@ let
           so this covers ordinary programs. Launching a macOS application
           bundle is a different operation and is not expressible here; the two
           cases StewOS needs, a terminal and a launcher, are actions instead.
+
+          On Windows there is no store for the package to point into, so the
+          program is found where winpkgs knows its installer puts it
+          ("pkgs.winpkgs.getExe"). A package winpkgs cannot place fails the
+          build by name.
         '';
         type = lib.types.nullOr commandType;
         default = null;
@@ -285,7 +283,11 @@ in
       visible = false;
     };
 
-    capsLockEscape = lib.mkEnableOption "sending Escape when Caps Lock is pressed";
+    capsLockEscape = lib.mkEnableOption ''
+      sending Escape when Caps Lock is pressed. Not on Windows, whose only
+      remapping is machine-wide: set "windows.keyboard.remap" in the host's
+      system configuration instead
+    '';
 
     swapCommandAlt = lib.mkEnableOption ''
       swapping the left Command and left Alt keys on macOS. Worth turning on
@@ -298,7 +300,9 @@ in
     modifier = lib.mkOption {
       description = ''
         Modifier held for the global keybinding prefix. Each platform renders
-        it in its own vocabulary -- "SUPER" is the Command key on macOS.
+        it in its own vocabulary -- "SUPER" is the Command key on macOS and
+        the Windows key on Windows, where the system keeps several Windows-key
+        combinations (Win+L among them) for itself.
       '';
       type = lib.types.enum [
         "SUPER"
@@ -363,20 +367,38 @@ in
         '';
       };
 
+      # Windows gets the Nerd Font build: nixpkgs makes plain JetBrains Mono
+      # from source, which cannot be built for Windows, while the Nerd Font is
+      # fetched and copied, so winpkgs can install it.
       monospace = lib.mkOption {
         description = "Font used wherever the width of a character matters.";
         type = fontType;
-        default = {
-          name = "JetBrains Mono";
-          package = pkgs.jetbrains-mono;
-          size = 11;
-        };
+        default =
+          if pkgs.stdenv.hostPlatform.isWindows then
+            {
+              name = "JetBrainsMono Nerd Font Mono";
+              package = pkgs.nerd-fonts.jetbrains-mono;
+              size = 11;
+            }
+          else
+            {
+              name = "JetBrains Mono";
+              package = pkgs.jetbrains-mono;
+              size = 11;
+            };
         defaultText = lib.literalExpression ''
-          {
-            name = "JetBrains Mono";
-            package = pkgs.jetbrains-mono;
-            size = 11;
-          }
+          if pkgs.stdenv.hostPlatform.isWindows then
+            {
+              name = "JetBrainsMono Nerd Font Mono";
+              package = pkgs.nerd-fonts.jetbrains-mono;
+              size = 11;
+            }
+          else
+            {
+              name = "JetBrains Mono";
+              package = pkgs.jetbrains-mono;
+              size = 11;
+            }
         '';
       };
     };

@@ -94,6 +94,8 @@ let
       comma = "comma";
       period = "period";
       semicolon = "semicolon";
+      bracketleft = "leftSquareBracket";
+      bracketright = "rightSquareBracket";
     };
 
   # What each neutral action means to Aerospace. An action absent from this

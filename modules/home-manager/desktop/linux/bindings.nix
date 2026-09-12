@@ -69,6 +69,8 @@ let
       comma = "comma";
       period = "period";
       semicolon = "semicolon";
+      bracketleft = "bracketleft";
+      bracketright = "bracketright";
 
       "volume-up" = "XF86AudioRaiseVolume";
       "volume-down" = "XF86AudioLowerVolume";

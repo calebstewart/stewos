@@ -7,43 +7,31 @@
   config,
   lib,
   ...
-}: let
-  winpkgs = inputs.winpkgs;
-in {
+}:
+{
   home.packages = with pkgs; [
     git
     ripgrep
-    nerd-fonts.jetbrains-mono
-    thide # hides the taskbar; alt + b brings it back
+    thide # hides the taskbar; see stewos.desktop.bindings.taskbar
   ];
 
   # Install packages explicitly from winget
   winget.packages = [ "Fastfetch-cli.Fastfetch" ];
 
-  # The same palette as every other host; stewos.neovim renders it.
+  # The same palette as every other host; the desktop, stewos.neovim and the
+  # terminals below all render it.
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
-  # Windows system settings
+  # Windows system settings. The theme, wallpaper and console palette come
+  # from stewos.desktop.
   windows = {
     keyboard.stickyKeysShortcut = false;
-
-    theme = {
-      mode = "dark";
-      wallpaper.image = config.stewos.desktop.wallpaper;
-      accentColor = "#${config.colorScheme.palette.base0D}";
-      background = "#${config.colorScheme.palette.base00}";
-      accentColorInactive = "#${config.colorScheme.palette.base02}";
-      accentOnStartAndTaskbar = true;
-      accentOnTitleBars = true;
-    };
-    
-    # Set the default console (ConHost) color scheme
-    console.base16 = config.colorScheme.palette;
 
     # Disable some default or unwanted auto-start entries
     startup = {
       OneDrive = null;
-      # thide in tray mode hides the taskbar as it starts; alt + b toggles it.
+      # thide in tray mode hides the taskbar as it starts; the "taskbar"
+      # binding below toggles it.
       THide = ''"%LOCALAPPDATA%\Programs\thide\thide.exe"'';
       "MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
     };
@@ -90,6 +78,22 @@ in {
 
   # Shared StewOS configurations we opt into
   stewos = {
+    # komorebi, whkd, Flow Launcher and masir, on the same keymap as the
+    # Linux machines. See modules/home-manager/desktop/windows.
+    desktop = {
+      enable = true;
+      modifier = "ALT";
+
+      # Show or hide the taskbar.
+      bindings.taskbar = {
+        key = "b";
+        command = {
+          package = pkgs.thide;
+          args = [ "toggle" ];
+        };
+      };
+    };
+
     git.enable = true;
     git.forceSSH = true;
     neovim.enable = true;
@@ -145,140 +149,33 @@ in {
 
   programs.windows-terminal = {
     enable = true;
-    settings.profiles.defaults.font.face = "JetBrainsMono Nerd Font Mono";
+    settings.profiles.defaults.font.face = config.stewos.desktop.fonts.monospace.name;
     settings.copyOnSelect = true;
-    base16 = { palette = config.colorScheme.palette; name = "Catppuccin Mocha"; };
-  };
-
-  programs.whkd = {
-    enable = true;
-    shell = "pwsh";                  # your current file says powershell; pwsh is on the machine
-    pause = "alt + shift + p";       # game mode: silences every other binding ...
-    pauseHook = "komorebic toggle-pause";  # ... and pauses tiling; again to resume both
-    
-    keybindings =
-      let
-        # Workspaces by position on the *focused* monitor: keys 1-5 are
-        # komorebi's workspace indices 0-4, whichever monitor has focus.
-        keys = [ "1" "2" "3" "4" "5" ];
-
-        # one binding per key: "<modifiers> + <key>" -> "komorebic <command> <index>"
-        perWorkspace =
-          modifiers: command:
-          lib.listToAttrs (
-            lib.imap0 (index: key: {
-              name = "${modifiers} + ${key}";
-              value = "komorebic ${command} ${toString index}";
-            }) keys
-          );
-      in
-      # alt + N          focus workspace N on this monitor
-      perWorkspace "alt" "focus-workspace"
-      # alt + shift + N  move the focused window to N and follow it
-      // perWorkspace "alt + shift" "move-to-workspace"
-      # alt + ctrl + N   send the focused window to N and stay put
-      // perWorkspace "alt + ctrl" "send-to-workspace"
-      // {
-        # cycle through workspaces on the current monitor
-        "alt + oem_comma" = "komorebic cycle-workspace previous";
-        "alt + oem_period" = "komorebic cycle-workspace next";
-        "alt + shift + oem_comma" = "komorebic cycle-move-to-workspace previous";
-        "alt + shift + oem_period" = "komorebic cycle-move-to-workspace next";
-
-        # back to wherever you were
-        "alt + tab" = "komorebic focus-last-workspace";
-        "alt + shift + tab" = "komorebic move-to-last-workspace";
-
-        # the other monitor
-        "alt + w" = "komorebic cycle-monitor next";
-        "alt + shift + w" = "komorebic cycle-move-to-monitor next";
-
-        # whkd reads whkdrc once: after a `winpkgs home switch`, press this.
-        "alt + o" = "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
-        "alt + shift + o" = "komorebic reload-configuration";
-        "alt + i" = "komorebic toggle-shortcuts";
-
-        # focus a window if open, else launch ($wshell is whkd's WScript.Shell)
-        "alt + return" = ''Start-Process "C:\Program Files\Alacritty\alacritty.exe" -WorkingDirectory $Env:USERPROFILE'';
-
-        "alt + d" = config.programs.flow-launcher.showCommand;
-        "alt + shift + r" = "Start-Process ms-screenclip:";   # rectangular screen capture, as Print Screen does
-        "alt + b" = ''& "$Env:LOCALAPPDATA\Programs\thide\thide.exe" toggle'';   # show or hide the taskbar
-        "alt + q" = "komorebic close";
-        "alt + m" = "komorebic minimize";
-
-        # focus
-        "alt + h" = "komorebic focus left";
-        "alt + j" = "komorebic focus down";
-        "alt + k" = "komorebic focus up";
-        "alt + l" = "komorebic focus right";
-        "alt + shift + oem_4" = "komorebic cycle-focus previous";   # oem_4 is [
-        "alt + shift + oem_6" = "komorebic cycle-focus next";       # oem_6 is ]
-
-        # move
-        "alt + shift + h" = "komorebic move left";
-        "alt + shift + j" = "komorebic move down";
-        "alt + shift + k" = "komorebic move up";
-        "alt + shift + l" = "komorebic move right";
-        "alt + shift + return" = "komorebic promote";
-
-        # stack
-        "alt + left" = "komorebic stack left";
-        "alt + down" = "komorebic stack down";
-        "alt + up" = "komorebic stack up";
-        "alt + right" = "komorebic stack right";
-        "alt + oem_1" = "komorebic unstack";                # oem_1 is ;
-        "alt + oem_4" = "komorebic cycle-stack previous";
-        "alt + oem_6" = "komorebic cycle-stack next";
-      };
-  };
-
-  # Keyboard launcher; whkd summons it on alt + d (see keybindings).
-  programs.flow-launcher = {
-    enable = true;
     base16 = {
-      palette = config.colorScheme.palette;
-      name = "Catppuccin Mocha";
+      inherit (config.colorScheme) palette name;
     };
   };
 
-  # Focus follows the mouse; masir only focuses windows komorebi manages.
-  programs.masir.enable = true;
-
   programs.gh.enable = true;
 
+  # What the desktop leaves to the machine: its two monitors. Five workspaces
+  # on each, which the workspace keys reach by position on whichever monitor
+  # has focus, and a bar on each (komorebi's monitor indices).
   programs.komorebi = {
-    enable = true;
-
-    base16.palette = config.colorScheme.palette;
-
-    # The community application rules (a pinned flake input): what makes the
-    # Snipping Tool overlay, installers and tray apps float or be ignored.
-    applications = "${inputs.komorebi-asc}/applications.json";
-
     settings = {
-      # Focus follows the mouse instead (programs.masir, above).
-      mouse_follows_focus = false;
-      window_hiding_behaviour = "Cloak";
-      cross_monitor_move_behaviour = "Insert";
-
-      default_workspace_padding = 5;
-      default_container_padding = 5;
-
-      border = true;
-      border_width = 1;
-      border_offset = -1;
-
       monitors =
         let
-          bsp = name: {
-            inherit name;
-            layout = "BSP";
+          # One BSP workspace per character of `names`.
+          monitor = names: {
+            workspaces = map (name: {
+              inherit name;
+              layout = "BSP";
+            }) (lib.stringToCharacters names);
           };
         in
         [
-          { workspaces = map bsp [ "1" "2" "3" "4" "5" ]; }
-          { workspaces = map bsp [ "6" "7" "8" "9" "0" ]; }
+          (monitor "12345")
+          (monitor "67890")
         ];
 
       layered_applications = [
@@ -290,50 +187,9 @@ in {
       ];
     };
 
-    bar = {
-      enable = true;
-
-      # One bar per monitor (komorebi monitor indices), each from `settings` below.
-      monitors = {
-        "0" = { };
-        "1" = { };
-      };
-
-      settings = {
-        font_family = "JetBrains Mono";
-
-        left_widgets = [
-          {
-            Komorebi = {
-              workspaces = {
-                enable = true;
-                hide_empty_workspaces = true;
-              };
-              layout.enable = false;
-              focused_window = {
-                enable = true;
-                show_icon = true;
-              };
-            };
-          }
-        ];
-
-        right_widgets = [
-          { Update.enable = true; }
-          {
-            Date = {
-              enable = true;
-              format = "DayDateMonthYear";
-            };
-          }
-          {
-            Time = {
-              enable = true;
-              format = "TwentyFourHour";
-            };
-          }
-        ];
-      };
+    bar.monitors = {
+      "0" = { };
+      "1" = { };
     };
   };
 }
