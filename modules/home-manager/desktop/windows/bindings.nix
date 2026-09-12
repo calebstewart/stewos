@@ -173,8 +173,17 @@ let
     screenshot-region = _: "Start-Process ms-screenclip:";
 
     reload-window-manager = _: komorebic "reload-configuration";
-    # whkd reads its configuration once, at start.
-    reload-hotkeys = _: "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
+    # whkd reads its configuration once, at start. As a user service it is
+    # steward's to restart (mkHome gives every Windows home steward's home
+    # module, and the system's installs stewctl on the PATH): killing it by
+    # hand would race steward into running two. From the Run key there is no
+    # one else to ask.
+    reload-hotkeys =
+      _:
+      if config.programs.whkd.service.enable then
+        "stewctl restart whkd"
+      else
+        "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
     show-shortcuts = _: komorebic "toggle-shortcuts";
   };
 
@@ -356,12 +365,10 @@ let
         key = "i";
         action = "show-shortcuts";
       };
-    }
-    # Started from the Run key, whkd keeps the old bindings after an apply
-    # until something restarts it. As a user service a changed whkdrc restarts
-    # it already, and killing it by hand would only race the service manager
-    # into running two.
-    // lib.optionalAttrs (!config.programs.whkd.service.enable) {
+
+      # From the Run key whkd keeps the old bindings after an apply until
+      # something restarts it; as a user service an apply that changes
+      # whkdrc restarts it, and this does it by hand.
       reload-hotkeys = {
         key = "o";
         action = "reload-hotkeys";

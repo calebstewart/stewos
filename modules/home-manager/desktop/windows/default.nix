@@ -1,5 +1,6 @@
 # The Windows desktop: komorebi for tiling, whkd for the keys, Flow Launcher
-# as the launcher, and masir for focus-follows-mouse. All of it is winpkgs'
+# as the launcher, and masir for focus-follows-mouse, the first three run by
+# steward (./services.nix). All of it is winpkgs'
 # (github:calebstewart/winpkgs), which evaluates a Windows home against
 # home-manager's own modules plus its own.
 #
@@ -26,6 +27,7 @@ in
     ./komorebi.nix
     ./bindings.nix
     ./theme.nix
+    ./services.nix
   ];
 
   config = lib.optionalAttrs (options ? windows) (

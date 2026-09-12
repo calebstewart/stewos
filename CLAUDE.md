@@ -387,10 +387,20 @@ following) on keys Linux leaves free. Things to know:
   through `Start-Process` because whkd feeds every binding to one long-lived
   pwsh session, where anything that did not return at once would stall every
   binding after it.
-- **The whkd restart binding (`reload-hotkeys`) is only contributed while whkd
-  runs from the Run key.** Under `programs.whkd.service.enable` a changed whkdrc
-  restarts it already, and killing it by hand would race the service manager
-  into running two.
+- **The whkd restart binding (`reload-hotkeys`) follows how whkd is run.**
+  Under `programs.whkd.service.enable` it is `stewctl restart whkd` -- every
+  Windows home gets steward's home module from `mkHome`, and killing whkd by
+  hand would race steward into running two. From the Run key it kills and
+  restarts whkd itself.
+- **StewOS runs the Windows desktop's daemons under steward by default.**
+  `windows/services.nix` sets `programs.{komorebi,whkd,masir}.service.enable`
+  (`mkDefault`) and groups them under a `tiling.target`, so `stewctl stop
+  tiling.target` puts tiling away; `mkWindowsHost` sets
+  `services.steward.enable` (`mkDefault`) so the system installs what the home
+  expects. The two halves are separate configurations and cannot see each
+  other: a host that turns steward off in `configuration.nix` must also turn
+  the three `service.enable`s off in `home.nix`, or nothing starts them.
+  Flow Launcher stays on the Run key; winpkgs has no service mode for it.
 - **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
   directive, not a binding; it is counted by the duplicate-combination
   assertion all the same.
@@ -539,6 +549,13 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `nixos-update-manager` - Update tray daemon; consumed through its
   `homeModules.default` (`services.nixos-update-manager`), never as a package
   here. Its own `CLAUDE.md` holds the design notes
+- `winpkgs` - Windows configurations (`mkWindowsHost`, and `mkHome` for a
+  `*-windows` system); also the source of `pkgs.winpkgs.getExe`, which the
+  desktop's Windows backend uses to find a `command`'s program
+- `steward` - Per-user service manager for Windows (`winpkgs` follows this
+  flake's). `mkWindowsHost` imports its system module and turns it on by
+  default; `mkHome` imports its home module, which writes `systemd.user.*` as
+  its units
 
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed

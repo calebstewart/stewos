@@ -237,9 +237,12 @@
           specialArgs = { inherit inputs; };
 
           modules = [
-            # Inert until a host sets services.steward.enable.
+            # steward, on by default: the desktop's Windows backend runs
+            # komorebi, whkd and masir as its units, and a home cannot
+            # install it (modules/home-manager/desktop/windows/services.nix).
             inputs.steward.windowsModules.system
             {
+              services.steward.enable = lib.mkDefault true;
               networking.hostName = hostname;
               winpkgs.homes = homes;
               wsl = {
