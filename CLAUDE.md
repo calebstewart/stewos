@@ -26,8 +26,11 @@ stewos/
 │   └── nix-darwin/    # macOS system modules
 ├── hosts/             # Machine-specific configuration only
 │   ├── common/        # Policy shared between machines
+│   │   ├── workstation.nix # the two Framework machines' NixOS side
+│   │   └── windows/        # every Windows machine: configuration.nix + home.nix
 │   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework 16 laptop
+│   ├── framework16-win/    # Windows side of framework16's dual boot, via winpkgs
 │   ├── huntress-mbp/       # Apple Silicon MacBook (work)
 │   └── gaming-windows/     # Windows 11 desktop, via winpkgs: configuration.nix (system) + home.nix
 └── templates/         # Flake templates for new systems

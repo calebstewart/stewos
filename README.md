@@ -58,6 +58,7 @@ normally. `inputs` arrives once, through `specialArgs` set in `flake.nix`.
 | `framework16` | `x86_64-linux` | Framework 16 laptop, Secure Boot |
 | `huntress-mbp` | `aarch64-darwin` | Apple Silicon MacBook, work machine |
 | `gaming-windows` | `x86_64-windows` | Windows 11 desktop, through winpkgs, with a NixOS-WSL distro |
+| `framework16-win` | `x86_64-windows` | The Windows side of `framework16`'s dual boot, on its own disk |
 
 The two Framework machines share `hosts/common/workstation.nix`, which holds the
 Secure Boot setup, silent boot, plain suspend and the StewOS modules they both
@@ -65,6 +66,11 @@ run. Anything genuinely machine-specific stays in that machine's
 `configuration.nix`, including `system.stateVersion`, which must never follow a
 shared default, and whether the machine hibernates -- framework16 does,
 framework-desktop deliberately does not.
+
+The Windows machines share `hosts/common/windows/`, split the same way the
+hosts are: `configuration.nix` for the system half, `home.nix` for the home.
+Power, keyboard remaps, monitors and the WSL distro's `stateVersion` stay
+per-host.
 
 ## Building
 

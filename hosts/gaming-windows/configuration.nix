@@ -3,54 +3,15 @@
 # halves. The user's half is home.nix. See mkWindowsHost in flake.nix.
 { ... }:
 {
-  # Windows system settings
-  windows = {
-    developer.developerMode = true;
-    userChoiceProtection.enable = false;
+  imports = [ ../common/windows/configuration.nix ];
 
-    # Machine-wide policy; the per-user privacy settings are in home.nix.
-    privacy = {
-      activityFeed = false;
-      telemetry = "required";
-    };
-
-    startup = {
-      # AMD User Experience Program
-      StartAUEP = null;
-    };
-
-    keyboard.lockShortcut = false;
-  };
-
+  # A desktop: stay up, and let the power button mean off.
   power = {
-    plan = "balanced";
     sleep.computer = "never";
     sleep.display = 30;
     sleep.harddisk = "never";
     buttons.power = "shutdown";
     hibernation = false;
-    fastStartup = false;
-  };
-
-  time = {
-    timeZone = "America/Chicago";
-    hardwareClockInLocalTime = false;
-    autoTimeZone = false;
-
-    ntp = {
-      enable = true;
-      servers = [
-        "time.cloudflare.com"
-        "time.nist.gov"
-      ];
-      pollInterval = 3600;
-      maxCorrection = "unlimited";
-    };
-  };
-
-  security.sudo = {
-    enable = true;
-    mode = "normal";
   };
 
   # The distro is winpkgs' slim base (NixOS-WSL, flakes, git) plus whatever goes

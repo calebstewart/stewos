@@ -354,6 +354,16 @@
           modules = [ ./hosts/gaming-windows/configuration.nix ];
           homes = [ self.windowsHomeConfigurations."Caleb Stewart@gaming-windows" ];
         };
+
+        # The Windows side of the framework16 laptop's dual boot. Not
+        # "framework16": the distro lands in nixosConfigurations under this
+        # name, beside the laptop's NixOS side, and Windows caps a computer
+        # name at fifteen characters.
+        framework16-win = mkWindowsHost {
+          hostname = "framework16-win";
+          modules = [ ./hosts/framework16-win/configuration.nix ];
+          homes = [ self.windowsHomeConfigurations."Caleb Stewart@framework16-win" ];
+        };
       };
 
       wslHosts = lib.mapAttrs (_name: host: host.config.system.build.wsl) (
@@ -505,6 +515,13 @@
           hostname = "gaming-windows";
           user = calebWindows;
           modules = [ ./hosts/gaming-windows/home.nix ];
+        };
+
+        "Caleb Stewart@framework16-win" = mkHome {
+          system = "x86_64-windows";
+          hostname = "framework16-win";
+          user = calebWindows;
+          modules = [ ./hosts/framework16-win/home.nix ];
         };
       };
 
