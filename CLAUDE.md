@@ -110,6 +110,16 @@ with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
 or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
 generations. The docs generator does not yet build host pages for either half.
 
+`hosts/common/windows/configuration.nix` turns on Hyper-V and puts each
+machine's home users (read off `winpkgs.homes`) in the built-in `Hyper-V
+Administrators` group, which is what lets an unelevated session -- and the
+steward units started from it -- control VMs. Two things winpkgs reports but
+does not do: the feature needs a restart the first time it is enabled, and
+group membership only reaches the logon token at the next sign-in, so a
+fresh `Get-VM` right after the first apply still returns nothing. A VHDX
+outside the user's own profile may also need NTFS access granted by hand;
+VMMS only handles the ACLs on disks it attaches.
+
 `hosts/common/workstation.nix` carries the policy the two Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move
 into shared configuration.

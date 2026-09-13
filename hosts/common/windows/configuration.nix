@@ -6,7 +6,7 @@
 # power (a desktop never sleeps, a laptop must), keyboard remaps, and the WSL
 # distro's stateVersion, which must never move in here for the same reason
 # system.stateVersion never moves into shared NixOS configuration.
-{ ... }:
+{ config, ... }:
 {
   windows = {
     developer.developerMode = true;
@@ -24,6 +24,18 @@
     };
 
     keyboard.lockShortcut = false;
+
+    # Hyper-V, driven from the user's ordinary session. A member of the
+    # built-in Hyper-V Administrators group has full control of VMMS without
+    # elevating, and UAC's filtered token keeps that group, so an
+    # administrator's unelevated shell -- and every steward unit started from
+    # their logon -- has it. The members are this machine's home users, read
+    # off winpkgs.homes so the name is written once, in flake.nix. Membership
+    # reaches the logon token at the next sign-in and the feature wants a
+    # restart the first time; winpkgs reports both and does neither. WSL's
+    # Virtual Machine Platform is a separate feature, implied by `wsl`.
+    features.Microsoft-Hyper-V-All = true;
+    localGroups."Hyper-V Administrators".members = map (h: h.config.home.username) config.winpkgs.homes;
   };
 
   # Fast startup shuts down by hibernating the kernel session, which leaves
