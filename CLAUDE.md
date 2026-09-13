@@ -301,7 +301,8 @@ running it on top of the filter chain processes the signal twice.
 |--------|---------|
 | `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) / komorebi (Windows) and surrounding services |
 | `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/config/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
-| `stewos.zsh` | Shell with Oh-My-Posh |
+| `stewos.zsh` | Shell; turns on `stewos.oh-my-posh` by default |
+| `stewos.oh-my-posh` | The prompt, one definition for zsh (Linux, macOS) and PowerShell (Windows): home-manager's `programs.oh-my-posh.settings`, which winpkgs' `programs.powershell` also reads. Colours come from `config.colorScheme`, and a `root` segment lights `⚡` when the session is root or elevated (`sudo pwsh`). Do not put a host back on `useTheme`: an upstream theme cannot be extended, and `settings` and `useTheme` are mutually exclusive |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
@@ -409,6 +410,9 @@ following) on keys Linux leaves free. Things to know:
   assertion all the same.
 - Win+L never reaches a hotkey daemon; `windows.keyboard.lockShortcut = false`
   in the system configuration frees it, if a host wants `SUPER`.
+- **The PowerShell prompt is `stewos.oh-my-posh`**, the same definition the
+  zsh hosts use, not an upstream theme. `sudo pwsh` shows a red `⚡` in front
+  of the path; nothing else distinguishes an elevated session.
 
 The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
 otherwise wire up individually: the locker, idle handling, notifications, the
