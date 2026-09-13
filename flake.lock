@@ -2005,11 +2005,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789233127,
-        "narHash": "sha256-eJl//RMIsu2cWCZU5ZegQT3kG7ypiPgkGbKYnnjqNB4=",
+        "lastModified": 1789244877,
+        "narHash": "sha256-2a0dOX8pwOOGL7VfTHC3DrQcFKkCzf3pMcnr60pcQqI=",
         "owner": "calebstewart",
         "repo": "steward",
-        "rev": "056c685b6153232822ed6205c4f6a7740b1d3824",
+        "rev": "08d5cef1961f35e02690674e6a686aed631cff99",
         "type": "github"
       },
       "original": {
@@ -2341,11 +2341,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789242106,
-        "narHash": "sha256-gLaQ3Wve+Jzty5q2EBxucyQUFmP2+kuUfpFzk596JSg=",
+        "lastModified": 1789244815,
+        "narHash": "sha256-On31sh2ltpbe6ObTQngAqcRd5AO9kAAH6W+FXl+jwWo=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "26cdeaf61126ad56f3248ed1e8d57324ade744e5",
+        "rev": "a44456786995fee7c0ea19b086d6b252c872fbf8",
         "type": "github"
       },
       "original": {
