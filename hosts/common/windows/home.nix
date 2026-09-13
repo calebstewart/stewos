@@ -97,6 +97,11 @@
     git.enable = true;
     git.forceSSH = true;
     neovim.enable = true;
+    # The same prompt as the zsh hosts, with the root segment lit under
+    # `sudo pwsh`. winpkgs installs oh-my-posh from winget, and its
+    # programs.powershell hooks the generated config.json into the profile
+    # below.
+    oh-my-posh.enable = true;
     alacritty.enable = true;
     eza.enable = true;
     zoxide.enable = true;
@@ -123,13 +128,6 @@
   programs.alacritty.settings.terminal.shell = {
     program = "pwsh";
     args = [ "-NoLogo" ];
-  };
-
-  # The prompt: home-manager's own module; winpkgs installs it from winget and
-  # hooks it into the PowerShell profile below.
-  programs.oh-my-posh = {
-    enable = true;
-    useTheme = "catppuccin_mocha";
   };
 
   programs.powershell = {

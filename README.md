@@ -178,7 +178,8 @@ Enabled under `stewos.*` in a Home-Manager configuration.
 |--------|-------------|
 | `desktop` | Hyprland (Linux), Aerospace (macOS) or komorebi (Windows), and everything around them |
 | `neovim` | Neovim with a plain Lua configuration (lazy.nvim), LSP, completion and a full keymap set, the same on every platform |
-| `zsh` | Zsh with Oh-My-Posh, any-nix-shell and completion |
+| `zsh` | Zsh with any-nix-shell and completion; enables `oh-my-posh` |
+| `oh-my-posh` | The prompt, shared by zsh and PowerShell, coloured from the nix-colors palette, with a root/elevation indicator |
 | `git` | Git with SSH signing and per-directory identities |
 | `rofi` | Rofi launcher, themed through the RASI DSL |
 | `services.nixos-update-manager` | Update tray daemon from the [nixos-update-manager](https://github.com/calebstewart/nixos-update-manager) flake; `update-manager.nix` here only supplies StewOS defaults (palette colours, desktop terminal, Claude) |
