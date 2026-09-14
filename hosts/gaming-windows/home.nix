@@ -1,81 +1,35 @@
 # Windows 11 desktop: the *home* configuration -- this user, applied as the
 # user, never elevated. The machine's half is configuration.nix. See mkHome in
 # flake.nix.
+{ lib, ... }:
 {
-  inputs,
-  pkgs,
-  config,
-  ...
-}:
-{
-  home.packages = with pkgs; [
-    git
-    ripgrep
-  ];
+  imports = [ ../common/windows/home.nix ];
 
-  # The same palette as every other host; stewos.neovim renders it.
-  colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
+  # Edge's auto-launch entry is named after a hash particular to this machine.
+  windows.startup."MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
 
-  # Windows system settings
-  windows = {
-    theme.mode = "dark";
-    keyboard.stickyKeysShortcut = false;
+  # What the desktop leaves to the machine: its two monitors. Five workspaces
+  # on each, which the workspace keys reach by position on whichever monitor
+  # has focus, and a bar on each (komorebi's monitor indices).
+  programs.komorebi = {
+    settings.monitors =
+      let
+        # One BSP workspace per character of `names`.
+        monitor = names: {
+          workspaces = map (name: {
+            inherit name;
+            layout = "BSP";
+          }) (lib.stringToCharacters names);
+        };
+      in
+      [
+        (monitor "12345")
+        (monitor "67890")
+      ];
 
-    # Configure the task bar
-    taskbar = {
-      alignment = "left";
-      searchBox = "hidden";
-      widgets = false;
-      chat = false;
-      taskViewButton = false;
-      showOnAllDisplays = true;
-      combineButtons = "whenFull";
-    };
-
-    # Configure Windows Explorer
-    explorer = {
-      contextMenu = "classic";
-      showHiddenFiles = true;
-      showFileExtensions = true;
-      showProtectedOsFiles = true;
-      launchTo = "home";
-      compactMode = true;
-      expandToCurrentFolder = true;
-      hideDrivesWithNoMedia = true;
-      showSyncProviderNotifications = false;
-    };
-
-    # Configure Windows "privacy" options; the machine-wide ones are in configuration.nix.
-    privacy = {
-      advertisingId = false;
-      suggestedContent = false;
-      suggestedApps = false;
-      tips = false;
-      webSearchInStart = false;
-    };
-  };
-
-  # Shared StewOS configurations we opt into
-  stewos = {
-    git.enable = true;
-    git.forceSSH = true;
-    neovim.enable = true;
-    alacritty.enable = true;
-  };
-
-  # Sets XDG_CONFIG_HOME, so Neovim (and git, starship, ...) read ~/.config on
-  # Windows too, where winpkgs puts xdg.configFile.
-  xdg.enable = true;
-
-  # Winpkgs internal settings
-  winpkgs = {
-    # Where this flake is checked out on the Windows side, so `winpkgs plan` etc.
-    # work from any Windows terminal without naming it.
-    winpkgs.cli.flake = ''%USERPROFILE%\git\stewos'';
-
-    powershell = {
-      ensure = true;
-      upgrade = true;
+    bar.monitors = {
+      "0" = { };
+      "1" = { };
     };
   };
 }

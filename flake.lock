@@ -1274,6 +1274,22 @@
         "type": "github"
       }
     },
+    "komorebi-asc": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784218402,
+        "narHash": "sha256-C5JzxCXeT/YLy6Cc+JHo9pmqbgOMJ7NPN+TITqOMfEQ=",
+        "owner": "LGUG2Z",
+        "repo": "komorebi-application-specific-configuration",
+        "rev": "e647fc15970964777dedbb4ba79d5e8547d722fb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "LGUG2Z",
+        "repo": "komorebi-application-specific-configuration",
+        "type": "github"
+      }
+    },
     "lanzaboote": {
       "inputs": {
         "crane": "crane",
@@ -1938,6 +1954,7 @@
         "hyprpolkitagent": "hyprpolkitagent",
         "hyprqt6engine": "hyprqt6engine",
         "hyprsplit": "hyprsplit",
+        "komorebi-asc": "komorebi-asc",
         "lanzaboote": "lanzaboote",
         "llm-agents": "llm-agents",
         "mac-app-util": "mac-app-util",
@@ -1951,6 +1968,7 @@
         "nixpkgs": "nixpkgs_10",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nur": "nur",
+        "steward": "steward",
         "stylix": "stylix",
         "vfio-hooks": "vfio-hooks",
         "winpkgs": "winpkgs"
@@ -1974,6 +1992,29 @@
       "original": {
         "owner": "oxalica",
         "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
+    "steward": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "winpkgs": [
+          "winpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789275595,
+        "narHash": "sha256-d/4Mbw3KekxSuieKQyM/E+gzhzG1G7m6Ly4OgHPbXFQ=",
+        "owner": "calebstewart",
+        "repo": "steward",
+        "rev": "0a6b97d9ecdb9abdbf16d2c1992a33c8969b73ba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "calebstewart",
+        "repo": "steward",
         "type": "github"
       }
     },
@@ -2300,11 +2341,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1788851186,
-        "narHash": "sha256-yVXO7btD7ZSJshKVFoGpJdi/MnVQCWf6BHWbf1rgMhI=",
+        "lastModified": 1789321557,
+        "narHash": "sha256-zoIA69NpU2OQVNCQ+kpq+b+XAm8cYxVXRBt3HP4NklI=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "7e7f2a355f811381c0b03b2b448c7b3eed8f5a17",
+        "rev": "a39d1bbaf9642bb489ee2c1644a56131195fe814",
         "type": "github"
       },
       "original": {

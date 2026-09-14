@@ -21,6 +21,7 @@
     ./ghostty.nix
     ./git.nix
     ./neovim
+    ./oh-my-posh.nix
     ./rofi.nix
     ./update-manager.nix
     ./zoxide.nix

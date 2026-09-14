@@ -71,9 +71,9 @@ S4 on its iGPU, and the laptop can.
 
 `stewos.desktop` is deliberately platform-neutral. A binding is
 `{ key, modifiers, useModifier, platforms, action | command }`, where `key` and
-`action` are neutral names. Each backend — Hyprland on Linux, Aerospace on macOS
-— owns three translation tables (modifiers, keys, actions) and asserts on
-anything it does not implement.
+`action` are neutral names. Each backend — Hyprland on Linux, Aerospace on
+macOS, komorebi and whkd on Windows — owns three translation tables (modifiers,
+keys, actions) and asserts on anything it does not implement.
 
 Adding an action means adding it to `modules/home-manager/desktop/vocabulary.nix`
 plus at least one backend's `actions` table. Hyprland and Rofi vocabulary stays

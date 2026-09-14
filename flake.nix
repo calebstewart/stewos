@@ -75,6 +75,13 @@
       flake = false;
     };
 
+    # komorebi's community list of applications that need special handling
+    # (ignore rules for overlays and installers, tray and layered apps).
+    komorebi-asc = {
+      url = "github:LGUG2Z/komorebi-application-specific-configuration";
+      flake = false;
+    };
+
     nh = {
       url = "github:nix-community/nh";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -107,6 +114,16 @@
       url = "github:calebstewart/winpkgs";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
+    };
+
+    # A per-user service manager for Windows, in the spirit of systemd --user:
+    # started at sign-in, it keeps the desktop's daemons running. Its winpkgs
+    # modules install it (system) and write each user's units from
+    # home-manager's systemd.user.services (home).
+    steward = {
+      url = "github:calebstewart/steward";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.winpkgs.follows = "winpkgs";
     };
   };
 
@@ -220,7 +237,12 @@
           specialArgs = { inherit inputs; };
 
           modules = [
+            # steward, on by default: the desktop's Windows backend runs
+            # komorebi, whkd and masir as its units, and a home cannot
+            # install it (modules/home-manager/desktop/windows/services.nix).
+            inputs.steward.windowsModules.system
             {
+              services.steward.enable = lib.mkDefault true;
               networking.hostName = hostname;
               winpkgs.homes = homes;
               wsl = {
@@ -253,6 +275,9 @@
             specialArgs = { inherit inputs; };
             modules = [
               ./modules/home-manager
+              # systemd.user.services become steward's units, which the
+              # system's steward runs; an apply that changes them switches.
+              inputs.steward.windowsModules.home
               {
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
@@ -328,6 +353,16 @@
           hostname = "gaming-windows";
           modules = [ ./hosts/gaming-windows/configuration.nix ];
           homes = [ self.windowsHomeConfigurations."Caleb Stewart@gaming-windows" ];
+        };
+
+        # The Windows side of the framework16 laptop's dual boot. Not
+        # "framework16": the distro lands in nixosConfigurations under this
+        # name, beside the laptop's NixOS side, and Windows caps a computer
+        # name at fifteen characters.
+        framework16-win = mkWindowsHost {
+          hostname = "framework16-win";
+          modules = [ ./hosts/framework16-win/configuration.nix ];
+          homes = [ self.windowsHomeConfigurations."Caleb Stewart@framework16-win" ];
         };
       };
 
@@ -480,6 +515,13 @@
           hostname = "gaming-windows";
           user = calebWindows;
           modules = [ ./hosts/gaming-windows/home.nix ];
+        };
+
+        "Caleb Stewart@framework16-win" = mkHome {
+          system = "x86_64-windows";
+          hostname = "framework16-win";
+          user = calebWindows;
+          modules = [ ./hosts/framework16-win/home.nix ];
         };
       };
 

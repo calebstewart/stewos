@@ -5,8 +5,9 @@ plus the modules, packages and helper libraries they are built from.
 
 Everything is configured through options under `stewos.*`. Most of the surface
 area is `stewos.desktop`, which sets up Hyprland and its associated services
-(locking, notifications, wallpaper, bar) on NixOS, and Aerospace with the
-equivalent macOS pieces on Nix-Darwin.
+(locking, notifications, wallpaper, bar) on NixOS, Aerospace with the
+equivalent macOS pieces on Nix-Darwin, and komorebi, whkd and Flow Launcher on
+Windows through [winpkgs](https://github.com/calebstewart/winpkgs).
 
 **[Documentation](https://calebstewart.github.io/stewos/)** — every option,
 searchable, along with the packages, the hosts as worked examples, and the
@@ -56,6 +57,8 @@ normally. `inputs` arrives once, through `specialArgs` set in `flake.nix`.
 | `framework-desktop` | `x86_64-linux` | AMD Framework Desktop, Secure Boot, ollama, tailscale |
 | `framework16` | `x86_64-linux` | Framework 16 laptop, Secure Boot |
 | `huntress-mbp` | `aarch64-darwin` | Apple Silicon MacBook, work machine |
+| `gaming-windows` | `x86_64-windows` | Windows 11 desktop, through winpkgs, with a NixOS-WSL distro |
+| `framework16-win` | `x86_64-windows` | The Windows side of `framework16`'s dual boot, on its own disk |
 
 The two Framework machines share `hosts/common/workstation.nix`, which holds the
 Secure Boot setup, silent boot, plain suspend and the StewOS modules they both
@@ -63,6 +66,11 @@ run. Anything genuinely machine-specific stays in that machine's
 `configuration.nix`, including `system.stateVersion`, which must never follow a
 shared default, and whether the machine hibernates -- framework16 does,
 framework-desktop deliberately does not.
+
+The Windows machines share `hosts/common/windows/`, split the same way the
+hosts are: `configuration.nix` for the system half, `home.nix` for the home.
+Power, keyboard remaps, monitors and the WSL distro's `stateVersion` stay
+per-host.
 
 ## Building
 
@@ -168,9 +176,10 @@ Enabled under `stewos.*` in a Home-Manager configuration.
 
 | Module | Description |
 |--------|-------------|
-| `desktop` | Hyprland (Linux) or Aerospace (macOS), and everything around them |
+| `desktop` | Hyprland (Linux), Aerospace (macOS) or komorebi (Windows), and everything around them |
 | `neovim` | Neovim with a plain Lua configuration (lazy.nvim), LSP, completion and a full keymap set, the same on every platform |
-| `zsh` | Zsh with Oh-My-Posh, any-nix-shell and completion |
+| `zsh` | Zsh with any-nix-shell and completion; enables `oh-my-posh` |
+| `oh-my-posh` | The prompt, shared by zsh and PowerShell, coloured from the nix-colors palette, with a root/elevation indicator |
 | `git` | Git with SSH signing and per-directory identities |
 | `rofi` | Rofi launcher, themed through the RASI DSL |
 | `services.nixos-update-manager` | Update tray daemon from the [nixos-update-manager](https://github.com/calebstewart/nixos-update-manager) flake; `update-manager.nix` here only supplies StewOS defaults (palette colours, desktop terminal, Claude) |
@@ -195,13 +204,14 @@ The largest module, and the one worth knowing the options of:
 | `wallpaper` | Path to a wallpaper image |
 | `fonts.ui` / `fonts.monospace` | Interface and monospace fonts, shared by every toolkit |
 | `startLocked` | Bring the session up locked (Linux) |
-| `capsLockEscape` | Send Escape when Caps Lock is pressed |
+| `capsLockEscape` | Send Escape when Caps Lock is pressed (Linux, macOS) |
 | `swapCommandAlt` | Swap left Command and left Alt (macOS) |
 
-None of these name a compositor. Hyprland runs the desktop on Linux and
-Aerospace on macOS, but that lives in `modules/home-manager/desktop/linux/` and
-`.../darwin/`; a host describes what it wants and the backend for the platform
-it is built for works out how to ask for it.
+None of these name a compositor. Hyprland runs the desktop on Linux, Aerospace
+on macOS and komorebi on Windows, but that lives in
+`modules/home-manager/desktop/linux/`, `.../darwin/` and `.../windows/`; a host
+describes what it wants and the backend for the platform it is built for works
+out how to ask for it.
 
 Bindings are keyed by a name you choose, and name a `key`, the `modifiers` held
 with it, and either a neutral `action` or a `command` to run:
@@ -228,7 +238,9 @@ to it, and asserts on anything it cannot render — so a typo, a duplicated key
 combination, or an action the platform cannot perform fails at build time
 rather than at compositor startup. Aerospace does not implement `lock-session`
 or the media keys, for instance; restrict such a binding with
-`platforms = [ "linux" ]`.
+`platforms = [ "linux" ]`. On Windows a `command` runs the program where
+winpkgs knows its installer puts it (`pkgs.winpkgs.getExe`), and a package it
+cannot place fails the build by name.
 
 ## Packages
 

@@ -26,8 +26,11 @@ stewos/
 │   └── nix-darwin/    # macOS system modules
 ├── hosts/             # Machine-specific configuration only
 │   ├── common/        # Policy shared between machines
+│   │   ├── workstation.nix # the two Framework machines' NixOS side
+│   │   └── windows/        # every Windows machine: configuration.nix + home.nix
 │   ├── framework-desktop/  # AMD Framework desktop
 │   ├── framework16/        # Framework 16 laptop
+│   ├── framework16-win/    # Windows side of framework16's dual boot, via winpkgs
 │   ├── huntress-mbp/       # Apple Silicon MacBook (work)
 │   └── gaming-windows/     # Windows 11 desktop, via winpkgs: configuration.nix (system) + home.nix
 └── templates/         # Flake templates for new systems
@@ -106,6 +109,16 @@ error naming the other tree. Both halves are applied from a Windows terminal
 with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
 or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
 generations. The docs generator does not yet build host pages for either half.
+
+`hosts/common/windows/configuration.nix` turns on Hyper-V and puts each
+machine's home users (read off `winpkgs.homes`) in the built-in `Hyper-V
+Administrators` group, which is what lets an unelevated session -- and the
+steward units started from it -- control VMs. Two things winpkgs reports but
+does not do: the feature needs a restart the first time it is enabled, and
+group membership only reaches the logon token at the next sign-in, so a
+fresh `Get-VM` right after the first apply still returns nothing. A VHDX
+outside the user's own profile may also need NTFS access granted by hand;
+VMMS only handles the ACLs on disks it attaches.
 
 `hosts/common/workstation.nix` carries the policy the two Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move
@@ -296,9 +309,10 @@ running it on top of the filter chain processes the signal twice.
 
 | Module | Purpose |
 |--------|---------|
-| `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) and surrounding services |
+| `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) / komorebi (Windows) and surrounding services |
 | `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/config/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
-| `stewos.zsh` | Shell with Oh-My-Posh |
+| `stewos.zsh` | Shell; turns on `stewos.oh-my-posh` by default |
+| `stewos.oh-my-posh` | The prompt, one definition for zsh (Linux, macOS) and PowerShell (Windows): home-manager's `programs.oh-my-posh.settings`, which winpkgs' `programs.powershell` also reads. Colours come from `config.colorScheme`, and a `root` segment lights `⚡` when the session is root or elevated (`sudo pwsh`). Do not put a host back on `useTheme`: an upstream theme cannot be extended, and `settings` and `useTheme` are mutually exclusive |
 | `stewos.git` | Git with SSH signing and per-directory identities |
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
@@ -316,13 +330,23 @@ desktop/
 ├── vocabulary.nix# the modifier/action/direction lists the options are typed against
 ├── default.nix   # imports + cross-platform config + binding shape assertions
 ├── linux/        # hyprland, style, bindings, theme, polkit, xdg
-└── darwin/       # aerospace, karabiner, autoraise, raycast
+├── darwin/       # aerospace, karabiner, autoraise, raycast
+└── windows/      # komorebi, bindings (whkd), theme; flow-launcher, masir
 ```
 
-Both platform directories are imported unconditionally and every file guards
-its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin}`. Do not switch
-this to conditional `imports` -- deciding what to import from `pkgs.stdenv`
-risks a recursion the module system cannot see through.
+All three platform directories are imported unconditionally and every file
+guards its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin,Windows}`.
+Do not switch this to conditional `imports` -- deciding what to import from
+`pkgs.stdenv` risks a recursion the module system cannot see through.
+
+`windows/` carries one guard more: `lib.optionalAttrs (options ? windows)`
+around the whole `config`. `programs.komorebi`, `programs.whkd`, `windows.*` and
+the rest are winpkgs' options and exist only in a winpkgs home, and a definition
+of an undeclared option is an error even under a false `mkIf` -- without the
+guard the Linux and macOS homes stop evaluating. Test `options`, never `pkgs`,
+for the same recursion reason as above. A winpkgs home does evaluate
+home-manager's own modules, so `pkgs.stdenv.hostPlatform.isWindows` is true
+there and the Linux/macOS backends switch themselves off without help.
 
 Options at `stewos.desktop`:
 - `monitors` - List of monitor configs (description, resolution, position, scale); Linux
@@ -331,9 +355,13 @@ Options at `stewos.desktop`:
 - `modifier` - Global keybinding modifier prefix, enum `SUPER`/`ALT`/`CTRL`/`SHIFT` (default `SUPER`)
 - `terminal` - Terminal package (default Alacritty)
 - `wallpaper` - Path to wallpaper image
-- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit
+- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit.
+  `monospace` defaults to `nerd-fonts.jetbrains-mono` on Windows: nixpkgs builds
+  plain `jetbrains-mono` from source, which winpkgs cannot install
 - `startLocked` - Bring the session up locked; Linux
-- `capsLockEscape` - Send Escape when Caps Lock is pressed
+- `capsLockEscape` - Send Escape when Caps Lock is pressed; Linux and macOS.
+  Windows asserts: its only remap is the machine-wide `windows.keyboard.remap`,
+  which belongs in the host's `configuration.nix`
 - `swapCommandAlt` - Swap left Command and left Alt; macOS
 
 `lockCommand` still exists but is `internal` -- the platform backend sets it,
@@ -342,20 +370,59 @@ no host should.
 **The option surface deliberately names no compositor.** A binding is
 `{key, modifiers, useModifier, platforms, action | command}` where `key` and
 `action` are neutral names. Each backend (`linux/bindings.nix`,
-`darwin/aerospace.nix`) owns three tables -- modifiers, keys, actions --
-translating those names into its own vocabulary, and asserts on any it does not
-implement. Adding an action means adding it to `vocabulary.nix` plus at least
-one backend's `actions` table. Keep Hyprland and Rofi vocabulary out of
-`options.nix`.
+`darwin/aerospace.nix`, `windows/bindings.nix`) owns three tables -- modifiers,
+keys, actions -- translating those names into its own vocabulary, and asserts
+on any it does not implement. Adding an action means adding it to
+`vocabulary.nix` plus at least one backend's `actions` table. Keep Hyprland,
+Rofi, whkd and komorebi vocabulary out of `options.nix`.
 
 Each backend contributes its default keymap *through* `stewos.desktop.bindings`
 with per-field `mkDefault`, which is what lets a host retarget or disable a
 StewOS-provided binding by name. Do not go back to merging a private
 `defaultBindings` in at render time.
 
-The two keymaps genuinely diverge on `h/j/k/l`: Linux focuses/moves a *window*,
-macOS focuses/moves between *monitors*. That is why the vocabulary has separate
-window-directional and monitor-directional actions -- it is not redundancy.
+The keymaps genuinely diverge on `h/j/k/l`: Linux and Windows focus/move a
+*window*, macOS focuses/moves between *monitors*. That is why the vocabulary has
+separate window-directional and monitor-directional actions -- it is not
+redundancy.
+
+The Windows keymap (`windows/bindings.nix`) keeps the Linux keys wherever both
+mean the same thing -- workspaces on the digits, `h/j/k/l`, `q`, `d`, `enter`,
+`shift+r` -- and adds komorebi's stacks, cycling and "send" (move without
+following) on keys Linux leaves free. Things to know:
+
+- **Workspaces stop at 5**, not 10: komorebi keeps five per monitor
+  (`hosts/gaming-windows/home.nix` declares them), and `workspace = N` means
+  the Nth on the *focused* monitor, as hyprsplit and Aerospace do it.
+- **A `command` is found through `pkgs.winpkgs.getExe`**, not `mkCommandLine`:
+  there is no store, so the package must say where its installer puts it
+  (winpkgs' `programDir`). One that does not fails evaluation by name; add a
+  `programDir` in winpkgs rather than hand-writing a path here. Commands go
+  through `Start-Process` because whkd feeds every binding to one long-lived
+  pwsh session, where anything that did not return at once would stall every
+  binding after it.
+- **The whkd restart binding (`reload-hotkeys`) follows how whkd is run.**
+  Under `programs.whkd.service.enable` it is `stewctl restart whkd` -- every
+  Windows home gets steward's home module from `mkHome`, and killing whkd by
+  hand would race steward into running two. From the Run key it kills and
+  restarts whkd itself.
+- **StewOS runs the Windows desktop's daemons under steward by default.**
+  `windows/services.nix` sets `programs.{komorebi,whkd,masir}.service.enable`
+  (`mkDefault`) and groups them under a `tiling.target`, so `stewctl stop
+  tiling.target` puts tiling away; `mkWindowsHost` sets
+  `services.steward.enable` (`mkDefault`) so the system installs what the home
+  expects. The two halves are separate configurations and cannot see each
+  other: a host that turns steward off in `configuration.nix` must also turn
+  the three `service.enable`s off in `home.nix`, or nothing starts them.
+  Flow Launcher stays on the Run key; winpkgs has no service mode for it.
+- **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
+  directive, not a binding; it is counted by the duplicate-combination
+  assertion all the same.
+- Win+L never reaches a hotkey daemon; `windows.keyboard.lockShortcut = false`
+  in the system configuration frees it, if a host wants `SUPER`.
+- **The PowerShell prompt is `stewos.oh-my-posh`**, the same definition the
+  zsh hosts use, not an upstream theme. `sudo pwsh` shows a red `⚡` in front
+  of the path; nothing else distinguishes an elevated session.
 
 The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
 otherwise wire up individually: the locker, idle handling, notifications, the
@@ -499,6 +566,13 @@ the consumer's. `templates/nixos-single/` is a worked example.
 - `nixos-update-manager` - Update tray daemon; consumed through its
   `homeModules.default` (`services.nixos-update-manager`), never as a package
   here. Its own `CLAUDE.md` holds the design notes
+- `winpkgs` - Windows configurations (`mkWindowsHost`, and `mkHome` for a
+  `*-windows` system); also the source of `pkgs.winpkgs.getExe`, which the
+  desktop's Windows backend uses to find a `command`'s program
+- `steward` - Per-user service manager for Windows (`winpkgs` follows this
+  flake's). `mkWindowsHost` imports its system module and turns it on by
+  default; `mkHome` imports its home module, which writes `systemd.user.*` as
+  its units
 
 ### External Custom Flakes
 - `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed
