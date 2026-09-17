@@ -552,6 +552,11 @@
           program = lib.getExe docsServe;
           meta.description = "Build the documentation site and serve it";
         };
+
+        gaming-windows-iso = {
+          type = "app";
+          program = lib.getExe windowsHosts.gaming-windows.config.system.build.installer;
+        };
       }
       // lib.mapAttrs' (
         hostname: host:

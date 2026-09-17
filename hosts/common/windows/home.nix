@@ -123,6 +123,12 @@
     };
   };
 
+  programs.gsudo = {
+    settings = { PowerShellLoadProfile = true; };
+    enablePowerShellIntegration = true;
+    sudoAlias = true;
+  };
+
   # Alacritty's built-in default shell on Windows is Windows PowerShell 5.1;
   # run pwsh 7, which programs.powershell below configures.
   programs.alacritty.settings.terminal.shell = {
