@@ -17,13 +17,42 @@
   # them. Microsoft Teams, Teams (personal) and OneDrive went the same way, the
   # last taking its three scheduled tasks with it.
 
-  # What this desk's hardware wants. AMD Software and the chipset drivers come
-  # from AMD's own installer rather than winget, so only Logitech's is sayable
-  # here; the AMD half of the answer is the Run entry in home.nix.
-  winget.packages = [ "Logitech.OptionsPlus" ];
+  # Machine-wide installs. Everything here offers only a machine-scope
+  # installer, which a home configuration cannot take because it never
+  # elevates: winget answers a user-scope install of one of these with "no
+  # applicable installer". The per-user half of the machine is in home.nix.
+  winget.packages = [
+    # Daily use. Chrome is installed and wanted and still not listed: winget
+    # does not recognise the copy that is here (it correlates the ARP entry to
+    # Google.Chrome.Beta.EXE, so `Google.Chrome` reads as absent and every
+    # apply would try to install it), and the Google.Chrome manifest currently
+    # fails its own hash check, because Google republishes that URL in place.
+    # Both ends of that have to be right before it can be declared.
+    "Valve.Steam"
+    "Mozilla.Firefox"
+    "Microsoft.WSL" # also what winpkgs itself runs in
+
+    # This desk's hardware. AMD Software and the chipset drivers come from
+    # AMD's own installer rather than winget, so they cannot be said here; the
+    # AMD half of the answer is the noise-suppression Run entry in home.nix.
+    "SteelSeries.GG"
+    "Logitech.OptionsPlus"
+
+    # Toolchains. Both of these are multi-gigabyte, and a fresh apply fetches
+    # them unattended.
+    "Microsoft.VisualStudio.2022.BuildTools"
+    "Microsoft.WindowsSDK.10.0.26100"
+  ];
 
   windows = {
     startup = {
+      # SteelSeries GG has to be running for the headset and mouse to keep
+      # their settings, so its entry is wanted. SecurityHealth (Defender's
+      # tray icon) and RtkAudUService (Realtek's audio helper) are here too
+      # and deliberately undeclared: Windows and the driver own them, and a
+      # fresh install grows them again by itself.
+      SteelSeriesGG = ''"C:\Program Files\SteelSeries\GG\SteelSeriesGGEZ.exe" -dataPath="C:\ProgramData\SteelSeries\GG" -dbEnv=production -auto=true'';
+
       # Logitech's installer nagware, a separate package from Options+ above,
       # which does not need it.
       "Logi Download Assistant" = null;
