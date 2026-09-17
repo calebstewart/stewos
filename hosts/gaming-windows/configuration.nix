@@ -45,6 +45,33 @@
   ];
 
   windows = {
+    # What the name of the machine promises. The per-user half of
+    # windows.gaming -- Game Mode, the Game Bar, background capture -- is in
+    # home.nix; this is the half that needs elevation.
+    #
+    # Hardware-accelerated GPU scheduling, which had no value written at all,
+    # so the machine was on whatever Windows decided. It takes a restart.
+    # `allowCaptures` is deliberately left unwritten: turning capture off per
+    # user (home.nix) is the wanted effect, and the policy is a machine-wide
+    # ban on the feature for everyone, which is a heavier thing to say.
+    gaming.hardwareAcceleratedScheduling = true;
+
+    # Optional features this machine was given beyond the ones Windows turns
+    # on for itself. Hyper-V is in ../common/windows/configuration.nix, with
+    # the group that makes it usable unelevated; VirtualMachinePlatform comes
+    # with `wsl`. SmbDirect, WorkFolders-Client, MSRDC-Infrastructure and the
+    # printing and media features are all Windows 11 defaults and are left to
+    # it. That leaves .NET 3.5, which something asked for by hand -- note a
+    # fresh apply fetches it from Windows Update, which needs to be reachable.
+    features.NetFx3 = true;
+
+    # Not declared, on purpose: this account is also in Performance Log Users.
+    # The survey in #7 read that as a leftover from a vendor installer, but
+    # AMD's Ryzen Master SDK task is still here and reads performance
+    # counters, so it is most likely AMD's and it stays. Nothing in
+    # windows.localGroups would remove it anyway -- winpkgs drops only the
+    # memberships it added itself.
+
     startup = {
       # SteelSeries GG has to be running for the headset and mouse to keep
       # their settings, so its entry is wanted. SecurityHealth (Defender's
