@@ -16,6 +16,27 @@
     "Microsoft.WinDbg"
   ];
 
+  # The per-user half of windows.gaming; the machine-wide half (HAGS) is in
+  # configuration.nix. Three of these four had no value written at all, so the
+  # machine ran on whatever Windows had decided that week.
+  windows.gaming = {
+    gameMode = true;
+
+    # The Game Bar records the last few minutes continuously so it can save
+    # what already happened. That is the part worth switching off on a machine
+    # that would rather spend the frames.
+    captures = false;
+
+    # ...and with capture off, the Xbox button opening the Game Bar is only a
+    # way to lose focus mid-game.
+    gameBarWithController = false;
+
+    # Windows' default, written down: the compositor's borderless path is the
+    # one modern games want. Off would force true exclusive full-screen on
+    # every game at once.
+    fullscreenOptimizations = true;
+  };
+
   windows.startup = {
     # Edge's auto-launch entry is named after a hash particular to this machine.
     "MicrosoftEdgeAutoLaunch_C4BE5320B38C83952663B909BE7916DD" = null;
