@@ -130,6 +130,7 @@ in
               "cava"
               "volume"
               "wifi"
+              "battery"
               "disk"
               "power_menu"
             ];
@@ -441,6 +442,38 @@ in
                 "󰤥"
                 "󰤨"
               ];
+            };
+          };
+
+          # Every Windows home has it; on a machine without a battery YASB
+          # hides it (hide_unsupported) and stops polling, so only the
+          # laptops show it.
+          battery = {
+            type = "yasb.battery.BatteryWidget";
+            options = {
+              label = "<span>{icon}</span> {percent}%";
+              label_alt = "<span>{icon}</span> {percent}% | {time_remaining}";
+              update_interval = 5000;
+              hide_unsupported = true;
+              time_remaining_natural = true;
+              # The bolt alone while charging, steady; the stylesheet colours it.
+              charging_options = {
+                icon_format = "{charging_icon}";
+                blink_charging_icon = false;
+              };
+              status_icons = {
+                icon_charging = "";
+                icon_critical = "";
+                icon_low = "";
+                icon_medium = "";
+                icon_high = "";
+                icon_full = "";
+              };
+              callbacks = {
+                on_left = "toggle_label";
+                on_middle = "do_nothing";
+                on_right = "exec cmd.exe /c start ms-settings:powersleep";
+              };
             };
           };
 
