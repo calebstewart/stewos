@@ -16,25 +16,5 @@
         }) (lib.stringToCharacters "12345");
       }
     ];
-
-    # No bar.monitors: one bar, on the primary monitor. The taskbar is hidden
-    # (thide, from the shared home), so the bar carries the battery -- which
-    # means restating the desktop module's right-hand widgets around it.
-    bar.settings.right_widgets = [
-      { Battery.enable = true; }
-      { Update.enable = true; }
-      {
-        Date = {
-          enable = true;
-          format = "DayDateMonthYear";
-        };
-      }
-      {
-        Time = {
-          enable = true;
-          format = "TwentyFourHour";
-        };
-      }
-    ];
   };
 }
