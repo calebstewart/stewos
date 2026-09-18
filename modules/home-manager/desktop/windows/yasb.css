@@ -183,6 +183,26 @@
 	margin-right: 7px;
 }
 
+/* Battery: the icon takes the charge level's colour */
+
+.battery-widget .icon {
+	color: var(--base0E);
+	margin: 0 4px 0 0;
+}
+
+.battery-widget .icon.status-low {
+	color: var(--base09);
+}
+
+.battery-widget .icon.status-critical,
+.battery-widget .label.status-critical {
+	color: var(--base08);
+}
+
+.battery-widget .icon.status-charging {
+	color: var(--base0B);
+}
+
 /* Media */
 
 .media-widget {
