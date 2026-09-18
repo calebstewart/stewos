@@ -1,0 +1,764 @@
+/*
+ * YASB's stylesheet, after "Comfyppuccin Reimagined" by AlmiWasFound
+ * (github:amnweb/yasb-themes, 0992d77b-662a-4f6b-ad41-551279d4f716).
+ *
+ * Every colour is a base16 slot of the home's colorScheme. theme.nix puts a
+ * :root block in front of this file declaring --base00 .. --base0F, plus an
+ * "r, g, b" --baseNN-rgb for each, for rgba(). YASB substitutes var() itself,
+ * as plain text, before Qt sees the sheet, so var() works anywhere a value
+ * does.
+ *
+ * The theme was written against catppuccin's own names. Where base16 has a
+ * slot for one it is used; the rest go to the nearest: crust and mantle are
+ * both base01, the overlays base04, maroon base08.
+ */
+
+/* 1. Layout and containers */
+
+* {
+	font-size: 12px;
+	color: var(--base05);
+	font-weight: 900;
+	font-family: "JetBrainsMono NFP";
+	margin: 0;
+	padding: 0;
+}
+
+.yasb-bar {
+	padding: 0 8px;
+	margin: 0;
+	background-color: var(--base00);
+	border-radius: 15px;
+}
+
+.widget {
+	padding: 0 10px;
+	margin: 0;
+}
+
+.widget .label {
+	padding: 2px 2px 1px 2px;
+}
+
+.widget .label.alt {
+	padding: 1px 8px 1px 8px;
+}
+
+/* 2. Workspaces: a dot per workspace, the active one a wider pill */
+
+.komorebi-workspaces {
+	margin: 0;
+}
+
+.komorebi-workspaces .widget-container {
+	background-color: var(--base01);
+	margin: 3px 0px 3px 0px;
+	border-radius: 8px;
+}
+
+.komorebi-workspaces .offline-status {
+	color: var(--base05);
+	font-size: 12px;
+	padding: 0 4px;
+	font-weight: 900;
+}
+
+.komorebi-workspaces .ws-btn,
+.komorebi-workspaces .ws-btn.populated {
+	border: none;
+	background-color: var(--base04);
+	margin: 0px 4px;
+	padding: 0;
+	color: transparent;
+	border-radius: 5px;
+	height: 10px;
+	width: 10px;
+}
+
+.komorebi-workspaces .ws-btn.active {
+	color: transparent;
+	background-color: var(--base0E);
+	width: 28px;
+	height: 10px;
+	border-radius: 5px;
+}
+
+/* 3. Widgets */
+
+/* Audio */
+
+.audio-menu {
+	background-color: rgba(var(--base01-rgb), 0.4);
+}
+
+.audio-container .device {
+	background-color: transparent;
+	border: none;
+	padding: 6px 8px 6px 4px;
+	margin: 2px 0;
+	font-size: 12px;
+	border-radius: 4px;
+}
+
+.audio-container .device.selected {
+	background-color: rgba(var(--base05-rgb), 0.085);
+}
+
+.audio-container .device:hover {
+	background-color: rgba(var(--base05-rgb), 0.06);
+}
+
+.volume-slider {
+	border: none;
+}
+
+.volume-slider::groove {
+	color: transparent;
+}
+
+.volume-slider::handle {
+	background-color: transparent;
+}
+
+/* Power menu */
+
+.power-menu-popup {
+	background: var(--base01);
+	border-radius: 8px;
+}
+
+.power-menu-widget .label {
+	color: var(--base08);
+	font-size: 16px;
+	padding: 0;
+}
+
+.power-menu-popup .button {
+	padding: 0px;
+	margin: 5px;
+	width: 250px;
+	height: 175px;
+	border-radius: 8px;
+	background-color: var(--base00);
+	color: var(--base05);
+}
+
+.power-menu-popup .button.hover {
+	background-color: var(--base03);
+}
+
+.power-menu-popup .button .label {
+	margin-bottom: 0px;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--base05);
+}
+
+.power-menu-popup .button .icon {
+	font-size: 55px;
+	padding-top: 25px;
+	padding-right: 10px;
+	color: var(--base05);
+}
+
+.power-menu-popup .button.cancel .icon,
+.power-menu-popup .button.cancel .label {
+	color: var(--base08);
+}
+
+/* Icons */
+
+.icon {
+	font-size: 16px;
+}
+
+.volume-widget .icon {
+	color: var(--base0E);
+	margin: 1px 2px 0 0;
+}
+
+.clock-widget .icon {
+	color: var(--base0E);
+	font-size: 14px;
+	margin-right: 7px;
+}
+
+/* Media */
+
+.media-widget {
+	padding: 0;
+	margin-left: 0;
+}
+
+.media-widget .label {
+	color: var(--base07);
+	padding-left: 5px;
+}
+
+/* The bar shows the title only; the controls live in the menu. */
+.media-widget .btn {
+	max-width: 0;
+}
+
+.media-menu {
+	min-width: 420px;
+	max-width: 420px;
+	background-color: var(--base00);
+	border-radius: 8px;
+}
+
+.media-menu .title,
+.media-menu .artist,
+.media-menu .source {
+	font-size: 14px;
+	font-weight: 600;
+	margin-left: 10px;
+	font-family: "Segoe UI";
+}
+
+.media-menu .artist {
+	font-size: 13px;
+	color: var(--base0E);
+	margin-top: 0px;
+	margin-bottom: 8px;
+}
+
+/*
+ * The source tag, classed by the player's name in lower case with dashes.
+ * The theme gave these their brand colours; they take the palette's nearest.
+ */
+.media-menu .source {
+	font-size: 11px;
+	color: var(--base00);
+	font-weight: normal;
+	border-radius: 3px;
+	background-color: var(--base05);
+	padding: 2px 4px;
+}
+
+.media-menu .source.firefox {
+	background-color: var(--base09);
+}
+
+.media-menu .source.spotify {
+	background-color: var(--base0B);
+}
+
+.media-menu .source.edge,
+.media-menu .source.windows-media {
+	background-color: var(--base0D);
+}
+
+/* The controls are Segoe Fluent Icons glyphs, not Nerd Font ones. */
+.media-menu .btn {
+	font-family: "Segoe Fluent Icons";
+	font-size: 18px;
+	font-weight: 400;
+	margin: 10px 2px 0px 2px;
+	min-width: 40px;
+	max-width: 40px;
+	min-height: 40px;
+	max-height: 40px;
+	border-radius: 20px;
+	color: var(--base04);
+}
+
+.media-menu .btn.prev {
+	margin-left: 10px;
+}
+
+.media-menu .btn:hover {
+	color: var(--base05);
+}
+
+.media-menu .btn.play {
+	font-size: 24px;
+}
+
+.media-menu .btn.disabled:hover,
+.media-menu .btn.disabled {
+	color: var(--base03);
+	background-color: transparent;
+}
+
+.media-menu .playback-time {
+	font-size: 13px;
+	font-family: "Segoe UI";
+	color: var(--base0E);
+	margin-top: 20px;
+	min-width: 100px;
+}
+
+.media-menu .progress-slider {
+	height: 10px;
+	margin: 5px 4px;
+	border-radius: 3px;
+}
+
+.media-menu .progress-slider::groove {
+	height: 2px;
+	border-radius: 3px;
+	background: rgba(var(--base05-rgb), 0.1);
+}
+
+.media-menu .progress-slider::groove:hover {
+	height: 6px;
+	border-radius: 3px;
+	background: rgba(var(--base05-rgb), 0.2);
+}
+
+.media-menu .progress-slider::sub-page {
+	background: var(--base0E);
+	border-radius: 3px;
+	height: 4px;
+}
+
+/* Calendar (the clock's) */
+
+.calendar {
+	background-color: var(--base01);
+}
+
+.calendar .calendar-table,
+.calendar .calendar-table::item {
+	background-color: transparent;
+	color: var(--base04);
+	margin: 0;
+	padding: 0;
+	border: none;
+	outline: none;
+}
+
+.calendar .calendar-table::item:selected {
+	color: var(--base00);
+	background: var(--base0E);
+	border-radius: 8px;
+}
+
+.calendar .day-label {
+	margin-top: 20px;
+}
+
+.calendar .day-label,
+.calendar .month-label,
+.calendar .date-label {
+	font-size: 16px;
+	color: var(--base05);
+	font-weight: 700;
+	min-width: 180px;
+	max-width: 180px;
+}
+
+.calendar .month-label {
+	font-weight: normal;
+	padding-bottom: 12px;
+}
+
+.calendar .date-label {
+	font-size: 88px;
+	font-weight: 900;
+	color: var(--base05);
+	margin-top: -20px;
+}
+
+/* Home menu */
+
+.home-menu {
+	background-color: var(--base01);
+	border-radius: 8px;
+	padding: 0;
+	margin-left: 0px;
+}
+
+.home-menu .menu-item {
+	padding: 8px 48px 8px 12px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.home-menu .menu-item:hover {
+	background-color: var(--base0E);
+	color: var(--base01);
+	margin: 4px 6px;
+	border-radius: 4px;
+}
+
+.home-menu .separator {
+	max-height: 1px;
+	background-color: var(--base03);
+	margin: 0 8px;
+}
+
+/*
+ * Quick Launch: not in the theme, so styled after YASB's own example for the
+ * widget, recoloured to match the menus above. Its result icons are SVGs,
+ * which CSS cannot reach.
+ */
+
+.quick-launch-widget .icon {
+	font-size: 16px;
+	padding: 0 4px;
+	color: var(--base0E);
+}
+
+.quick-launch-widget .icon:hover {
+	color: var(--base05);
+}
+
+.quick-launch-popup .container {
+	background-color: rgba(var(--base00-rgb), 0.85);
+}
+
+.quick-launch-popup .search {
+	padding: 12px 16px;
+	background-color: transparent;
+	border-bottom: 1px solid rgba(var(--base05-rgb), 0.15);
+}
+
+.quick-launch-popup .search .loader-line {
+	color: var(--base0E);
+}
+
+.quick-launch-popup .search .search-icon,
+.quick-launch-popup .search .search-submit-icon {
+	font-family: "Segoe Fluent Icons";
+	font-size: 18px;
+	color: rgba(var(--base05-rgb), 0.6);
+	min-width: 18px;
+}
+
+.quick-launch-popup .search .search-icon {
+	padding-right: 8px;
+}
+
+.quick-launch-popup .search .search-input {
+	background: transparent;
+	border: none;
+	color: var(--base05);
+	font-size: 16px;
+	font-family: "Segoe UI";
+	font-weight: 400;
+	padding: 4px 0;
+}
+
+/* The provider prefix, once one is typed ("=", ">", "?" ...) */
+.quick-launch-popup .search .prefix {
+	background: var(--base0E);
+	border-radius: 6px;
+	color: var(--base00);
+	padding: -2px 8px 0px 8px;
+	margin-top: 2px;
+	margin-right: 4px;
+	font-size: 13px;
+	font-weight: 600;
+	font-family: "Segoe UI";
+	max-height: 28px;
+}
+
+.quick-launch-popup .results {
+	background: transparent;
+	padding: 8px;
+}
+
+.quick-launch-popup .results-list-view {
+	font-size: 16px;
+	font-family: "Segoe UI";
+	font-weight: 600;
+	color: var(--base05);
+}
+
+.quick-launch-popup .results-list-view .description,
+.quick-launch-popup .results-list-view .separator {
+	color: rgba(var(--base05-rgb), 0.6);
+	font-family: "Segoe UI";
+	font-weight: 600;
+}
+
+.quick-launch-popup .results-list-view .description {
+	font-size: 11px;
+}
+
+.quick-launch-popup .results-list-view .separator {
+	font-size: 13px;
+	padding: 4px 0 4px 12px;
+}
+
+.quick-launch-popup .results-list-view::item {
+	padding: 12px;
+	border-radius: 8px;
+}
+
+.quick-launch-popup .results-list-view::item:hover,
+.quick-launch-popup .results-list-view::item:selected {
+	background-color: rgba(var(--base0E-rgb), 0.15);
+}
+
+.quick-launch-popup .results-empty-text {
+	font-size: 24px;
+	font-family: "Segoe UI";
+	color: var(--base04);
+	padding-top: 8px;
+}
+
+.quick-launch-popup .preview {
+	background: transparent;
+	border-left: 1px solid rgba(var(--base05-rgb), 0.06);
+}
+
+.quick-launch-popup .preview .preview-text,
+.quick-launch-popup .preview .preview-image {
+	background-color: rgba(var(--base05-rgb), 0.03);
+	padding: 8px 12px;
+}
+
+.quick-launch-popup .preview .preview-text {
+	font-size: 13px;
+	color: rgba(var(--base05-rgb), 0.85);
+	font-family: "Segoe UI";
+	border: none;
+}
+
+.quick-launch-popup .preview .preview-meta {
+	padding: 6px 12px;
+	border-top: 1px solid rgba(var(--base05-rgb), 0.06);
+	font-family: "Segoe UI";
+}
+
+.quick-launch-popup .preview .preview-meta .preview-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--base05);
+	font-family: "Segoe UI";
+	margin-bottom: 10px;
+	margin-left: -2px;
+}
+
+.quick-launch-popup .preview .preview-meta .preview-subtitle {
+	font-size: 12px;
+	color: rgba(var(--base05-rgb), 0.8);
+	font-family: "Segoe UI";
+	padding-bottom: 1px;
+}
+
+/* Disk */
+
+.disk-widget {
+	padding: 0 6px 0 6px;
+}
+
+.disk-widget .icon {
+	color: var(--base0E);
+}
+
+.disk-group {
+	background-color: rgba(var(--base01-rgb), 0.4);
+}
+
+.disk-group-row {
+	min-width: 220px;
+	max-width: 220px;
+	max-height: 40px;
+	margin: 0;
+	padding: 0;
+	border-radius: 6px;
+	border: 1px solid transparent;
+}
+
+.disk-group-row:hover {
+	background-color: rgba(var(--base05-rgb), 0.05);
+	border: 1px solid rgba(var(--base05-rgb), 0.1);
+}
+
+.disk-group-label-bar {
+	max-height: 8px;
+	border: 0px solid transparent;
+	background-color: rgba(var(--base0D-rgb), 0.1);
+	border-radius: 4px;
+}
+
+.disk-group-label-bar::chunk {
+	background-color: var(--base0E);
+	border-radius: 4px;
+}
+
+.disk-group-label {
+	font-size: 10px;
+}
+
+.disk-group-label-size {
+	font-size: 10px;
+	color: var(--base0E);
+}
+
+/* Cava */
+
+.cava-widget {
+	padding: 0;
+	margin: 0;
+}
+
+/* CPU and memory, drawn as one pill split down the middle */
+
+.cpu-widget {
+	padding-right: 0;
+}
+
+.memory-widget {
+	padding-left: 0;
+}
+
+.cpu-widget .widget-container {
+	border-bottom-right-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.memory-widget .widget-container {
+	border-bottom-left-radius: 0;
+	border-top-left-radius: 0;
+}
+
+.cpu-widget .label,
+.memory-widget .label {
+	min-width: 34px;
+	max-width: 34px;
+}
+
+.cpu-widget .icon,
+.memory-widget .icon {
+	color: var(--base0E);
+	margin-right: 4px;
+}
+
+/* Network */
+
+.wifi-widget .icon {
+	color: var(--base0E);
+}
+
+.traffic-widget .icon {
+	color: var(--base0E);
+	padding-right: 6px;
+	padding-left: 6px;
+}
+
+.traffic-widget .label {
+	color: var(--base0E);
+}
+
+/*
+ * Every widget is a pill. After the per-widget rules on purpose, as in the
+ * theme: at equal specificity this margin wins over theirs.
+ */
+.widget {
+	border-radius: 8px;
+	margin: 8px 4px;
+	background-color: var(--base02);
+}
+
+/* Notes */
+
+.notes-widget {
+	padding: 4px;
+}
+
+.notes-widget .label {
+	font-size: 14px;
+	color: var(--base0E);
+}
+
+.notes-widget .icon {
+	font-size: 16px;
+	color: var(--base0E);
+}
+
+.notes-menu {
+	min-width: 400px;
+	max-width: 400px;
+	background-color: var(--base00);
+}
+
+.notes-menu .note-item {
+	background-color: transparent;
+	border-bottom: 1px solid rgba(var(--base05-rgb), 0.1);
+}
+
+.notes-menu .note-item:hover {
+	background-color: rgba(var(--base05-rgb), 0.1);
+}
+
+.notes-menu .note-item .icon {
+	font-size: 16px;
+	padding: 0 4px;
+	color: var(--base0E);
+}
+
+.notes-menu .delete-button {
+	color: var(--base08);
+	background: transparent;
+	border: none;
+	font-size: 8px;
+	padding: 7px 8px;
+	border-radius: 3px;
+}
+
+.notes-menu .delete-button:hover {
+	background-color: rgba(var(--base04-rgb), 0.5);
+}
+
+.notes-menu .note-item .title {
+	font-size: 13px;
+	font-family: "Segoe UI";
+}
+
+.notes-menu .note-item .date {
+	font-size: 12px;
+	font-family: "Segoe UI";
+	color: rgba(var(--base05-rgb), 0.4);
+}
+
+.notes-menu .empty-list {
+	font-family: "Segoe UI";
+	color: var(--base0E);
+	font-size: 24px;
+	font-weight: 600;
+	padding: 10px 0 20px 0;
+}
+
+.notes-menu .add-button,
+.notes-menu .cancel-button {
+	padding: 8px;
+	background-color: rgba(var(--base05-rgb), 0.1);
+	border: none;
+	border-radius: 4px;
+	color: var(--base05);
+	font-family: "Segoe UI";
+}
+
+.notes-menu .cancel-button {
+	margin-left: 4px;
+}
+
+.notes-menu .add-button:hover,
+.notes-menu .cancel-button:hover {
+	background-color: rgba(var(--base05-rgb), 0.2);
+}
+
+.notes-menu .scroll-area {
+	background: transparent;
+	border: none;
+	border-radius: 0;
+}
+
+.notes-menu .note-input {
+	background-color: rgba(var(--base01-rgb), 0.2);
+	border: 1px solid var(--base0E);
+	font-family: "Segoe UI";
+	font-size: 14px;
+	max-height: 30px;
+	padding: 4px;
+	border-radius: 6px;
+}
+
+.note-input:focus {
+	border: 1px solid var(--base0E);
+}

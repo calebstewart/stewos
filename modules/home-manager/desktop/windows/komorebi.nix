@@ -1,9 +1,10 @@
-# komorebi, the tiling window manager, and komorebi-bar along the top of
-# each monitor.
+# komorebi, the tiling window manager. The bar along the top of each monitor
+# is YASB's (./yasb.nix), not komorebi-bar, which stays at winpkgs' default of
+# off: komorebi reserves room for every bar it is configured with, running or
+# not, so leaving it configured beside YASB would stack the two gaps.
 #
 # What a host still says for itself is its monitors: komorebi takes the
-# workspaces of each one from `programs.komorebi.settings.monitors`, and the
-# bar one file per monitor from `programs.komorebi.bar.monitors`, both indexed
+# workspaces of each one from `programs.komorebi.settings.monitors`, indexed
 # by komorebi's own monitor numbers. The workspace bindings in ./bindings.nix
 # reach the first five of the focused monitor, so five per monitor is the
 # shape to give it.
@@ -46,8 +47,8 @@ in
           })
 
           {
-            # Flow Launcher (./default.nix), which the community rules have no
-            # entry for. Its confirmations (log off, restart, ...) are WPF
+            # Flow Launcher, for a host that turns it back on (./default.nix);
+            # the community rules have no entry for it. Its confirmations (log off, restart, ...) are WPF
             # windows titled with their own prompt text and sharing an
             # HwndWrapper class with everything else it opens, so nothing
             # narrower than the exe picks them out. The launcher itself is
@@ -63,46 +64,6 @@ in
             ];
           }
         ];
-
-        bar = {
-          enable = lib.mkDefault true;
-
-          settings = lib.mapAttrs (_: lib.mkDefault) {
-            font_family = cfg.fonts.monospace.name;
-
-            left_widgets = [
-              {
-                Komorebi = {
-                  workspaces = {
-                    enable = true;
-                    hide_empty_workspaces = true;
-                  };
-                  layout.enable = false;
-                  focused_window = {
-                    enable = true;
-                    show_icon = true;
-                  };
-                };
-              }
-            ];
-
-            right_widgets = [
-              { Update.enable = true; }
-              {
-                Date = {
-                  enable = true;
-                  format = "DayDateMonthYear";
-                };
-              }
-              {
-                Time = {
-                  enable = true;
-                  format = "TwentyFourHour";
-                };
-              }
-            ];
-          };
-        };
       };
     }
   );
