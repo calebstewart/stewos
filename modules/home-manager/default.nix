@@ -24,6 +24,7 @@
     ./oh-my-posh.nix
     ./rofi.nix
     ./update-manager.nix
+    ./yasb.nix
     ./zoxide.nix
     ./zsh.nix
   ];
