@@ -545,19 +545,20 @@
         };
       };
 
-      # "nix run .#<hostname>-vm" boots a host's configuration in a VM.
+      # "nix run .#<hostname>-vm" boots a host's configuration in a VM;
+      # "nix run .#<hostname>-iso -- --iso Win11.iso --out <hostname>.iso"
+      # makes a Windows machine's unattended installation media.
       apps.x86_64-linux = {
         docs = {
           type = "app";
           program = lib.getExe docsServe;
           meta.description = "Build the documentation site and serve it";
         };
-
-        gaming-windows-iso = {
-          type = "app";
-          program = lib.getExe windowsHosts.gaming-windows.config.system.build.installer;
-        };
       }
+      # One per Windows machine, from the same attrset the configurations come
+      # from, so declaring a machine above is all there is to wiring up its
+      # installer.
+      // inputs.winpkgs.lib.installerApps { configurations = windowsHosts; }
       // lib.mapAttrs' (
         hostname: host:
         lib.nameValuePair "${hostname}-vm" {
