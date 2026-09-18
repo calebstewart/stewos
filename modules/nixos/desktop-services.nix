@@ -13,7 +13,6 @@ in
   config = lib.mkIf cfg.enable {
     # Most things expect this to be around
     services.gnome.gnome-keyring.enable = true;
-    services.dbus.packages = [ pkgs.gcr ];
 
     # PAM does not start the keyring's *secrets* component. Its auto_start brings
     # up "gnome-keyring-daemon --login", which owns no well-known bus name; the

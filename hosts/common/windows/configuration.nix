@@ -66,8 +66,14 @@
     };
   };
 
-  security.sudo = {
+  # security.sudo = {
+  #   enable = true;
+  #   mode = "normal";
+  # };
+
+  security.gsudo = {
     enable = true;
-    mode = "normal";
+    cacheMode = "auto";
+    enforceUacIsolation = false;
   };
 }

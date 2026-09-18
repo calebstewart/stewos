@@ -2005,11 +2005,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789275595,
-        "narHash": "sha256-d/4Mbw3KekxSuieKQyM/E+gzhzG1G7m6Ly4OgHPbXFQ=",
+        "lastModified": 1789519065,
+        "narHash": "sha256-5sKI0nR5EKtTpbUA3zz9lEl4czEqlWigFkA2LrGkcCk=",
         "owner": "calebstewart",
         "repo": "steward",
-        "rev": "0a6b97d9ecdb9abdbf16d2c1992a33c8969b73ba",
+        "rev": "43c9e59d8171bd42d9b5782e2832d168e36ae8bb",
         "type": "github"
       },
       "original": {
@@ -2330,6 +2330,22 @@
         "type": "github"
       }
     },
+    "winget-pkgs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789353538,
+        "narHash": "sha256-6mma6mjtxhT7jj+4OOU4b7Xe2ceVWau2A6ELkwgBnbc=",
+        "owner": "microsoft",
+        "repo": "winget-pkgs",
+        "rev": "10e9803789c33d104e0dea0986e51160b4683780",
+        "type": "github"
+      },
+      "original": {
+        "owner": "microsoft",
+        "repo": "winget-pkgs",
+        "type": "github"
+      }
+    },
     "winpkgs": {
       "inputs": {
         "home-manager": [
@@ -2338,14 +2354,15 @@
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "winget-pkgs": "winget-pkgs"
       },
       "locked": {
-        "lastModified": 1789321557,
-        "narHash": "sha256-zoIA69NpU2OQVNCQ+kpq+b+XAm8cYxVXRBt3HP4NklI=",
+        "lastModified": 1789679808,
+        "narHash": "sha256-bUYNcPGV/iOnC7xr0XHbKrqo1PdFBbu9lMRt5fZJVYA=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "a39d1bbaf9642bb489ee2c1644a56131195fe814",
+        "rev": "e5e06b2a1d4c37421233d2df5a5c0fb9f07f9400",
         "type": "github"
       },
       "original": {

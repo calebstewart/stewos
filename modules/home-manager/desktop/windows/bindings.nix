@@ -1,11 +1,20 @@
 # Keybindings, rendered into whkd's configuration, with komorebi performing
-# the window management.
+# the window management -- all but the launcher's, which YASB holds (below).
 #
 # The neutral binding vocabulary declared in ../options.nix arrives here as
 # data. This file owns three tables -- modifiers, keys, and actions -- that say
 # what each neutral name means to whkd and komorebi, plus the default keymap,
 # which is contributed back into "stewos.desktop.bindings" so a host can
 # override any of it by name.
+#
+# The one binding whkd cannot carry is the launcher's. The launcher is YASB's
+# Quick Launch widget (./yasb.nix), and yasbc has no command that opens it:
+# the only way in is a hotkey YASB registers itself. So a binding whose action
+# YASB performs is rendered into that widget's `keybindings` instead of
+# whkdrc -- the same binding, the same key, still subject to the duplicate
+# check below. Unlike whkd's, it is not silenced by the pause combination.
+# A host that turns Flow Launcher back on gets the old arrangement: whkd
+# starts Flow, which is single-instance, so starting it shows the running one.
 {
   options,
   pkgs,
@@ -66,6 +75,10 @@ let
       bracketright = "oem_6";
     };
 
+  # YASB's names for the same keys: it takes every neutral name as it is. Its
+  # modifier names are whkd's (above), "win" included.
+  yasbKeys = lib.mapAttrs (name: _: name) keys;
+
   # whkd writes every command to one long-lived pwsh session, so a command has
   # to hand back at once: a program started with `&` that stays in the
   # foreground would hold up every binding pressed after it. Start-Process
@@ -124,9 +137,28 @@ let
   # counts from 1, as the keys do.
   index = b: toString (b.workspace - 1);
 
+  # Who answers the "launcher" action: Flow Launcher, through whkd, when a
+  # host turns it on; otherwise YASB's Quick Launch, holding the key itself.
+  launcher =
+    if config.programs.flow-launcher.enable then
+      "flow"
+    else if config.programs.yasb.enable then
+      "yasb"
+    else
+      null;
+
+  # The actions YASB performs, as the widget and callback each one names.
+  yasbActions = lib.optionalAttrs (launcher == "yasb") {
+    launcher = {
+      widget = "quick_launch";
+      callback = "toggle_quick_launch";
+    };
+  };
+
   # What each neutral action means to komorebi. An action absent from this
-  # table is one this desktop cannot perform; the assertion below reports it
-  # by name rather than letting the binding silently do nothing.
+  # table (and from yasbActions) is one this desktop cannot perform; the
+  # assertion below reports it by name rather than letting the binding
+  # silently do nothing.
   actions = {
     close-window = _: komorebic "close";
     minimize-window = _: komorebic "minimize";
@@ -158,7 +190,6 @@ let
     workspace-back-and-forth = _: komorebic "focus-last-workspace";
     move-window-back-and-forth = _: komorebic "move-to-last-workspace";
 
-    launcher = _: config.programs.flow-launcher.showCommand;
     terminal =
       _:
       start {
@@ -185,6 +216,9 @@ let
       else
         "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
     show-shortcuts = _: komorebic "toggle-shortcuts";
+  }
+  // lib.optionalAttrs (launcher == "flow") {
+    launcher = _: config.programs.flow-launcher.showCommand;
   };
 
   # komorebi keeps five workspaces on each monitor here (./komorebi.nix), so
@@ -388,11 +422,21 @@ let
     in
     lib.concatStringsSep " + " (map (m: modifiers.${m}) ordered ++ [ key ]);
 
-  mkCombo =
+  held =
     binding:
-    combo (lib.unique (
-      lib.optional binding.useModifier (lib.toLower cfg.modifier) ++ binding.modifiers
-    )) keys.${binding.key};
+    lib.unique (lib.optional binding.useModifier (lib.toLower cfg.modifier) ++ binding.modifiers);
+
+  mkCombo = binding: combo (held binding) keys.${binding.key};
+
+  # The same combination as YASB writes it: "alt+d".
+  mkHotkey =
+    binding:
+    let
+      ordered = lib.filter (m: lib.elem m (held binding)) modifierOrder;
+    in
+    lib.concatStringsSep "+" (map (m: modifiers.${m}) ordered ++ [ yasbKeys.${binding.key} ]);
+
+  byYasb = { binding, ... }: binding.action != null && yasbActions ? ${binding.action};
 
   mkBinding =
     { binding, ... }:
@@ -408,17 +452,36 @@ let
     "shift"
   ] "p";
 
+  known = action: actions ? ${action} || yasbActions ? ${action};
+
   unknownKeys = lib.filter ({ binding, ... }: !(keys ? ${binding.key})) active;
   unknownActions = lib.filter (
-    { binding, ... }: binding.action != null && !(actions ? ${binding.action})
+    { binding, ... }: binding.action != null && !(known binding.action)
   ) active;
 
   # Only what renders; the rest is reported by the assertions below rather
   # than failing on a missing attribute first.
   renderable = lib.filter (
-    { binding, ... }: keys ? ${binding.key} && (binding.action == null || actions ? ${binding.action})
+    { binding, ... }: keys ? ${binding.key} && (binding.action == null || known binding.action)
   ) active;
 
+  # YASB's, grouped by the widget that registers them: { quick_launch = [ ... ]; }.
+  yasbKeybindings = lib.zipAttrs (
+    map (
+      { binding, ... }:
+      let
+        target = yasbActions.${binding.action};
+      in
+      {
+        ${target.widget} = {
+          keys = mkHotkey binding;
+          action = target.callback;
+        };
+      }
+    ) (lib.filter byYasb renderable)
+  );
+
+  # Across whkd and YASB alike: the two would fight over a key they share.
   combos =
     map ({ binding, ... }: mkCombo binding) renderable
     ++ lib.optional (config.programs.whkd.pause != null) config.programs.whkd.pause;
@@ -444,7 +507,9 @@ in
             perform:
             ${lib.concatMapStringsSep "\n" (b: "  ${b.name}: \"${b.binding.action}\"") unknownActions}
 
-            Actions it does support: ${lib.concatStringsSep ", " (lib.attrNames actions)}.
+            Actions it does support: ${
+              lib.concatStringsSep ", " (lib.attrNames (actions // yasbActions))
+            }. "launcher" needs Flow Launcher or YASB enabled.
             Restrict the binding with platforms = [ "linux" "darwin" ] if it is
             not meant for Windows.
           '';
@@ -472,8 +537,12 @@ in
         pause = lib.mkDefault pause;
         pauseHook = lib.mkDefault (komorebic "toggle-pause");
 
-        keybindings = lib.listToAttrs (map mkBinding renderable);
+        keybindings = lib.listToAttrs (map mkBinding (lib.filter (b: !(byYasb b)) renderable));
       };
+
+      programs.yasb.settings.widgets = lib.mapAttrs (_: keybindings: {
+        options = { inherit keybindings; };
+      }) yasbKeybindings;
     }
   );
 }
