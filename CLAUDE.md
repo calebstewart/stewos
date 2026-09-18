@@ -317,7 +317,7 @@ running it on top of the filter chain processes the signal twice.
 | `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
 | `stewos.rofi` | Rofi, themed through the RASI DSL |
 | `services.nixos-update-manager` | Update tray daemon from the `nixos-update-manager` flake (external, not a `stewos.*` module). `update-manager.nix` imports the upstream module and only fills in StewOS defaults -- `flakePath`, the desktop terminal, `nvim`, Claude from `llm-agents`, palette-derived icon colours -- each as `mkDefault`; hosts enable and customise it at the upstream namespace. See "update-manager" below |
-| `programs.yasb` | YASB status bar, Windows only. Deliberately *not* a `stewos.*` module: it is written in winpkgs' shape (`package` from winget, `settings` → `~/.config/yasb/config.yaml`, `style` → `styles.css`, the `YASB` Run value or `service.enable` for steward) so it can be upstreamed to winpkgs as is. The only StewOS-specific part is the `options ? windows` guard around `config`, which goes when it moves. No host enables it, and `stewos.desktop` still uses komorebi-bar. As a service, a changed file restarts the unit, because winpkgs replaces files rather than modifying them and YASB's watcher only sees modifications |
+| `programs.yasb` | YASB status bar, Windows only. Deliberately *not* a `stewos.*` module: it is written in winpkgs' shape (`package` from winget, `settings` → `~/.config/yasb/config.yaml`, `style` → `styles.css`, the `YASB` Run value or `service.enable` for steward) so it can be upstreamed to winpkgs as is. The StewOS-specific parts are the `options ? windows` guard around `config` and the `null` fallback in `package`'s default (the docs host pages force every default on a Linux stub), both of which go when it moves. `stewos.desktop` turns it on for every Windows home and configures it (`desktop/windows/yasb.nix`); the module itself only knows YASB. As a service, a changed file restarts the unit, because winpkgs replaces files rather than modifying them and YASB's watcher only sees modifications |
 | `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
 | `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
@@ -332,7 +332,7 @@ desktop/
 ├── default.nix   # imports + cross-platform config + binding shape assertions
 ├── linux/        # hyprland, style, bindings, theme, polkit, xdg
 ├── darwin/       # aerospace, karabiner, autoraise, raycast
-└── windows/      # komorebi, bindings (whkd), theme; flow-launcher, masir
+└── windows/      # komorebi, yasb (bar + launcher), bindings (whkd), theme, services; masir
 ```
 
 All three platform directories are imported unconditionally and every file
@@ -408,14 +408,29 @@ following) on keys Linux leaves free. Things to know:
   hand would race steward into running two. From the Run key it kills and
   restarts whkd itself.
 - **StewOS runs the Windows desktop's daemons under steward by default.**
-  `windows/services.nix` sets `programs.{komorebi,whkd,masir}.service.enable`
-  (`mkDefault`) and groups them under a `tiling.target`, so `stewctl stop
-  tiling.target` puts tiling away; `mkWindowsHost` sets
+  `windows/services.nix` sets `programs.{komorebi,whkd,masir,yasb}.service.enable`
+  (`mkDefault`) and groups the first three under a `tiling.target`, so `stewctl
+  stop tiling.target` puts tiling away; YASB stays on `graphical-session.target`,
+  since it is the launcher and clock too. `mkWindowsHost` sets
   `services.steward.enable` (`mkDefault`) so the system installs what the home
   expects. The two halves are separate configurations and cannot see each
   other: a host that turns steward off in `configuration.nix` must also turn
-  the three `service.enable`s off in `home.nix`, or nothing starts them.
-  Flow Launcher stays on the Run key; winpkgs has no service mode for it.
+  the four `service.enable`s off in `home.nix`, or nothing starts them.
+- **The bar and the launcher are YASB** (`windows/yasb.nix`, stylesheet
+  `windows/yasb.css` set from `windows/theme.nix`), replacing komorebi-bar and
+  Flow Launcher, which stay at winpkgs' default of off. Do not leave
+  komorebi-bar configured beside it: komorebi reserves a `work_area_offset` for
+  every bar in `bar_configurations`, running or not, and the gaps stack. The
+  settings are `mkDefault` down to the leaves, so a host overrides one value
+  without restating the rest.
+- **The `launcher` binding is YASB's hotkey, not whkd's.** Quick Launch can
+  only be opened by a hotkey YASB registers itself -- `yasbc` has no command
+  for it -- so `windows/bindings.nix` renders a binding whose action YASB
+  performs (`yasbActions`) into the widget's `keybindings` (`alt+d`) instead
+  of whkdrc. It is still a `stewos.desktop.bindings` entry, retargeted the
+  same way and counted by the duplicate check, but whkd's pause does not
+  silence it. A host that turns `programs.flow-launcher.enable` back on gets
+  `launcher` routed to Flow through whkd again.
 - **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
   directive, not a binding; it is counted by the duplicate-combination
   assertion all the same.

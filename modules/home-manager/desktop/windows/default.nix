@@ -1,8 +1,13 @@
-# The Windows desktop: komorebi for tiling, whkd for the keys, Flow Launcher
-# as the launcher, and masir for focus-follows-mouse, the first three run by
-# steward (./services.nix). All of it is winpkgs'
-# (github:calebstewart/winpkgs), which evaluates a Windows home against
-# home-manager's own modules plus its own.
+# The Windows desktop: komorebi for tiling, whkd for the keys, YASB for the
+# bar and, through its Quick Launch widget, the launcher (./yasb.nix), and
+# masir for focus-follows-mouse, all run by steward (./services.nix). All of
+# it is winpkgs' (github:calebstewart/winpkgs), which evaluates a Windows home
+# against home-manager's own modules plus its own -- YASB's module aside, which
+# is StewOS's (../../yasb.nix), written to move there.
+#
+# komorebi-bar and Flow Launcher, which YASB replaces, are off. A host that
+# turns Flow back on (programs.flow-launcher.enable) gets the "launcher"
+# binding back as well; see ./bindings.nix.
 #
 # Every file here guards its own config on "cfg.enable && isWindows", as the
 # Linux and macOS backends do, and on one thing more: that winpkgs' options
@@ -25,6 +30,7 @@ in
 {
   imports = [
     ./komorebi.nix
+    ./yasb.nix
     ./bindings.nix
     ./theme.nix
     ./services.nix
@@ -61,11 +67,6 @@ in
           '';
         }
       ];
-
-      # The launcher the "launcher" action summons. Flow is single-instance,
-      # so starting it again shows the running one, which is how whkd calls it
-      # up without the two fighting over a global hotkey.
-      programs.flow-launcher.enable = lib.mkDefault true;
 
       # Focus follows the mouse; masir only focuses windows komorebi manages.
       programs.masir.enable = lib.mkDefault true;
