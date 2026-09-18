@@ -44,6 +44,15 @@ in
             border = true;
             border_width = 1;
             border_offset = -1;
+
+            # This number is right for 150% scaling on a 4k monitor. Override in
+            # your host's home configuration if it's not right for you.
+            global_work_area_offset = {
+              left = 0;
+              top = 74;
+              right = 0;
+              bottom = 74;
+            };
           })
 
           {

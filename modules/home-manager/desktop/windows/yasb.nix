@@ -94,9 +94,12 @@ in
             round_corners = true;
             border_color = "none";
           };
+          # Workspace offset is handled by Komorebi, because restarts of YASB
+          # cause problems with rendering in Chromium apps. Appears to be
+          # an upstream bug caused by sudden and fast window resize events.
           window_flags = {
             always_on_top = false;
-            windows_app_bar = true;
+            windows_app_bar = false;
           };
           dimensions = {
             width = "100%";
