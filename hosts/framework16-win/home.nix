@@ -17,4 +17,7 @@
       }
     ];
   };
+
+  # The taskbar is hidden (thide, from the shared home); YASB's battery widget
+  # takes its place, and shows itself here because this machine has one.
 }

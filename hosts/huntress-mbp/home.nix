@@ -68,6 +68,7 @@
     nodejs
     circleci-cli
     poppler-utils
+    opentofu
     stewos.shortcut-cli
     stewos.macfetch
   ];
