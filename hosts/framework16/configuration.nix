@@ -1,5 +1,6 @@
 {
   inputs,
+  pkgs,
   ...
 }:
 {
@@ -20,5 +21,13 @@
     AllowHibernation = true;
     AllowSuspendThenHibernate = true;
     AllowHybridSleep = true;
+  };
+
+  # Default to CST
+  time.timeZone = "America/Chicago";
+
+  services.ollama = {
+    enable = true;
+    package = pkgs.ollama-rocm;
   };
 }
