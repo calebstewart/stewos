@@ -46,10 +46,22 @@
       btop
       opencode
     ])
-    ++ [
-      # From llm-agents.nix rather than nixpkgs, which lags upstream releases.
-      inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
-    ];
+    ++ (with inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}; [
+      claude-code
+      claude-desktop
+    ]);
+
+  xdg.mimeApps = {
+    enable = true;
+
+    defaultApplications = {
+      "x-scheme-handler/discord" = "discord.desktop";
+      "x-scheme-handler/sgnl" = "signal.desktop";
+      "x-scheme-handler/signalcaptcha" = "signal.desktop";
+      "x-scheme-handler/claude" = "claude-desktop.desktop";
+      "x-scheme-handler/claude-cli" = "claude-code-url-handler.desktop";
+    };
+  };
 
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
