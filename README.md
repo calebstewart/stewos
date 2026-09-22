@@ -1,196 +1,311 @@
-# StewOS - NixOS and Nix-Darwin Configurations
-This repository houses my personal NixOS, Nix-Darwin and Home-Manager configurations for all my systems.
-It also houses some utility library functions, and a few custom packages which are used for my system
-configurations.
+# StewOS
 
-Generally, the system is configured with fields under `stewos.*`. The majority of configuration comes
-from `stewos.desktop` which will configure Hyprland and my custom [stew-shell] shell UI and associated
-services (`hyprlock`, `swaync`, etc.) for NixOS. For Nix-Darwin, `stewos.desktop` configures Aerospace
-and associated services for customizing the graphical interface in MacOS.
+Personal NixOS, Nix-Darwin and Home-Manager configuration for all my machines,
+plus the modules, packages and helper libraries they are built from.
 
-## Quick Start
+Everything is configured through options under `stewos.*`. Most of the surface
+area is `stewos.desktop`, which sets up Hyprland and its associated services
+(locking, notifications, wallpaper, bar) on NixOS, Aerospace with the
+equivalent macOS pieces on Nix-Darwin, and komorebi, whkd and Flow Launcher on
+Windows through [winpkgs](https://github.com/calebstewart/winpkgs).
 
-To get started with StewOS on a new NixOS system:
+**[Documentation](https://calebstewart.github.io/stewos/)** — every option,
+searchable, along with the packages, the hosts as worked examples, and the
+library reference. It is generated from this flake by `nix build .#docs`, so it
+cannot drift from the code.
 
-```bash
-# Create a new configuration from the template
-nix flake new -t github:calebstewart/stewos#nixos-single ./my-config
-cd my-config
+## Repository Layout
 
-# Initialize git and add files
-git init
-git add .
-
-# Copy your hardware configuration (generated during NixOS install)
-cp /etc/nixos/hardware-configuration.nix .
-git add hardware-configuration.nix
-
-# Edit flake.nix with your hostname and user info
-# Then rebuild your system
-nixos-rebuild switch --flake .#your-hostname
+```
+flake.nix     Inputs, and every output declared explicitly. The one place
+              flake inputs are captured and handed to the module system.
+overlays/     The StewOS overlay: adds a "stewos" package scope to nixpkgs.
+pkgs/         Package definitions. Plain callPackage derivations that never
+              reference flake inputs.
+lib/          Pure helpers: takes a nixpkgs lib, returns functions.
+  desktop.nix   Command line construction shared by both desktop backends
+  rofi.nix      Rofi command line construction
+  rasi/         RASI DSL used to generate Rofi themes and configs
+  docs/         Extraction half of the documentation generator
+docs/         This flake's own site: flakedoc.toml and hand-written prose
+modules/
+  common/       Options shared by NixOS and Home-Manager
+  nixos/        NixOS modules; default.nix lists them all
+  home-manager/ Home-Manager modules
+  nix-darwin/   Nix-Darwin modules
+hosts/        Per-machine configuration, and nothing else
+  common/       Policy shared between machines
+templates/    Starting points for new StewOS-based flakes
 ```
 
-## Initial Setup on a New System
+Two rules keep this navigable:
 
-### Prerequisites
-- NixOS installed with a base configuration
-- Nix flakes enabled (add `experimental-features = nix-command flakes` to `/etc/nix/nix.conf`)
+**Nothing is auto-discovered.** Modules and packages are listed explicitly in
+the relevant `default.nix`. Adding one is a single line, and in exchange every
+import is greppable and the set of modules is visible without evaluating
+anything.
 
-### Step-by-Step Setup
+**Modules are ordinary module files.** They take
+`{ inputs, lib, config, pkgs, ... }` and are imported by path, so
+`imports = [ ./audio.nix ]` works and the module system deduplicates them
+normally. `inputs` arrives once, through `specialArgs` set in `flake.nix`.
 
-1. **Create your configuration** using the StewOS template:
-   ```bash
-   nix flake new -t github:calebstewart/stewos#nixos-single ~/git/stewos
-   cd ~/git/stewos
-   ```
+## Machines
 
-2. **Initialize git** (required for flakes):
-   ```bash
-   git init
-   git add .
-   ```
+| Host | Platform | Notes |
+|------|----------|-------|
+| `framework-desktop` | `x86_64-linux` | AMD Framework Desktop, Secure Boot, ollama, tailscale |
+| `framework16` | `x86_64-linux` | Framework 16 laptop, Secure Boot |
+| `huntress-mbp` | `aarch64-darwin` | Apple Silicon MacBook, work machine |
+| `gaming-windows` | `x86_64-windows` | Windows 11 desktop, through winpkgs, with a NixOS-WSL distro |
+| `framework16-win` | `x86_64-windows` | The Windows side of `framework16`'s dual boot, on its own disk |
 
-3. **Copy your hardware configuration**:
-   ```bash
-   cp /etc/nixos/hardware-configuration.nix .
-   git add hardware-configuration.nix
-   ```
+The two Framework machines share `hosts/common/workstation.nix`, which holds the
+Secure Boot setup, silent boot, plain suspend and the StewOS modules they both
+run. Anything genuinely machine-specific stays in that machine's
+`configuration.nix`, including `system.stateVersion`, which must never follow a
+shared default, and whether the machine hibernates -- framework16 does,
+framework-desktop deliberately does not.
 
-4. **Edit `flake.nix`** and set your:
-   - Hostname
-   - Username
-   - Full name
-   - Email address
+The Windows machines share `hosts/common/windows/`, split the same way the
+hosts are: `configuration.nix` for the system half, `home.nix` for the home.
+Power, keyboard remaps, monitors and the WSL distro's `stateVersion` stay
+per-host.
 
-5. **Edit `src/configuration.nix`** to enable the StewOS modules you want.
+## Building
 
-6. **Edit `src/home.nix`** to configure Home-Manager modules.
+```bash
+# NixOS
+nh os switch ~/git/stewos
 
-7. **Build and switch**:
-   ```bash
-   # First time (before nh is available)
-   sudo nixos-rebuild switch --flake .#your-hostname
+# Home-Manager
+nh home switch ~/git/stewos
 
-   # Subsequent rebuilds (after nh is installed)
-   nh os switch ~/git/stewos
-   nh home switch ~/git/stewos
-   ```
+# Boot a host's configuration in a VM
+nix run .#framework-desktop-vm
 
-## Defining a System
-To define a system, create a new directory under [systems/] and a `default.nix` in that directory.
-`default.nix` is a function taking all inputs from the flake, and should return the flake outputs.
-Additionally, `default.nix` takes a `hostname` input which is the name of the directory containing
-the file. This just decreases constant duplication because the name of the directory is often the
-hostname of the system (or maybe the name of the user for Home-Manager-only systems). The outputs
-from all systems are merged to create the outputs of the flake.
+# Format, and check that everything still evaluates
+nix fmt
+nix flake check --all-systems
+```
 
-There are shortcut functions defined in `stewos.lib` to create NixOS, Nix-Darwin or Home-Manager
-configurations which automatically include the StewOS NixOS, Nix-Darwin and/or Home-Manager modules.
+## Adding to the Repository
+
+**A module.** Create `modules/{platform}/{name}.nix` following the usual shape,
+then add it to that platform's `default.nix`:
 
 ```nix
-# Creating a NixOS configuration=
-nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem {
-  inherit hostname;
+{ lib, config, ... }:
+let
+  cfg = config.stewos.thing;
+in
+{
+  options.stewos.thing.enable = lib.mkEnableOption "thing";
 
-  user = {
-    username = "username";
-    fullname = "User Name";
-    email = "user.name@system.tld";
+  config = lib.mkIf cfg.enable {
+    # ...
   };
-
-  system = "x86_64-linux";
-  modules = [./hardware-configuration.nix ./configuration.nix];
 }
+```
 
-# Creating a Nix-Darwin Configuration
-darwinConfigurations.${hostname} = stewos.lib.mkNixDarwinSystem {
-  inherit hostname;
+Only take `inputs` if you actually use it.
 
-  system = "aarch64-darwin";
-  modules = [./configuration.nix];
+**A package.** Create `pkgs/{name}/default.nix` as a plain callPackage
+derivation and add a line to `pkgs/default.nix`. Packages never reference flake
+inputs; if one needs something from an input (a `flake = false` source tree, a
+colour scheme), add that value to the scope in `overlays/default.nix` and take
+it as an argument.
+
+**A machine.** Create `hosts/{hostname}/` with `configuration.nix`, `home.nix`
+and, for NixOS, `hardware-configuration.nix`. Then declare the outputs in
+`flake.nix`:
+
+```nix
+nixosConfigurations.my-host = mkNixOSHost {
+  hostname = "my-host";
+  system = "x86_64-linux";
+  user = caleb;
+  modules = [
+    ./hosts/my-host/hardware-configuration.nix
+    ./hosts/my-host/configuration.nix
+  ];
+};
+
+homeConfigurations."caleb@my-host" = mkHome {
+  system = "x86_64-linux";
+  user = caleb;
+  modules = [ ./hosts/my-host/home.nix ];
 };
 ```
 
-You can also use `stewos.lib.mkNixOSVirtualMachineApp` to create a Nix Flakes app output which will
-build and execute a virtual machine of the given NixOS configuration.
+`mkNixOSHost`, `mkDarwinHost`, `mkWindowsHost` and `mkHome` live in `flake.nix`.
+They are thin wrappers that attach the StewOS modules, the shared `pkgs` instance
+for that system, and `inputs` via `specialArgs`. `mkHome` derives the home
+directory from the username, so the two cannot disagree. `mkWindowsHost` wraps
+the `winpkgs` input's `windowsSystem` -- the machine, plus its slim NixOS-WSL
+distro (extend it with `wsl.modules`) -- and `mkHome` with a
+`*-windows` system and a `hostname` makes the matching
+`windowsHomeConfigurations."<Windows user>@<host>"`, so one builder covers every
+user@host. On the machine, `winpkgs switch` applies the distro, then the system
+half (one UAC prompt), then the home half.
+
+## NixOS Modules
+
+Enabled under `stewos.*` in a NixOS configuration.
+
+| Module | Description |
+|--------|-------------|
+| `base` | Boot loader, Plymouth, Nix settings, `nh`, documentation. On by default; set `enable = false` to take the modules without the opinions |
+| `audio` | PipeWire, JACK, ALSA and realtime scheduling |
+| `autologin` | greetd with regreet, logging straight into a session |
+| `containers` | Docker, with Compose and Docker compatibility options |
+| `desktop-services` | Portals, polkit and the services a graphical session needs |
+| `greeter` | Display manager, as an alternative to `autologin` |
+| `looking-glass` | Looking Glass client for VM display passthrough, with the client config modelled as options |
+| `sshd` | SSH server, with address and port options |
+| `virtualisation` | KVM/QEMU/libvirt, plus VFIO hooks for GPU passthrough |
+| `zsa` | udev rules for ZSA keyboards, and the keymapp editor |
+
+`networking`, `security` and `user` have no enable flag -- they apply
+unconditionally as part of the module set. `security` is what replaces `sudo`
+with `doas`; `user` creates the account described by `stewos.user`.
+
+## Home-Manager Modules
+
+Enabled under `stewos.*` in a Home-Manager configuration.
+
+| Module | Description |
+|--------|-------------|
+| `desktop` | Hyprland (Linux), Aerospace (macOS) or komorebi (Windows), and everything around them |
+| `neovim` | Neovim with a plain Lua configuration (lazy.nvim), LSP, completion and a full keymap set, the same on every platform |
+| `zsh` | Zsh with any-nix-shell and completion; enables `oh-my-posh` |
+| `oh-my-posh` | The prompt, shared by zsh and PowerShell, coloured from the nix-colors palette, with a root/elevation indicator |
+| `git` | Git with SSH signing and per-directory identities |
+| `rofi` | Rofi launcher, themed through the RASI DSL |
+| `services.nixos-update-manager` | Update tray daemon from the [nixos-update-manager](https://github.com/calebstewart/nixos-update-manager) flake; `update-manager.nix` here only supplies StewOS defaults (palette colours, desktop terminal, Claude) |
+| `alacritty` | Terminal emulator |
+| `firefox` | Firefox, with addons from NUR |
+| `bat` | Syntax-highlighted `cat` |
+| `eza` | Modern `ls` |
+| `zoxide` | Smart directory jumping |
+| `direnv` | Per-directory development environments |
+
+### `stewos.desktop`
+
+The largest module, and the one worth knowing the options of:
+
+| Option | Description |
+|--------|-------------|
+| `monitors` | Monitor list: description, resolution, position, scale (Linux) |
+| `keyboards` | Per-keyboard overrides, keyed by device name (Linux) |
+| `bindings` | Keybindings, keyed by name; see below |
+| `modifier` | Global modifier prefix for keybindings (default `SUPER`) |
+| `terminal` | Terminal package (default Alacritty) |
+| `wallpaper` | Path to a wallpaper image |
+| `fonts.ui` / `fonts.monospace` | Interface and monospace fonts, shared by every toolkit |
+| `startLocked` | Bring the session up locked (Linux) |
+| `capsLockEscape` | Send Escape when Caps Lock is pressed (Linux, macOS) |
+| `swapCommandAlt` | Swap left Command and left Alt (macOS) |
+
+None of these name a compositor. Hyprland runs the desktop on Linux, Aerospace
+on macOS and komorebi on Windows, but that lives in
+`modules/home-manager/desktop/linux/`, `.../darwin/` and `.../windows/`; a host
+describes what it wants and the backend for the platform it is built for works
+out how to ask for it.
+
+Bindings are keyed by a name you choose, and name a `key`, the `modifiers` held
+with it, and either a neutral `action` or a `command` to run:
 
 ```nix
-apps.${system}.${hostname} = stewos.lib.mkNixOSVirtualMachineApp nixosConfigurations.${hostname}
+stewos.desktop.bindings = {
+  # Retarget a binding StewOS provides
+  launcher.key = "space";
+
+  # Or stop binding it
+  power-menu.enable = false;
+
+  # Or add one of your own
+  notes = {
+    key = "n";
+    modifiers = [ "shift" ];
+    command.package = pkgs.obsidian;
+  };
+};
 ```
 
-## Available Modules
+Each backend owns a table saying what every neutral key name and action means
+to it, and asserts on anything it cannot render — so a typo, a duplicated key
+combination, or an action the platform cannot perform fails at build time
+rather than at compositor startup. Aerospace does not implement `lock-session`
+or the media keys, for instance; restrict such a binding with
+`platforms = [ "linux" ]`. On Windows a `command` runs the program where
+winpkgs knows its installer puts it (`pkgs.winpkgs.getExe`), and a package it
+cannot place fails the build by name.
 
-### NixOS Modules
+## Packages
 
-These modules are enabled under `stewos.*` in your NixOS configuration:
-
-| Module | Description |
-|--------|-------------|
-| `user` | User account creation with groups and shell configuration |
-| `audio` | PipeWire, JACK, ALSA, and NoiseTorch audio configuration |
-| `networking` | NetworkManager, firewall, and Bluetooth configuration |
-| `sshd` | SSH server configuration |
-| `containers` | Docker with rootless support |
-| `virtualisation` | KVM/QEMU/libvirt with VFIO hooks for GPU passthrough |
-| `security` | Security hardening options |
-| `desktop-services` | Polkit and common desktop services |
-| `autologin` | Automatic login support |
-| `greeter` | Display manager (greetd/tuigreet) configuration |
-| `zsa` | ZSA keyboard (Moonlander, Voyager, etc.) support |
-| `looking-glass` | Looking Glass VM display client support |
-
-### Home-Manager Modules
-
-These modules are enabled under `stewos.*` in your Home-Manager configuration:
-
-| Module | Description |
-|--------|-------------|
-| `desktop` | Hyprland (Linux) / Aerospace (macOS) desktop environment |
-| `neovim` | Full Neovim configuration via nixvim with LSP support |
-| `zsh` | Zsh shell with Oh-My-Posh prompt |
-| `git` | Git with SSH signing and conditional configuration |
-| `alacritty` | Terminal emulator configuration |
-| `firefox` | Firefox browser configuration |
-| `rofi` | Application launcher (Linux) |
-| `bat` | Syntax-highlighted cat replacement |
-| `eza` | Modern ls replacement |
-| `zoxide` | Smart directory navigation (z/cd replacement) |
-| `direnv` | Per-directory development environment management |
-
-## Available Packages
-
-Custom packages provided by StewOS:
+Custom packages live in their own scope, reachable as `pkgs.stewos.<name>` with
+the overlay applied, and buildable as `nix build .#<name>`.
 
 | Package | Description |
 |---------|-------------|
 | `gh-actions-language-server` | LSP for GitHub Actions workflow files |
-| `nordvpn` | NordVPN client |
-| `mkRofiConfig` | Helper function for generating Rofi configurations |
-| `rofiScripts` | Custom Rofi script modes (power menu, libvirt VMs) |
-| `rofiThemes` | StewOS Rofi theme |
-| `wl-gen-uuid` | Wayland UUID generation utility |
+| `lucas-chess` | Lucas Chess R2 |
+| `shortcut-cli` | Command line client for shortcut.com |
+| `wl-gen-uuid` | Generate a UUID onto the Wayland clipboard |
+| `rofi-theme` | The StewOS Rofi theme |
+| `rofi-hyprpower` | Rofi script mode for session power actions |
+| `rofi-libvirt` | Rofi script mode for starting and connecting to VMs |
 
-## Terminal Configuration
-The terminal for both NixOS and Nix-Darwin is Alacritty. The color scheme for Alacritty is defined by
-the root `colorScheme` configuration. For the existing systems, I generally use `catpuccin-mocha`.
-The default shell is `zsh` for all systems.
+The scope also holds the `mkRofiConfig` and `mkRofiTheme` builders. They are
+functions rather than derivations, so they are not part of the `packages`
+output.
 
-<img width="2131" height="1123" alt="image" src="https://github.com/user-attachments/assets/3d9ffb51-4ef8-4122-8a9c-522773afaa6b" />
+## Using StewOS From Another Flake
 
-## Neovim Configuration
-If you enable `stewos.neovim.enable`, then StewOS will configure Neovim using [nixvim]. There are a lot
-of moving parts in vim configurations, so I won't go into all the details, but the improtant big pieces
-are:
+Start from the template:
 
-1. Configured to use the color scheme defined in the root `colorScheme` config.
-2. Use ` ` (SPACE) as the global leader, which behaves similarly to emacs.
-3. Enable support for `wl-copy` under NixOS (ignored for Nix-Darwin).
-4. Enable plugins: `nix`, `lualine`, `lsp-format`, `oil`, `cmp-nvim-lsp-signature-help`, `transparent`, `noice`, `neogit`, `vim-bbye`, `illuminate`, `web-devicons`, `treesitter`, `markdown-preview`, `trouble`, `notify`, `toggleterm`, `lspsaga`, `lsp`, `cmp`, `none-ls`, `telescope`, `neotree`, `which-key`.
-5. LSP Servers: `lua_ls`, `gopls`, `nixd`, `pyright`, `clangd`, `jdtls`, `ts_ls`, `vala_ls`, `mesonlsp`, `ruby_lsp`, `rust_analyzer`, `gh_actions_ls`.
-6. A bunch of keymaps with helpful documentation.
+```bash
+nix flake new -t github:calebstewart/stewos#nixos-single ./my-config
+```
 
-<img width="3826" height="2104" alt="image" src="https://github.com/user-attachments/assets/2651791c-c14e-4a41-87fd-9f40a92eaa9e" />
+To wire it up by hand, note that StewOS exports module trees rather than builder
+functions. The modules reference StewOS's own inputs from inside `imports`,
+where only `specialArgs` are available, so those inputs have to be handed back
+in:
 
-[systems/]: ./systems
-[stew-shell]: https://github.com/calebstewart/stew-shell
-[nixvim]: https://github.com/nix-community/nixvim
+```nix
+nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+  specialArgs = { inputs = stewos.lib.moduleInputs; };
+  modules = [ stewos.nixosModules.default ./configuration.nix ];
+};
+```
+
+This means `inputs` inside a StewOS module always refers to StewOS's inputs.
+Pass your own under a different name.
+
+The modules also expect two overlays on the `pkgs` you give them: StewOS's
+package scope, and NUR, which the `firefox` module uses for browser addons.
+
+```nix
+pkgs = import nixpkgs {
+  inherit system;
+  config.allowUnfree = true;
+  overlays = [
+    stewos.overlays.default                          # pkgs.stewos.*
+    stewos.lib.moduleInputs.nur.overlays.default     # pkgs.nur.*
+  ];
+};
+```
+
+If you only want the packages and none of the modules, `overlays.default` on its
+own is enough.
+
+## Conventions
+
+- Privilege escalation is `doas`, not `sudo`
+- Git forces SSH URLs for GitHub and signs commits with an SSH key
+- `system.stateVersion` is per-machine; Home-Manager's is shared
+- Platform differences go through `lib.mkIf pkgs.stdenv.isLinux`
+- Overridable values use `lib.mkDefault`
+- Formatting is `nix fmt` (nixfmt-tree)

@@ -1,25 +1,38 @@
 # StewOS
 
-A declarative Nix Flake-based configuration management system for NixOS, Nix-Darwin (macOS), and Home-Manager. Manages multiple machines with a unified, modular approach.
+A Nix flake managing NixOS, Nix-Darwin (macOS) and Home-Manager configurations
+for several machines, along with the modules, packages and helper libraries they
+are built from. All configuration lives under options named `stewos.*`.
 
 ## Project Structure
 
 ```
 stewos/
-├── flake.nix          # Main flake configuration
-├── lib/               # Utility library functions
-│   ├── default.nix    # mkNixOSSystem, mkNixDarwinSystem, mkHomeManagerConfig, etc.
-│   ├── hypr.nix       # Hyprland helpers (monitors, keybindings, rofi)
-│   └── rasi/          # RASI DSL for Rofi theme generation
+├── flake.nix          # Inputs + every output, declared explicitly.
+│                      # The only place flake inputs are captured.
+├── overlays/          # The StewOS overlay (adds pkgs.stewos.*)
+├── pkgs/              # Package definitions; plain callPackage derivations
+│   └── default.nix    # Explicit list of every package in the scope
+├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
+│   ├── desktop.nix    # Shared desktop helpers (command line construction)
+│   ├── rofi.nix       # Rofi command line construction
+│   ├── rasi/          # RASI DSL for Rofi theme generation
+│   └── docs/          # Extraction half of the documentation generator
+├── docs/              # This flake's own site: config + hand-written prose
 ├── modules/
-│   ├── nixos/         # NixOS system modules
+│   ├── common/        # Options shared by NixOS and Home-Manager
+│   ├── nixos/         # NixOS system modules (default.nix lists them)
 │   ├── home-manager/  # Home-Manager user modules
 │   └── nix-darwin/    # macOS system modules
-├── packages/          # Custom package definitions
-├── systems/           # Machine-specific configurations
-│   ├── framework-desktop/  # AMD Framework 16 + NVIDIA
-│   ├── framework16/        # Framework laptop
-│   └── huntress-mbp/       # Apple Silicon MacBook
+├── hosts/             # Machine-specific configuration only
+│   ├── common/        # Policy shared between machines
+│   │   ├── workstation.nix # the two Framework machines' NixOS side
+│   │   └── windows/        # every Windows machine: configuration.nix + home.nix
+│   ├── framework-desktop/  # AMD Framework desktop
+│   ├── framework16/        # Framework 16 laptop
+│   ├── framework16-win/    # Windows side of framework16's dual boot, via winpkgs
+│   ├── huntress-mbp/       # Apple Silicon MacBook (work)
+│   └── gaming-windows/     # Windows 11 desktop, via winpkgs: configuration.nix (system) + home.nix
 └── templates/         # Flake templates for new systems
 ```
 
@@ -27,11 +40,12 @@ stewos/
 
 ### Module Structure
 
-All modules follow this pattern:
+Modules are ordinary module files, imported by path. `inputs` arrives through
+`specialArgs`, which `flake.nix` sets once:
 
 ```nix
-{ inputs... }:
 {
+  inputs,
   lib,
   config,
   pkgs,
@@ -51,31 +65,140 @@ in
 }
 ```
 
-### Automatic Discovery
+Take `inputs` only if you actually use it. Because modules are paths, the module
+system deduplicates them, so importing the same one twice is harmless.
 
-Modules and packages are auto-imported via directory structure:
-- `/modules/{platform}/{name}/default.nix` becomes a module
-- `/packages/{name}/default.nix` becomes a package overlay
+A module that needs several files gets a directory with a `default.nix`
+(`modules/nixos/looking-glass/`, `modules/home-manager/desktop/`). Everything
+else is a single `{name}.nix`.
 
-### System Configuration
+### No Automatic Discovery
 
-Systems in `/systems/{hostname}/default.nix` return flake outputs:
+Nothing is discovered by scanning directories. To add a module, add a line to
+the relevant `modules/{platform}/default.nix`; to add a package, add a line to
+`pkgs/default.nix`. This keeps every import greppable.
 
-```nix
-{
-  hostname,
-  stewos,
-  ...
-}@inputs:
-let
-  system = "x86_64-linux";
-  user = stewos.lib.mkUserOptions { username = "caleb"; ... };
-in
-{
-  nixosConfigurations.${hostname} = stewos.lib.mkNixOSSystem { ... };
-  homeConfigurations."${user.username}@${hostname}" = stewos.lib.mkHomeManagerConfig { ... };
-}
-```
+### Host Configuration
+
+`hosts/{hostname}/` holds configuration only. The outputs are declared in
+`flake.nix` using the `mkNixOSHost` / `mkDarwinHost` / `mkWindowsHost` / `mkHome`
+helpers defined there, so the full set of configurations is visible in one file.
+
+Windows hosts come from the `winpkgs` input (`github:calebstewart/winpkgs`,
+nix-darwin-shaped: Nix evaluates, PowerShell applies) and are split the way
+NixOS + home-manager are:
+
+- `windowsConfigurations.<host>` (`mkWindowsHost`, `hosts/<host>/configuration.nix`)
+  is the *system* configuration -- `HKLM`, `%ProgramData%`, machine-scope
+  packages -- applied elevated, plus the NixOS-WSL distro that evaluates and
+  applies everything. winpkgs builds the distro as a deliberately slim system
+  (NixOS-WSL, flakes, `git`; *not* a StewOS workstation, it does not import
+  `modules/nixos`) and exposes it as `config.system.build.wsl`, which `flake.nix`
+  also surfaces under `nixosConfigurations.<host>`. Extend it through
+  `wsl.modules`.
+- `windowsHomeConfigurations."<Windows user>@<host>"` (`mkHome` with a
+  `*-windows` system and `hostname`, `hosts/<host>/home.nix`) is the *home*
+  configuration -- `HKCU`, `%USERPROFILE%`, user-scope packages, the shell --
+  applied as the user, never elevated. It speaks home-manager's names
+  (`home.file`, `xdg.configFile`, `home.packages`, `home.sessionVariables`),
+  so `mkHome` is one builder for every user@host. Kept out of
+  `homeConfigurations` on purpose: it is not a home-manager object.
+
+A resource in the wrong tree (an `HKLM` key in `home.nix`) is an evaluation
+error naming the other tree. Both halves are applied from a Windows terminal
+with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
+or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
+generations. The docs generator does not yet build host pages for either half.
+
+`hosts/common/windows/configuration.nix` turns on Hyper-V and puts each
+machine's home users (read off `winpkgs.homes`) in the built-in `Hyper-V
+Administrators` group, which is what lets an unelevated session -- and the
+steward units started from it -- control VMs. Two things winpkgs reports but
+does not do: the feature needs a restart the first time it is enabled, and
+group membership only reaches the logon token at the next sign-in, so a
+fresh `Get-VM` right after the first apply still returns nothing. A VHDX
+outside the user's own profile may also need NTFS access granted by hand;
+VMMS only handles the ACLs on disks it attaches.
+
+`hosts/common/workstation.nix` carries the policy the two Framework machines
+share. `system.stateVersion` deliberately stays per-host and must never move
+into shared configuration.
+
+### Packages and the Overlay
+
+Packages under `pkgs/` never reference flake inputs. Anything that must come
+from an input (a `flake = false` source tree, a colour scheme) is injected into
+the scope by `overlays/default.nix` and resolved by argument name. Custom
+packages are reached as `pkgs.stewos.<name>`.
+
+The modules expect two overlays on `pkgs`: `stewos.overlays.default` and NUR
+(the `firefox` module pulls addons from `pkgs.nur`). `flake.nix` applies both.
+
+### Documentation
+
+`nix build .#docs` generates a complete static site -- searchable options,
+packages, hosts, `lib/`, outputs and inputs -- and `.github/workflows/pages.yml`
+publishes it. It is two halves with a JSON document between them:
+
+- **`lib/docs/`** evaluates the flake and writes one `docs.json`. It lives in
+  `lib/` rather than under `docs/` so the generator documents its own entry
+  point, and it keeps `lib/`'s contract: the *file* is pkgs-free, and `mkSite`
+  takes `pkgs`, `self` and `inputs` as arguments the way `mkCommandLine` takes a
+  package.
+- **`pkgs/flakedoc/`** is the Rust renderer. Ordinary `callPackage`, no flake
+  inputs, so splitting the pair into its own repository is a move rather than a
+  rewrite.
+- **`docs/`** is only this flake's site inputs: `flakedoc.toml` and `content/`.
+  Both halves read the TOML.
+
+Things that are the way they are on purpose:
+
+- **Module trees are evaluated against a machine that does not exist.** A tree
+  cannot be evaluated alone -- `modules/nixos/default.nix` imports stylix, whose
+  nvf module probes `options.programs`, so `lib.evalModules` dies the moment
+  `.options` is touched -- so each goes through its real evaluator with a stub
+  host. Using one of the real hosts instead works and is wrong: an option whose
+  default reads `config` then documents that host's value. `kvmfr.owner`
+  documented itself as `"caleb"` before this was fixed. Keep the stub minimal
+  for the same reason.
+- **Options are recognised by declaration path, not by name prefix.** An option
+  is ours when a declaration lives inside `self.outPath`. That needs no
+  configuration and catches `programs.nh`, which is the *only* thing the darwin
+  tree declares -- a `stewos.` prefix filter would document nothing there. Note
+  the modules must be imported as `"${self}/modules/nixos"`; a relative
+  `./modules/nixos` copies a second store path and the filter silently matches
+  nothing.
+- **A module imported as a value has no file, so give it one.** A bare
+  `imports = [ inputs.embermug-tray.homeManagerModules.default ]` leaves the
+  module system crediting upstream's `services.embermug-tray.*` to the StewOS
+  file that imported it, and the declaration filter cannot tell the difference.
+  Both such imports -- embermug-tray and caelestia -- are therefore wrapped:
+
+  ```nix
+  imports = [
+    {
+      _file = "${inputs.embermug-tray}/nix/hm-module.nix";
+      imports = [ inputs.embermug-tray.homeManagerModules.default ];
+    }
+  ];
+  ```
+
+  Do not replace this with `excludeOptions` in `flakedoc.toml`. That list is
+  the fallback for imports you do not control; `_file` fixes the attribution
+  properly and improves the module's error messages too. Re-declaring the
+  offending option with a `defaultText` does *not* work -- `mergeOptionDecls`
+  folds with `opt.options // res`, so upstream's declaration wins.
+  `nixos-update-manager` is the counter-example: its flake sets `_file` on
+  the exported module itself, so `update-manager.nix` imports it bare.
+- **Host pages are the reference's worked examples**, built from
+  `definitionsWithLocations`, one entry per defining file so shared policy stays
+  distinct from what a machine asked for itself. Definitions from `modules/` are
+  dropped -- a module's own `mkDefault` is documented on the module's page.
+  Every lookup is `tryEval`-guarded: an option can be perfectly documented and
+  still refuse to evaluate on one host.
+- **`warningsAreErrors = true`.** The docs build fails on an option with no
+  description or no type, which is the cheapest way to keep every option
+  documented.
 
 ## Build Commands
 
@@ -88,98 +211,634 @@ nh home switch ~/git/stewos
 
 # Test in VM
 nix run .#framework-desktop-vm
+
+# Build the documentation site and serve it (port is optional, defaults to 8080)
+nix run .#docs
+nix run .#docs -- 9000
+
+# Just the artifact
+nix build .#docs
+
+# Format and verify
+nix fmt
+nix flake check --all-systems
 ```
 
 ## Adding Components
 
 ### New Module
 
-Create `/modules/{platform}/{name}/default.nix`:
-- Use `stewos.{name}.enable` option pattern
+Create `/modules/{platform}/{name}.nix` and add it to that platform's
+`default.nix`:
+- Use the `stewos.{name}.enable` option pattern
 - Wrap config in `lib.mkIf cfg.enable`
 
 ### New Package
 
-Create `/packages/{name}/default.nix`:
+Create `/pkgs/{name}/default.nix`:
 ```nix
 {
   lib,
   stdenv,
-  ...
 }:
 stdenv.mkDerivation {
   pname = "package-name";
   # ...
 }
 ```
+then add `{name} = self.callPackage ./{name} { };` to `/pkgs/default.nix`.
 
-### New System
+If it needs something from a flake input, add that value to the scope in
+`/overlays/default.nix` and take it as an argument here. Set `meta.platforms` on
+anything that is not cross-platform, or it will break the `packages` output on
+darwin.
 
-Create `/systems/{hostname}/` with:
-- `default.nix` - Flake outputs
-- `configuration.nix` - NixOS config
-- `home.nix` - Home-Manager config
+### New Host
 
-## Key Modules
+Create `/hosts/{hostname}/` with `configuration.nix`, `home.nix` and (for NixOS)
+`hardware-configuration.nix`, then declare the outputs in `flake.nix`.
 
-| Module | Platform | Purpose |
-|--------|----------|---------|
-| `stewos.user` | NixOS | User account creation |
-| `stewos.audio` | NixOS | PipeWire/JACK audio |
-| `stewos.containers` | NixOS | Podman/Docker |
-| `stewos.virtualisation` | NixOS | KVM/QEMU |
-| `stewos.desktop` | Home-Manager | Hyprland, Waybar, Rofi |
-| `stewos.neovim` | Home-Manager | Nixvim configuration |
-| `stewos.zsh` | Home-Manager | Shell with Oh-My-Posh |
-| `stewos.git` | Home-Manager | Git with SSH signing |
+## NixOS Modules
+
+| Module | Purpose |
+|--------|---------|
+| `stewos.base` | Boot loader, Plymouth, Nix settings, `nh`. Enabled by default |
+| `stewos.audio` | PipeWire/JACK/ALSA with realtime scheduling. `noiseCancellation` adds an rnnoise filter chain in front of the microphone, as a WirePlumber *smart filter* rather than a virtual source the user has to select -- see below |
+| `stewos.autologin` | greetd + regreet, straight into a session |
+| `stewos.containers` | Docker (Podman is present but commented out) |
+| `stewos.desktop-services` | Portals, polkit, graphical session services |
+| `stewos.greeter` | Display manager; alternative to `autologin` |
+| `stewos.looking-glass` | Looking Glass client; its config is modelled as options |
+| `stewos.sshd` | SSH server |
+| `stewos.virtualisation` | KVM/QEMU/libvirt + VFIO hooks |
+| `stewos.zsa` | udev rules for ZSA keyboards |
+
+`networking.nix`, `security.nix` and `user.nix` have no enable flag and apply
+unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
+`user.nix` creates the account described by `stewos.user`.
+
+### Microphone noise cancellation
+
+`stewos.audio.noiseCancellation` writes one `pipewire.conf.d` drop-in loading
+`libpipewire-module-filter-chain` with `rnnoise-plugin`'s LADSPA suppressor.
+Both Framework machines get it from `hosts/common/workstation.nix`.
+
+The part worth knowing is that it is a **WirePlumber smart filter**
+(`filter.smart = true` on the source node, and deliberately *no*
+`filter.smart.target`), not a virtual source the user selects:
+
+- A targetless smart filter is inserted between the default device and any
+  stream that has not named a target of its own. So `wpctl set-default` still
+  picks the *microphone* -- the filter follows it -- while an application that
+  deliberately asks for a specific device still gets that device unfiltered.
+- The obvious alternative, giving the virtual source a high `priority.session`
+  so it becomes the default, breaks the microphone choice: the filter's own
+  capture side is the thing that reads the default source, so once it *is* the
+  default there is nowhere left to express which mic to filter. The desktop has
+  five sources; this is not hypothetical.
+- Both nodes carry an explicit `node.link-group = "rnnoise"`. The module would
+  otherwise generate one from its pid. WirePlumber keys a filter's identity off
+  that group, and it is also what stops the capture side from being linked back
+  to the source it feeds.
+
+This module used to set `programs.noisetorch.enable`. It does not any more, and
+should not again: NoiseTorch is the same rnnoise suppressor driven by hand, so
+running it on top of the filter chain processes the signal twice.
+
+## Home-Manager Modules
+
+| Module | Purpose |
+|--------|---------|
+| `stewos.desktop` | Hyprland (Linux) / Aerospace (macOS) / komorebi (Windows) and surrounding services |
+| `stewos.neovim` | Neovim: plain Lua config (`modules/home-manager/neovim/config/`, lazy.nvim) shared by all platforms; Nix supplies tools and `generated.lua` |
+| `stewos.zsh` | Shell; turns on `stewos.oh-my-posh` by default |
+| `stewos.oh-my-posh` | The prompt, one definition for zsh (Linux, macOS) and PowerShell (Windows): home-manager's `programs.oh-my-posh.settings`, which winpkgs' `programs.powershell` also reads. Colours come from `config.colorScheme`, and a `root` segment lights `⚡` when the session is root or elevated (`sudo pwsh`). Do not put a host back on `useTheme`: an upstream theme cannot be extended, and `settings` and `useTheme` are mutually exclusive |
+| `stewos.git` | Git with SSH signing and per-directory identities |
+| `stewos.delta` | delta as git's pager for diff/log/show/blame, side-by-side with line numbers. Only `enable` is exposed; everything else is home-manager's `programs.delta.options`. `syntax-theme = "base16"` so it follows the terminal palette exactly as `stewos.bat` does, rather than reading `colorScheme` itself. No shell aliases or wrappers: delta styles plain `diff` and grep output piped to it unaided, and reads the same `[delta]` git config when it does |
+| `stewos.rofi` | Rofi, themed through the RASI DSL |
+| `services.nixos-update-manager` | Update tray daemon from the `nixos-update-manager` flake (external, not a `stewos.*` module). `update-manager.nix` imports the upstream module and only fills in StewOS defaults -- `flakePath`, the desktop terminal, `nvim`, Claude from `llm-agents`, palette-derived icon colours -- each as `mkDefault`; hosts enable and customise it at the upstream namespace. See "update-manager" below |
+| `programs.yasb` | YASB status bar, Windows only. Deliberately *not* a `stewos.*` module: it is written in winpkgs' shape (`package` from winget, `settings` → `~/.config/yasb/config.yaml`, `style` → `styles.css`, the `YASB` Run value or `service.enable` for steward) so it can be upstreamed to winpkgs as is. The StewOS-specific parts are the `options ? windows` guard around `config` and the `null` fallback in `package`'s default (the docs host pages force every default on a Linux stub), both of which go when it moves. `stewos.desktop` turns it on for every Windows home and configures it (`desktop/windows/yasb.nix`); the module itself only knows YASB. As a service, a changed file restarts the unit, because winpkgs replaces files rather than modifying them and YASB's watcher only sees modifications |
+| `stewos.embermug-tray` | Ember Mug tray app; a thin wrapper over the `embermug-tray` flake's own home-manager module (`services.embermug-tray`), which owns the unit, package and QSettings file |
+| `stewos.alacritty`, `stewos.firefox`, `stewos.bat`, `stewos.eza`, `stewos.zoxide`, `stewos.direnv` | Straightforward per-program modules |
 
 ## Desktop Configuration
 
-Desktop module options at `stewos.desktop`:
-- `monitors` - List of monitor configs (resolution, position, scale)
-- `idle.{dim,lock,sleep}` - Timeout values in seconds
-- `keybindings` - Hyprland keybindings
+The directory is split by platform:
+
+```
+desktop/
+├── options.nix   # the whole stewos.desktop surface, in one file
+├── vocabulary.nix# the modifier/action/direction lists the options are typed against
+├── default.nix   # imports + cross-platform config + binding shape assertions
+├── linux/        # hyprland, style, bindings, theme, polkit, xdg
+├── darwin/       # aerospace, karabiner, autoraise, raycast
+└── windows/      # komorebi, yasb (bar + launcher), bindings (whkd), theme, services; masir
+```
+
+All three platform directories are imported unconditionally and every file
+guards its own `config` on `cfg.enable && pkgs.stdenv.is{Linux,Darwin,Windows}`.
+Do not switch this to conditional `imports` -- deciding what to import from
+`pkgs.stdenv` risks a recursion the module system cannot see through.
+
+`windows/` carries one guard more: `lib.optionalAttrs (options ? windows)`
+around the whole `config`. `programs.komorebi`, `programs.whkd`, `windows.*` and
+the rest are winpkgs' options and exist only in a winpkgs home, and a definition
+of an undeclared option is an error even under a false `mkIf` -- without the
+guard the Linux and macOS homes stop evaluating. Test `options`, never `pkgs`,
+for the same recursion reason as above. A winpkgs home does evaluate
+home-manager's own modules, so `pkgs.stdenv.hostPlatform.isWindows` is true
+there and the Linux/macOS backends switch themselves off without help.
+
+Options at `stewos.desktop`:
+- `monitors` - List of monitor configs (description, resolution, position, scale); Linux
+- `keyboards` - Per-keyboard overrides keyed by device name (layout, variant, capsLockEscape); Linux
+- `bindings` - Keybindings, keyed by a name of your choosing
+- `modifier` - Global keybinding modifier prefix, enum `SUPER`/`ALT`/`CTRL`/`SHIFT` (default `SUPER`)
+- `terminal` - Terminal package (default Alacritty)
 - `wallpaper` - Path to wallpaper image
+- `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit.
+  `monospace` defaults to `nerd-fonts.jetbrains-mono` on Windows: nixpkgs builds
+  plain `jetbrains-mono` from source, which winpkgs cannot install
+- `startLocked` - Bring the session up locked; Linux
+- `capsLockEscape` - Send Escape when Caps Lock is pressed; Linux and macOS.
+  Windows asserts: its only remap is the machine-wide `windows.keyboard.remap`,
+  which belongs in the host's `configuration.nix`
+- `swapCommandAlt` - Swap left Command and left Alt; macOS
+
+`lockCommand` still exists but is `internal` -- the platform backend sets it,
+no host should.
+
+**The option surface deliberately names no compositor.** A binding is
+`{key, modifiers, useModifier, platforms, action | command}` where `key` and
+`action` are neutral names. Each backend (`linux/bindings.nix`,
+`darwin/aerospace.nix`, `windows/bindings.nix`) owns three tables -- modifiers,
+keys, actions -- translating those names into its own vocabulary, and asserts
+on any it does not implement. Adding an action means adding it to
+`vocabulary.nix` plus at least one backend's `actions` table. Keep Hyprland,
+Rofi, whkd and komorebi vocabulary out of `options.nix`.
+
+Each backend contributes its default keymap *through* `stewos.desktop.bindings`
+with per-field `mkDefault`, which is what lets a host retarget or disable a
+StewOS-provided binding by name. Do not go back to merging a private
+`defaultBindings` in at render time.
+
+The keymaps genuinely diverge on `h/j/k/l`: Linux and Windows focus/move a
+*window*, macOS focuses/moves between *monitors*. That is why the vocabulary has
+separate window-directional and monitor-directional actions -- it is not
+redundancy.
+
+The Windows keymap (`windows/bindings.nix`) keeps the Linux keys wherever both
+mean the same thing -- workspaces on the digits, `h/j/k/l`, `q`, `d`, `enter`,
+`shift+r` -- and adds komorebi's stacks, cycling and "send" (move without
+following) on keys Linux leaves free. Things to know:
+
+- **Workspaces stop at 5**, not 10: komorebi keeps five per monitor
+  (`hosts/gaming-windows/home.nix` declares them), and `workspace = N` means
+  the Nth on the *focused* monitor, as hyprsplit and Aerospace do it.
+- **A `command` is found through `pkgs.winpkgs.getExe`**, not `mkCommandLine`:
+  there is no store, so the package must say where its installer puts it
+  (winpkgs' `programDir`). One that does not fails evaluation by name; add a
+  `programDir` in winpkgs rather than hand-writing a path here. Commands go
+  through `Start-Process` because whkd feeds every binding to one long-lived
+  pwsh session, where anything that did not return at once would stall every
+  binding after it.
+- **The whkd restart binding (`reload-hotkeys`) follows how whkd is run.**
+  Under `programs.whkd.service.enable` it is `stewctl restart whkd` -- every
+  Windows home gets steward's home module from `mkHome`, and killing whkd by
+  hand would race steward into running two. From the Run key it kills and
+  restarts whkd itself.
+- **StewOS runs the Windows desktop's daemons under steward by default.**
+  `windows/services.nix` sets `programs.{komorebi,whkd,masir,yasb}.service.enable`
+  (`mkDefault`) and groups the first three under a `tiling.target`, so `stewctl
+  stop tiling.target` puts tiling away; YASB stays on `graphical-session.target`,
+  since it is the launcher and clock too. `mkWindowsHost` sets
+  `services.steward.enable` (`mkDefault`) so the system installs what the home
+  expects. The two halves are separate configurations and cannot see each
+  other: a host that turns steward off in `configuration.nix` must also turn
+  the four `service.enable`s off in `home.nix`, or nothing starts them.
+- **The bar and the launcher are YASB** (`windows/yasb.nix`, stylesheet
+  `windows/yasb.css` set from `windows/theme.nix`), replacing komorebi-bar and
+  Flow Launcher, which stay at winpkgs' default of off. Do not leave
+  komorebi-bar configured beside it: komorebi reserves a `work_area_offset` for
+  every bar in `bar_configurations`, running or not, and the gaps stack. The
+  settings are `mkDefault` down to the leaves, so a host overrides one value
+  without restating the rest.
+- **The `launcher` binding is YASB's hotkey, not whkd's.** Quick Launch can
+  only be opened by a hotkey YASB registers itself -- `yasbc` has no command
+  for it -- so `windows/bindings.nix` renders a binding whose action YASB
+  performs (`yasbActions`) into the widget's `keybindings` (`alt+d`) instead
+  of whkdrc. It is still a `stewos.desktop.bindings` entry, retargeted the
+  same way and counted by the duplicate check, but whkd's pause does not
+  silence it. A host that turns `programs.flow-launcher.enable` back on gets
+  `launcher` routed to Flow through whkd again.
+- **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
+  directive, not a binding; it is counted by the duplicate-combination
+  assertion all the same.
+- Win+L never reaches a hotkey daemon; `windows.keyboard.lockShortcut = false`
+  in the system configuration frees it, if a host wants `SUPER`.
+- **The PowerShell prompt is `stewos.oh-my-posh`**, the same definition the
+  zsh hosts use, not an upstream theme. `sudo pwsh` shows a red `⚡` in front
+  of the path; nothing else distinguishes an elevated session.
+
+The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
+otherwise wire up individually: the locker, idle handling, notifications, the
+bar and the wallpaper daemon. There are deliberately no hypridle / hyprlock /
+hyprpaper / swaync / waybar modules here -- do not add them back without
+checking whether caelestia already covers it.
+
+`stewos.rofi` is still a real module and is enabled per-host; caelestia does not
+replace the launcher.
+
+Unlocking the screen also unlocks the GNOME login keyring. The hosts autologin,
+so greetd never collects a password and the `pam_gnome_keyring` lines NixOS puts
+in `/etc/pam.d/login` have nothing to work with -- the lock screen is the only
+place in the session a password is typed. Two pieces make it work, and both are
+load-bearing:
+
+- `pkgs/caelestia-shell` appends `auth optional pam_gnome_keyring.so` to the
+  locker's PAM stack. Caelestia reads that stack from *inside the package*
+  (`modules/lock/Pam.qml` points Quickshell's `PamContext` at
+  `shellDir + "/assets/pam.d"`), not `/etc/pam.d`, which is why this is a
+  packaging override rather than an upstream patch. Quickshell calls only
+  `pam_authenticate` -- no `pam_setcred`, no session phase -- which works
+  because `pam_gnome_keyring` unlocks from `pam_sm_authenticate` itself.
+- `stewos.desktop-services` starts the keyring's secrets component up front.
+  Without that the unlock loses a race; see the failure mode below.
+
+All application theming lives in `modules/home-manager/desktop/linux/theme.nix`
+and is driven from `config.colorScheme` (nix-colors), so a scheme change moves
+the whole desktop rather than half of it:
+
+- GTK 3 and 4 via `adw-gtk3-dark` plus a generated `@define-color` stylesheet
+  set as both `gtk3.extraCss` and `gtk4.extraCss`. libadwaita ignores theme
+  packages but honours those named colours, and adw-gtk3 backports them to
+  GTK 3 -- which is why one stylesheet covers both.
+- `hypr/hyprtoolkit.conf` for hyprtoolkit-native apps.
+- `programs.hyprland-qt-support` for the QML style hyprpolkitagent uses.
+- `hypr/hyprqt6engine.conf` for every other Qt6 app, with `qt.platformTheme.name
+  = "hyprqt6engine"` (`pkgs.stewos.hyprqt6engine`) instead of qt6ct/gtk3. Its
+  palette is a **generated** qt5ct-format file -- three rows of 22 `#AARRGGBB`
+  values in `QPalette::ColorRole` order -- not a path into a theme package.
+  The package is the upstream flake's, rebuilt against the Qt stdenv: upstream
+  builds the plugin with `gcc16Stdenv` and it then cannot be loaded by a
+  nixpkgs Qt app at all. See "Qt apps lose every themed icon" below.
+
+The one thing not derived is cursors and tinted folder icons, which ship as
+per-flavour image sets. Those come from a small `schemeAssets` map in
+`theme.nix` keyed on `config.colorScheme.slug`, with a neutral fallback so an
+unmapped scheme still evaluates. That map is the right home for them: `pkgs/`
+is for derivations and `lib/` takes a pkgs-free nixpkgs lib, so neither can
+return a package.
+
+### update-manager
+
+The update tray daemon is **not in this repository**. It lives at
+`github:calebstewart/nixos-update-manager` (a flake input) and is consumed
+only through its `homeModules.default`, which declares
+`services.nixos-update-manager.*`. That repository's own `CLAUDE.md` carries
+the design notes -- the check/build/apply stages, the review dialog, failure
+reports, the icon grammar -- so look there before changing daemon behaviour;
+nothing about how it works is decided here.
+
+What StewOS adds is `modules/home-manager/update-manager.nix`, which declares
+no options. It imports the upstream module and supplies, as `mkDefault`, the
+values upstream leaves null or required: `flakePath` (`~/git/stewos`),
+`terminal` (`config.stewos.desktop.terminal`), `editor` (`nvim`, a PATH name
+so it is the nixvim-wrapped one), `claudePackage` (from `llm-agents`, which
+tracks releases nixpkgs lags), and the nine `icons.*` colours from
+`config.colorScheme.palette` -- cool slots while the daemon works (0D
+checking, 0C building, 0E applying), warm when it is the user's turn (0A
+decide, 09 fix the checkout, 08 broke). Those defaults live here rather than
+upstream because upstream may not know about `stewos.desktop`, nix-colors or
+`llm-agents`, and they are `mkDefault` so a host overrides any of them at
+`services.nixos-update-manager.*` directly. Both Framework hosts set only
+`enable`.
+
+Names to know: the unit is `nixos-update-manager.service`, state lives in
+`~/.cache/nixos-update-manager`, and the update branch is upstream's default
+`nixos-update`. The daemon refuses to check, build or apply while the checkout
+has uncommitted changes (its *Blocked* state), so after editing this repo it
+stays quiet until the work is committed -- that is the intended behaviour, not
+a fault. `packages.<system>` here no longer carries the daemon or its icons;
+they come from the input's own outputs, built against our nixpkgs through
+`follows`.
+
+The option reference documents nothing for it: upstream's declarations sit
+outside `self.outPath`, so the declaration-path filter hides them, and there
+is no `stewos.*` option to show. The host pages still list each host's
+`services.nixos-update-manager.enable`.
+
+Stylix is imported (`modules/home-manager/default.nix`, and the NixOS and
+Darwin equivalents) but **deliberately never configured**. Adopting it would
+mean handing it Alacritty, Neovim, Firefox, GTK, Qt and the cursor -- all styled
+by hand here -- and giving the repo a second palette source alongside
+`config.colorScheme`. Do not wire it up as a drive-by.
 
 ## Conventions
 
 - **Privilege escalation**: Uses `doas` instead of `sudo`
 - **Git**: SSH URLs forced for GitHub, SSH key signing
-- **State versions**: NixOS 24.05, Home-Manager 25.05
-- **Platform conditionals**: Use `lib.mkIf pkgs.stdenv.isLinux`
+- **State versions**: `system.stateVersion` is per-host (in `hosts/*/configuration.nix`);
+  Home-Manager's 25.05 is shared in `modules/home-manager/default.nix`
+- **Formatting**: `nix fmt` (nixfmt-tree)
+- **Platform conditionals**: Use `lib.mkIf pkgs.stdenv.hostPlatform.isLinux`
 - **Defaults**: Use `lib.mkDefault` for overridable values
 - **Experimental features**: `nix-command` and `flakes` enabled
+
+## Consuming StewOS Elsewhere
+
+`nixosModules.default`, `homeModules.default` and `darwinModules.default` are
+paths to the module trees. They reference StewOS's own inputs from inside
+`imports`, where only `specialArgs` work, so consumers must pass them back:
+
+```nix
+specialArgs = { inputs = stewos.lib.moduleInputs; };
+```
+
+Consequently `inputs` inside a StewOS module always means StewOS's inputs, never
+the consumer's. `templates/nixos-single/` is a worked example.
 
 ## Flake Inputs
 
 ### Core Infrastructure
-- `nixpkgs` (nixos-25.11) - Main package repository
-- `nixpkgs-unstable` - Latest packages
-- `nixpkgs-darwin` (25.05-darwin) - macOS packages
-- `home-manager` (release-25.11) - User configuration
-- `nix-darwin` (25.05) - macOS system management
+- `nixpkgs` (nixos-unstable) - Main package repository
+- `nixpkgs-darwin` (nixpkgs-26.05-darwin) - macOS packages
+- `home-manager` (master) - User configuration
+- `nix-darwin` (nix-darwin-26.05) - macOS system management
 
 ### Desktop/Theming
-- `stylix` - Unified theming engine
+- `stylix` (release-26.05) - Unified theming engine
 - `nix-colors` - Color scheme management
-- `nixvim` - Neovim as Nix modules
+- `hyprsplit` - Hyprland workspace splitting plugin
 
 ### System Tools
 - `lanzaboote` - Secure Boot support
-- `nixos-generators` - Image generation
 - `nh` - Simplified Nix rebuilding
 - `nixos-hardware` - Hardware configurations
+- `mac-app-util` - macOS app trampolines for Home-Manager
 
 ### Personal Flakes (github:calebstewart)
-- `stew-shell` - Custom shell UI components
 - `embermug-tray` - Ember Mug system tray app
+- `nixos-update-manager` - Update tray daemon; consumed through its
+  `homeModules.default` (`services.nixos-update-manager`), never as a package
+  here. Its own `CLAUDE.md` holds the design notes
+- `winpkgs` - Windows configurations (`mkWindowsHost`, and `mkHome` for a
+  `*-windows` system); also the source of `pkgs.winpkgs.getExe`, which the
+  desktop's Windows backend uses to find a `command`'s program
+- `steward` - Per-user service manager for Windows (`winpkgs` follows this
+  flake's). `mkWindowsHost` imports its system module and turns it on by
+  default; `mkHome` imports its home module, which writes `systemd.user.*` as
+  its units
 
 ### External Custom Flakes
-- `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework
+- `caelestia-shell` (github:caelestia-dots/shell) - Shell UI framework. Consumed
+  as `pkgs.stewos.caelestia-shell`, which appends `pam_gnome_keyring` to the
+  locker's PAM stack (`pkgs/caelestia-shell/`). Note it overrides the flake's
+  `with-cli` output, not `default` -- that is what the upstream home-manager
+  module defaults to, and `cli.enable` is set here
+- `caelestia-cli` (github:caelestia-dots/cli) - CLI for the above. The shell
+  input `follows` this one, so both halves come from the same revision; without
+  that, the shell pulls in a second CLI and a second copy of the shell. It was
+  briefly a fork (`Gitkubikon/cli`) -- see the note below before restoring one
+- `llm-agents` (github:numtide/llm-agents.nix) - Source of `claude-code`; see
+  the failure mode below
 - `vfio-hooks` (github:PassthroughPOST/VFIO-Tools) - GPU passthrough tools
 - `gh-actions-language-server` (github:lttb/gh-actions-language-server) - GitHub Actions LSP
+- `hyprqt6engine` (github:hyprwm/hyprqt6engine) - Qt6 platform theme; unreleased
+  upstream and carries the same `follows` fragility as `llm-agents` (same
+  remedy: drop the follows if it stops building after a flake update). Consumed
+  as `pkgs.stewos.hyprqt6engine`, which rebuilds it against the Qt stdenv
+  (`pkgs/hyprqt6engine/`)
+- `hyprpolkitagent` (github:hyprwm/hyprpolkitagent) - Polkit agent from
+  upstream because nixpkgs' 0.1.3 predates the hyprtoolkit rewrite (upstream
+  did not bump the version); same follows caveat as `hyprqt6engine`. Consumed
+  as `pkgs.stewos.hyprpolkitagent`, which carries a local rendering patch
+  (`pkgs/hyprpolkitagent/`)
 
 ### Community
 - `nur` - Nix User Repository
 - `nix-std` - Standard library extensions
-- `flake-utils` - Flake utilities
+
+## Known Failure Modes
+
+### claude-code fails to build after a flake update
+
+`claude-code` comes from the `llm-agents` input rather than nixpkgs, because
+nixpkgs lags upstream releases. That input carries
+`inputs.nixpkgs.follows = "nixpkgs"` so it does not pull a second nixpkgs tree
+into the lock, and it built cleanly that way when it was added
+(claude-code 2.1.228, verified by building it and running the binary).
+
+The follows is the fragile part. `llm-agents` pins its own nixpkgs and builds
+through `bun2nix` against it, so it is only ever tested against that pin. A
+`nix flake update` can move either side and leave claude-code building against
+a nixpkgs its packaging never saw.
+
+**Symptom:** `claude-code` fails to build — most likely inside `bun2nix` or the
+bun/node derivation underneath it — while nothing in this repository changed
+and every other package still builds.
+
+**Fix:** drop the follows in `flake.nix` and let the flake use its own pin:
+
+```nix
+llm-agents.url = "github:numtide/llm-agents.nix";
+```
+
+That adds a second nixpkgs to `flake.lock`, which is the correct trade — the
+follows is a lock-size optimization, not a requirement. Do not try to fix it by
+patching the package or pinning `llm-agents` to an older revision; the whole
+point of the input is that it tracks upstream.
+
+### Qt apps lose every themed icon
+
+**Symptom:** Qt apps render the broken-image placeholder wherever they draw an
+icon by freedesktop name — the caelestia tray, notification icons, menu icons.
+Icons supplied as pixmaps or absolute paths (an SNI app shipping its own) still
+work, which makes it look like the icon theme is at fault. It is not: the theme
+is installed and the names resolve on disk.
+
+**Cause:** the `hyprqt6engine` platform theme plugin failed to load, so Qt has
+no `QPlatformTheme::SystemIconThemeName` hint, `QIcon::themeName()` is empty and
+*every* `QIcon::fromTheme` call in the process returns null. Nothing reports
+this; Qt logs the load failure only under `QT_DEBUG_PLUGINS=1`.
+
+The usual reason is a libstdc++ ABI split. A `platformthemes` plugin is
+`dlopen`'d into a host that already has a `libstdc++.so.6` mapped, and the
+loader matches on SONAME rather than the plugin's RPATH — so the plugin gets the
+*host's* copy. nixpkgs builds its whole Qt stack with the default stdenv while
+the Hypr packages are pinned to `gcc16Stdenv`, and upstream's overlay pins the
+plugin the same way, so it asks gcc 15's libstdc++ for `GLIBCXX_3.4.36` and
+never loads.
+
+**Diagnose:**
+
+```bash
+QT_DEBUG_PLUGINS=1 <any qt6 app> 2>&1 | rg -i "hyprqt6engine|cannot load"
+```
+
+**Fix:** `pkgs/hyprqt6engine` already rebuilds the plugin — plus `hyprlang` and
+`hyprutils`, which leak the same symbol version — against
+`qt6Packages.qtbase.stdenv`. If a flake update reintroduces the failure, check
+that override still applies rather than reaching for a different platform theme.
+Deriving the stdenv from qtbase rather than naming a gcc version is deliberate:
+it stays correct as nixpkgs moves its Qt stack forward. `pkgs/hyprqt6engine/
+upstream-issue.md` is the report to file if this is still unfixed upstream.
+
+### Do not put caelestia back on a CLI fork
+
+`caelestia-cli` pointed at `Gitkubikon/cli` from 2025-12-07 to 2026-08-14. It
+arrived as the companion half of a `Gitkubikon/shell/screenshot-card` shell
+fork; the shell went back upstream in March 2026 but the CLI was left behind,
+and by the end it was **1 commit ahead of upstream and 289 behind** -- a 2025-09
+CLI paired with a 2026-08 shell, with the `follows` making the shell build
+against it.
+
+The one commit it carried added `_convert_to_physical_pixels` to `record.py`,
+multiplying a region by the monitor scale before handing it to
+`gpu-screen-recorder`. **Do not reintroduce that.** gpu-screen-recorder already
+does it -- `region_get_data` in `src/main.cpp` subtracts the monitor origin and
+multiplies by `monitor_scale_inverted` (physical / logical) itself, and its
+`-region` docs give `$(slurp -f "%wx%h+%x+%y")` as the intended invocation,
+which is exactly what upstream `record.py` passes. On the desktop's 1.5-scaled
+monitors the patch scales twice, for 2.25x and a doubly-offset origin.
+
+If region recording looks wrong, check gpu-screen-recorder's own version and
+behaviour before reaching for a CLI patch.
+
+### The desktop wakes up with a dead GPU
+
+**Symptom:** framework-desktop is left overnight and never comes back. Monitors
+report no input and re-sleep; mouse and keyboard do nothing; the power LED looks
+exactly as it does when the machine is running. A short power-button press turns
+the LED off, but the machine will not boot again -- only pulling PSU power for a
+few seconds recovers it, followed by a very long POST.
+
+**It is not a hang.** The CPU, disks and network are fine and journald keeps
+logging the whole time. The GPU is dead, so there is no display and the
+compositor is wedged, which is indistinguishable from a lockup at the desk. The
+long POST afterwards is 128 GiB of LPDDR5 retraining from a cold start.
+
+**Cause:** a chain that starts with hibernation, in one boot's journal:
+
+1. caelestia's idle timer runs `systemctl suspend-then-hibernate`; the machine
+   enters s2idle.
+2. `HibernateDelaySec` (2h) elapses and it wakes to hibernate.
+3. `PM: Image saving failed: -28` -- ENOSPC. The snapshot was 46.8 GiB
+   (`Allocated 49113792 kbytes`) against a **14.9 GiB swap partition**.
+4. ~3.5 seconds later (compare *monotonic* timestamps; realtime is skewed
+   across the sleep) it falls back to plain s2idle, and amdgpu suspends out of
+   the aborted S4 in a broken state: `SMU uninitialized but power ungate
+   requested for 14!`, `DPM enable vpe failed, ret = -95`, `DMCUB error`,
+   `pci_pm_resume returns -110`.
+5. `ring sdma0 timeout` -> `GPU reset begin` -> eight `MES failed to respond to
+   msg=REMOVE_QUEUE` -> `GPU reset end with ret = -5`. The reset fails, twice.
+6. Every subsequent `amdgpu_cs_ioctl` oopses with `Trying to move memory with
+   ring turned off`. Pressing power *is* seen (`systemd-logind: Power key
+   pressed short`) but the shutdown then wedges tearing down drm.
+
+The swap shortfall is the trigger and it is a coin flip, not a constant: the
+snapshot is sized by the working set, and prior nights' images of 12.6, 18.5 and
+31.3 GiB all compressed small enough to fit. `ttm.pages_limit=29360128` makes
+this worse -- the iGPU has 512M of real VRAM and 112 GiB of GTT, so GPU buffers
+are system RAM and land in the snapshot. `/sys/power/image_size` defaults to
+~50 GiB here and does not consult swap size, so the kernel happily builds an
+image it cannot write.
+
+**Fix:** already in place -- framework-desktop does not hibernate.
+`hosts/framework-desktop/configuration.nix` sets `AllowHibernation`,
+`AllowSuspendThenHibernate` and `AllowHybridSleep` to false and turns on
+`security.protectKernelImage`, which adds `nohibernate` to the kernel command
+line; `hosts/framework-desktop/home.nix` retargets caelestia's third idle
+timeout from `suspend-then-hibernate` to plain `suspend`. Both halves are
+needed: without the second, the shell would still ask for a sleep verb systemd
+now refuses, and the machine would never suspend at all.
+
+Hibernation is therefore **per-host, not shared policy**. framework16 opts in
+from its own `configuration.nix`; `hosts/common/workstation.nix` grants only
+`AllowSuspend`.
+
+Two things to know before touching this:
+
+- **`security.protectKernelImage` defaults to `false` in nixpkgs**, not `true`
+  as the name suggests. The shared profile used to set it to `false`
+  explicitly, which read as "we turned hibernation on" but was a no-op.
+- **systemd's key is `AllowHibernation`, not `AllowHibernate`.** The shared
+  profile carried the misspelling for a long time and logind silently ignored
+  it (`Unknown key 'AllowHibernate' in section [Sleep], ignoring`) -- the option
+  read as deliberate policy while doing nothing. `systemd.sleep.settings` is
+  freeform, so nothing in Nix will catch this; the journal is the only check.
+- **Making hibernation work here would take ~130 GiB of swap**, not a smaller
+  `image_size`. Capping `image_size` only asks the kernel to reclaim harder,
+  and there is nowhere to page anonymous memory out *to*. It would also still
+  be riding an amdgpu S4 path that demonstrably cannot survive being aborted.
+
+### The lock screen says the keyring password is invalid
+
+**Symptom:** unlocking the screen leaves the login keyring locked, and the
+journal has `gkr-pam: the password for the login keyring was invalid`. The
+password is not wrong -- `pam_unix` accepted the very same string a moment
+earlier, which is why the session unlocked at all. Anything wanting a secret
+then prompts separately, and that prompt takes the same password happily.
+
+**Cause:** a race, not a credential problem. PAM's `auto_start` brings up
+`gnome-keyring-daemon --login`, which owns no well-known bus name and does not
+run the *secrets* component. That component only appears when something first
+asks for `org.freedesktop.secrets` and D-Bus activates gnome-keyring a second
+time; the new process finds the first (`discover_other_daemon`), hands the work
+over, and -- because the activation file passes `--foreground` -- sits parked
+for the rest of the session. With autologin and `startLocked`, the lock screen
+comes up before anything has asked for a secret, so the unlock reaches a daemon
+that cannot service it. A boot where this went wrong:
+
+```
+19:35:44  gnome-keyring-daemon --login  (PAM auto_start, at greetd)
+19:35:52  gkr-pam: the password for the login keyring was invalid
+19:36:00  secrets component activated over D-Bus
+19:36:06  gcr prompt unlocks it with the same password
+```
+
+**Fix:** already in place -- `stewos.desktop-services` defines a
+`gnome-keyring-secrets` user unit that runs
+`gnome-keyring-daemon --start --components=secrets` before
+`graphical-session.target`. Dropping `--foreground` matters: the command exits 0
+once the handoff is done, so `Type = "oneshot"` gives a real readiness barrier,
+whereas home-manager's own `services.gnome-keyring` module uses the foreground
+form under `Type = simple` and is considered started the instant it forks --
+which would not close this race. Owning the bus name early also stops the D-Bus
+activation firing at all, so the parked stub never appears.
+
+**Verify:** after a reboot, all three should hold.
+
+```bash
+systemctl --user status gnome-keyring-secrets   # active (exited)
+journalctl -b | rg gkr-pam                      # unlocked login keyring
+pgrep -af gnome-keyring                         # only --daemonize --login
+```
+
+Do not chase this as a wrong password. If the keyring genuinely has a different
+password the message is identical, so check the ordering above first.
+
+### Darwin home configuration pairs home-manager master with stable nixpkgs
+
+`home-manager` tracks master while `nixpkgs-darwin` tracks the
+`nixpkgs-*-darwin` release branch, so the darwin home configurations
+(currently `huntress-mbp`) build with mismatched versions — e.g. home-manager
+26.11 against nixpkgs 26.05. The Linux hosts are unaffected because they build
+from `nixos-unstable`, which is what home-manager master targets.
+
+This skew is deliberate (a stable home-manager would lag the modules the Linux
+hosts use), and home-manager's release-check warning is suppressed on the
+affected host with `home.enableNixpkgsReleaseCheck = false` in
+`hosts/huntress-mbp/home.nix`.
+
+**Symptom:** after a flake update, the darwin home configuration fails to
+evaluate or behaves oddly — typically a renamed/removed nixpkgs option or a
+home-manager module using a package attribute that stable nixpkgs does not
+have yet — while the Linux hosts and the darwin *system* configuration are
+fine. Because the warning is suppressed, nothing will point at the version
+skew; check for it before debugging the module itself.
+
+**Fix:** usually wait for (or pin to) a home-manager revision compatible with
+the darwin release branch, or bump `nixpkgs-darwin` to the next release. As a
+last resort, split the input and pin a separate `home-manager` release branch
+for darwin.

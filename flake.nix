@@ -2,23 +2,26 @@
   description = "Personal NixOS / Home-Manager / Nix-Darwin Modules";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.11";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-25.05-darwin";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs-darwin.url = "github:nixos/nixpkgs?ref=nixpkgs-26.05-darwin";
     nix-colors.url = "github:misterio77/nix-colors";
     nur.url = "github:nix-community/NUR";
     nix-std.url = "github:chessai/nix-std";
     nixos-hardware.url = "github:nixos/nixos-hardware";
-    nixvim.url = "github:nix-community/nixvim";
-    flake-utils.url = "github:numtide/flake-utils";
+    hyprsplit.url = "github:shezdy/hyprsplit";
 
     nix-darwin = {
-      url = "github:nix-darwin/nix-darwin?ref=nix-darwin-25.05";
+      url = "github:nix-darwin/nix-darwin?ref=nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
+    mac-app-util = {
+      url = "github:hraban/mac-app-util";
+      # inputs.nixpkgs.follows = "nixpkgs-darwin";
+    };
+
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -28,29 +31,38 @@
     };
 
     stylix = {
-      url = "github:nix-community/stylix/release-25.05";
+      url = "github:nix-community/stylix/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nixos-generators = {
-      url = "github:nix-community/nixos-generators";
-      inputs.nixpkgs.follows = "nixpkgs";
+    caelestia-cli = {
+      url = "github:caelestia-dots/cli";
     };
-
-    stew-shell = {
-      url = "github:calebstewart/stew-shell";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # caelestia-cli = {
-    #   url = "github:Gitkubikon/cli/main";
-    # };
 
     caelestia-shell = {
       url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
-      # url = "github:Gitkubikon/shell/screenshot-card";
-      # inputs.caelestia-cli.follows = "caelestia-cli";
+      # The follows keeps the shell built against the same CLI we install --
+      # without it the shell drags in a second copy of both the CLI and (via the
+      # CLI) the shell itself.
+      inputs.caelestia-cli.follows = "caelestia-cli";
+    };
+
+    # Qt6 platform theme + widget style for the Hyprland ecosystem (replaces
+    # qt6ct/gtk3). Unreleased upstream; carries the same follows fragility as
+    # llm-agents (see CLAUDE.md known failure modes).
+    hyprqt6engine = {
+      url = "github:hyprwm/hyprqt6engine";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # The polkit agent from upstream rather than nixpkgs: upstream rewrote it
+    # in hyprtoolkit (themed by hyprtoolkit.conf) without bumping the version,
+    # so nixpkgs' "0.1.3" is still the old Qt dialog. Same follows caveat as
+    # hyprqt6engine.
+    hyprpolkitagent = {
+      url = "github:hyprwm/hyprpolkitagent";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     vfio-hooks = {
@@ -63,6 +75,13 @@
       flake = false;
     };
 
+    # komorebi's community list of applications that need special handling
+    # (ignore rules for overlays and installers, tray and layered apps).
+    komorebi-asc = {
+      url = "github:LGUG2Z/komorebi-application-specific-configuration";
+      flake = false;
+    };
+
     nh = {
       url = "github:nix-community/nh";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -72,36 +91,480 @@
       url = "github:calebstewart/embermug-tray";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nixos-update-manager = {
+      url = "github:calebstewart/nixos-update-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Packages the LLM coding agents, tracking their upstream releases more
+    # closely than nixpkgs manages to.
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Discord with Vencord, configured declaratively through home-manager.
+    nixcord.url = "github:4evy/nixcord";
+
+    # Declarative Windows configuration: Nix evaluates a module tree into a
+    # desired-state document, a PowerShell runtime applies it. Evaluated from
+    # the NixOS-WSL distro on the Windows machine itself.
+    winpkgs = {
+      url = "github:calebstewart/winpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+
+    # A per-user service manager for Windows, in the spirit of systemd --user:
+    # started at sign-in, it keeps the desktop's daemons running. Its winpkgs
+    # modules install it (system) and write each user's units from
+    # home-manager's systemd.user.services (home).
+    steward = {
+      url = "github:calebstewart/steward";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.winpkgs.follows = "winpkgs";
+    };
   };
 
   outputs =
-    { self, ... }@externalInputs:
+    { self, nixpkgs, ... }@inputs:
     let
-      inputs = externalInputs // {
-        stewos = self;
+      inherit (nixpkgs) lib;
+
+      # ----------------------------------------------------------------------
+      # nixpkgs instances
+      # ----------------------------------------------------------------------
+
+      # Which nixpkgs each target system is built from. Add a system here to get
+      # "packages" and "formatter" outputs for it.
+      nixpkgsFor = {
+        x86_64-linux = nixpkgs;
+        aarch64-darwin = inputs.nixpkgs-darwin;
       };
 
-      # Base outputs which don't need any fancieness
-      baseOutputs = {
-        lib = import ./lib/default.nix inputs;
-        nixosModules = import ./modules/nixos/individual.nix inputs;
-        homeModules = import ./modules/home-manager/individual.nix inputs;
-        darwinModules = import ./modules/nix-darwin/individual.nix inputs;
+      # One nixpkgs instance per system, with the StewOS overlay applied.
+      # Instantiated once and reused, so a host's system configuration and its
+      # home configuration share an instance instead of evaluating nixpkgs twice.
+      pkgsFor = lib.mapAttrs (
+        system: src:
+        import src {
+          inherit system;
+
+          config.allowUnfree = true;
+
+          overlays = [
+            (import ./overlays inputs)
+            inputs.nur.overlays.default
+          ];
+        }
+      ) nixpkgsFor;
+
+      forAllSystems = f: lib.mapAttrs (_system: pkgs: f pkgs) pkgsFor;
+
+      # ----------------------------------------------------------------------
+      # Configuration builders
+      #
+      # "inputs" is handed to the module system once, here, via specialArgs.
+      # Every module below modules/ and hosts/ is then a plain module file that
+      # can be imported by path and takes { inputs, lib, config, pkgs, ... }.
+      # ----------------------------------------------------------------------
+
+      mkNixOSHost =
+        {
+          hostname,
+          system,
+          user,
+          modules ? [ ],
+        }:
+        lib.nixosSystem {
+          pkgs = pkgsFor.${system};
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/nixos
+            {
+              networking.hostName = hostname;
+              stewos.user = user;
+            }
+          ]
+          ++ modules;
+        };
+
+      mkDarwinHost =
+        {
+          hostname,
+          system,
+          modules ? [ ],
+        }:
+        inputs.nix-darwin.lib.darwinSystem {
+          pkgs = pkgsFor.${system};
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/nix-darwin
+            { networking.hostName = hostname; }
+          ]
+          ++ modules;
+        };
+
+      # A Windows machine's *system* configuration -- the machine, applied
+      # elevated -- and the NixOS-WSL distro living on it, as one configuration.
+      # winpkgs evaluates the distro itself and exposes it as
+      # config.system.build.wsl, a full nixosConfiguration; building the Windows
+      # toplevel builds the distro too, and "winpkgs system switch" activates
+      # both. The user's half is a windowsHomeConfiguration, made by mkHome.
+      #
+      # The distro is deliberately slim -- just what winpkgs needs to evaluate
+      # and apply -- not a StewOS workstation; the StewOS modules are for the
+      # machines people sit at. A host adds anything more through
+      # wsl.modules in its own configuration.nix.
+      #
+      # `homes` are the machine's windowsHomeConfigurations. A package a home
+      # declares whose winget installer is machine-wide (Alacritty, LLVM) is
+      # installed by the system on the home's behalf, since a home never
+      # elevates -- home-manager.useUserPackages, in effect.
+      mkWindowsHost =
+        {
+          hostname,
+          modules ? [ ],
+          homes ? [ ],
+        }:
+        inputs.winpkgs.lib.windowsSystem {
+          # The system that *evaluates* -- the WSL distro on the host -- not the
+          # target, which is always Windows.
+          system = "x86_64-linux";
+          specialArgs = { inherit inputs; };
+
+          modules = [
+            # steward, on by default: the desktop's Windows backend runs
+            # komorebi, whkd and masir as its units, and a home cannot
+            # install it (modules/home-manager/desktop/windows/services.nix).
+            inputs.steward.windowsModules.system
+            {
+              services.steward.enable = lib.mkDefault true;
+              networking.hostName = hostname;
+              winpkgs.homes = homes;
+              wsl = {
+                enable = true;
+                specialArgs = { inherit inputs; };
+              };
+            }
+          ]
+          ++ modules;
+        };
+
+      # One user's home configuration. home-manager on Linux and macOS; on a
+      # Windows system it is a winpkgs home configuration, which speaks
+      # home-manager's names for files, variables and packages and is applied as
+      # the user by "winpkgs home switch". Windows needs the hostname too: the
+      # configuration is named "<Windows user name>@<host>", which is how the
+      # winpkgs command finds it.
+      mkHome =
+        {
+          system,
+          user,
+          modules ? [ ],
+          hostname ? null,
+        }:
+        if lib.hasSuffix "windows" system then
+          assert lib.assertMsg (hostname != null) "mkHome: a Windows home configuration needs `hostname`";
+          inputs.winpkgs.lib.homeConfiguration {
+            # The system that evaluates -- the WSL distro -- not the target.
+            system = "x86_64-linux";
+            specialArgs = { inherit inputs; };
+            modules = [
+              ./modules/home-manager
+              # systemd.user.services become steward's units, which the
+              # system's steward runs; an apply that changes them switches.
+              inputs.steward.windowsModules.home
+              {
+                winpkgs.name = "${user.username}@${hostname}";
+                home.username = user.username;
+                stewos.user = user;
+              }
+            ]
+            ++ modules;
+          }
+        else
+          mkHomeManager {
+            inherit system user modules;
+          };
+
+      mkHomeManager =
+        {
+          system,
+          user,
+          modules ? [ ],
+        }:
+        let
+          isDarwin = lib.hasSuffix "darwin" system;
+        in
+        inputs.home-manager.lib.homeManagerConfiguration {
+          pkgs = pkgsFor.${system};
+          extraSpecialArgs = { inherit inputs; };
+
+          modules = [
+            ./modules/home-manager
+            {
+              home.username = user.username;
+              # Derived rather than passed in: the home directory and the
+              # username cannot disagree if only one of them is written down.
+              home.homeDirectory = (if isDarwin then "/Users/" else "/home/") + user.username;
+              stewos.user = user;
+            }
+          ]
+          ++ lib.optional isDarwin inputs.mac-app-util.homeManagerModules.default
+          ++ modules;
+        };
+
+      # ----------------------------------------------------------------------
+      # Users
+      # ----------------------------------------------------------------------
+
+      caleb = {
+        username = "caleb";
+        fullname = "Caleb Stewart";
+        email = "caleb.stewart94@gmail.com";
       };
 
-      # Packages which must use the flake-utils helper
-      packageOutputs = inputs.flake-utils.lib.eachDefaultSystem (system: {
-        packages = import ./packages system inputs;
-      });
+      calebWork = {
+        username = "caleb.stewart";
+        fullname = "Caleb Stewart";
+        email = "caleb.stewart94@gmail.com";
+        aliases.personal.email = "caleb.stewart94@gmail.com";
+      };
 
-      # System outputs which may also provide overlapping output keys, and must
-      # be recursively merged with the above two attrsets.
-      systemOutputs = import ./systems inputs;
+      # The Windows account name is the display name, spaces included.
+      calebWindows = caleb // {
+        username = "Caleb Stewart";
+      };
 
-      # Templates allow users to generate projects using StewOS from a template
-      templateOutputs = import ./templates inputs;
+      # ----------------------------------------------------------------------
+      # Windows machines
+      #
+      # Declared here rather than inline below because each one also yields a
+      # NixOS configuration (its WSL distro), which is surfaced under
+      # nixosConfigurations so nixos-rebuild and the docs see it too.
+      # ----------------------------------------------------------------------
+
+      windowsHosts = {
+        gaming-windows = mkWindowsHost {
+          hostname = "gaming-windows";
+          modules = [ ./hosts/gaming-windows/configuration.nix ];
+          homes = [ self.windowsHomeConfigurations."Caleb Stewart@gaming-windows" ];
+        };
+
+        # The Windows side of the framework16 laptop's dual boot. Not
+        # "framework16": the distro lands in nixosConfigurations under this
+        # name, beside the laptop's NixOS side, and Windows caps a computer
+        # name at fifteen characters.
+        framework16-win = mkWindowsHost {
+          hostname = "framework16-win";
+          modules = [ ./hosts/framework16-win/configuration.nix ];
+          homes = [ self.windowsHomeConfigurations."Caleb Stewart@framework16-win" ];
+        };
+      };
+
+      wslHosts = lib.mapAttrs (_name: host: host.config.system.build.wsl) (
+        lib.filterAttrs (_name: host: host.config.wsl.enable) windowsHosts
+      );
+
+      # ----------------------------------------------------------------------
+      # Documentation
+      # ----------------------------------------------------------------------
+
+      # The whole site is built on one system. Reading an option tree never
+      # builds anything, so the darwin module set evaluates perfectly well from
+      # Linux -- which is what keeps this to a single job rather than a matrix
+      # with a macOS runner in it.
+      docsSystem = "x86_64-linux";
+
+      scopePackages = forAllSystems (
+        pkgs:
+        lib.filterAttrs (
+          _name: drv: lib.isDerivation drv && lib.meta.availableOn pkgs.stdenv.hostPlatform drv
+        ) pkgs.stewos
+      );
+
+      docs = self.lib.docs.mkSite {
+        pkgs = pkgsFor.${docsSystem};
+        inherit self inputs;
+        pkgsBySystem = pkgsFor;
+        config = ./docs/flakedoc.toml;
+        content = ./docs/content;
+
+        # No stubs. The module trees are evaluated against a machine that does
+        # not exist, and every option whose default reads "config" or "pkgs"
+        # carries a defaultText, so nothing forces a value the stub would have
+        # had to invent. Keep it that way: a stub is a value that shows up in
+        # the rendered defaults of real options.
+      };
+
+      # "nix run .#docs" builds the site and serves it. A documentation site is
+      # not much use as a store path -- every link in it is relative, so opening
+      # result/index.html from the filesystem works but tells you nothing about
+      # whether it will work once served.
+      docsServe =
+        let
+          pkgs = pkgsFor.${docsSystem};
+        in
+        pkgs.writeShellApplication {
+          name = "stewos-docs";
+          runtimeInputs = [ pkgs.miniserve ];
+          text = ''
+
+            port="''${1:-8080}"
+            echo "StewOS documentation on http://localhost:$port/"
+            exec miniserve --index index.html --port "$port" ${docs}
+          '';
+        };
     in
-    inputs.nixpkgs.lib.attrsets.recursiveUpdate (
-      baseOutputs // packageOutputs // templateOutputs
-    ) systemOutputs;
+    {
+      lib = import ./lib { inherit lib; } // {
+        # The inputs the modules below are written against.
+        #
+        # StewOS modules reference specific inputs (stylix, nh, vfio-hooks, ...)
+        # from inside "imports", and only specialArgs are available that early --
+        # a _module.args value used in "imports" is an infinite recursion. So a
+        # consuming flake has to hand these back in:
+        #
+        #   specialArgs = { inputs = stewos.lib.moduleInputs; };
+        #
+        # which also means "inputs" inside a StewOS module always refers to
+        # StewOS's inputs. Pass your own under a different name.
+        moduleInputs = inputs;
+      };
+
+      # The StewOS package scope, for use in other flakes:
+      #   nixpkgs.overlays = [ stewos.overlays.default ];
+      overlays.default = import ./overlays inputs;
+
+      nixosModules.default = ./modules/nixos;
+      homeModules.default = ./modules/home-manager;
+      darwinModules.default = ./modules/nix-darwin;
+
+      templates = import ./templates;
+
+      # Only the derivations from the scope, and only the ones that can be built
+      # on the system in question. The scope also holds builders (mkRofiConfig,
+      # mkRofiTheme) which are functions, and Linux-only packages which must not
+      # show up in the darwin output.
+      #
+      # "docs" is not one of those: it is this flake's own documentation site,
+      # not a package the scope offers, and it exists on one system only.
+      packages = scopePackages // {
+        ${docsSystem} = scopePackages.${docsSystem} // {
+          inherit docs;
+        };
+      };
+
+      # Building the documentation is the check. It evaluates every module tree,
+      # every host and every package's meta, and refuses to finish if an option
+      # has no description -- which is a good deal more than "does it evaluate".
+      checks.${docsSystem} = {
+        inherit docs;
+      };
+
+      formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
+
+      nixosConfigurations = {
+        framework-desktop = mkNixOSHost {
+          hostname = "framework-desktop";
+          system = "x86_64-linux";
+          user = caleb // {
+            groups = [ "nordvpn" ];
+          };
+          modules = [
+            ./hosts/framework-desktop/hardware-configuration.nix
+            ./hosts/framework-desktop/configuration.nix
+          ];
+        };
+
+        framework16 = mkNixOSHost {
+          hostname = "framework16";
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [
+            ./hosts/framework16/hardware-configuration.nix
+            ./hosts/framework16/configuration.nix
+          ];
+        };
+      }
+      # The WSL distros of the Windows machines, under their machine's name, so
+      # "nixos-rebuild switch --flake ." inside one picks itself by hostname.
+      // wslHosts;
+
+      darwinConfigurations = {
+        huntress-mbp = mkDarwinHost {
+          hostname = "huntress-mbp";
+          system = "aarch64-darwin";
+          modules = [ ./hosts/huntress-mbp/configuration.nix ];
+        };
+      };
+
+      # The machine half of each Windows host, applied elevated from its own WSL
+      # distro: `winpkgs system switch` (or, the first time,
+      # nix run .#windowsConfigurations.<host>.config.system.build.toplevel -- switch).
+      windowsConfigurations = windowsHosts;
+
+      # The user half: `winpkgs home switch`. Named <Windows user>@<host>.
+      windowsHomeConfigurations = {
+        "Caleb Stewart@gaming-windows" = mkHome {
+          system = "x86_64-windows";
+          hostname = "gaming-windows";
+          user = calebWindows;
+          modules = [ ./hosts/gaming-windows/home.nix ];
+        };
+
+        "Caleb Stewart@framework16-win" = mkHome {
+          system = "x86_64-windows";
+          hostname = "framework16-win";
+          user = calebWindows;
+          modules = [ ./hosts/framework16-win/home.nix ];
+        };
+      };
+
+      homeConfigurations = {
+        "caleb@framework-desktop" = mkHome {
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [ ./hosts/framework-desktop/home.nix ];
+        };
+
+        "caleb@framework16" = mkHome {
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [ ./hosts/framework16/home.nix ];
+        };
+
+        "caleb.stewart@huntress-mbp" = mkHome {
+          system = "aarch64-darwin";
+          user = calebWork;
+          modules = [ ./hosts/huntress-mbp/home.nix ];
+        };
+      };
+
+      # "nix run .#<hostname>-vm" boots a host's configuration in a VM.
+      apps.x86_64-linux = {
+        docs = {
+          type = "app";
+          program = lib.getExe docsServe;
+          meta.description = "Build the documentation site and serve it";
+        };
+
+        gaming-windows-iso = {
+          type = "app";
+          program = lib.getExe windowsHosts.gaming-windows.config.system.build.installer;
+        };
+      }
+      // lib.mapAttrs' (
+        hostname: host:
+        lib.nameValuePair "${hostname}-vm" {
+          type = "app";
+          program = "${host.config.system.build.vm}/bin/run-${hostname}-vm";
+          meta.description = "Boot the ${hostname} configuration in a VM";
+        }
+      ) self.nixosConfigurations;
+    };
 }

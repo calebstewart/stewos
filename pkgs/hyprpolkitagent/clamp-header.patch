@@ -1,0 +1,10 @@
+--- a/src/ui/Dialog.cpp	2026-08-12 00:50:50.891234926 -0500
++++ b/src/ui/Dialog.cpp	2026-08-12 00:50:50.893235895 -0500
+@@ -216,6 +216,7 @@
+         wrap->addChild(CTextBuilder::begin()
+                            ->text(std::string{"Authentication Required"})
+                            ->fontSize({CFontSize::HT_FONT_H2})
++                           ->clampSize({(double)cfg.passwordFieldWidth, -1.0})
+                            ->color([] { return g_pAgent->backend()->getPalette()->m_colors.text; })
+                            ->commence());
+         outer->addChild(wrap);
