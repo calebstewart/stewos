@@ -63,6 +63,13 @@
     };
   };
 
+  # Try the sidebar on hover rather than on drag. The trigger is the right edge
+  # above `max(sidebar.minHoverThreshold, bottom of the notification stack)` --
+  # see Config.sidebar.showOnHover in the shell's
+  # modules/drawers/Interactions.qml -- so it is the top-right corner, not the
+  # whole right edge. Drag still works; this only adds the hover path.
+  programs.caelestia.settings.sidebar.showOnHover = true;
+
   colorScheme = inputs.nix-colors.colorSchemes.catppuccin-mocha;
 
   # Setup Chrome
