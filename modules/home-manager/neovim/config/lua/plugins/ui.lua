@@ -51,6 +51,7 @@ return {
         { "<leader>g", group = "Go to..." },
         { "<leader>f", group = "Find..." },
         { "<leader>l", group = "LSP..." },
+        { "<leader>c", group = "Claude..." },
       },
     },
   },

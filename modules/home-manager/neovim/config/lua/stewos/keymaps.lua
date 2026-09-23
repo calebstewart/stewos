@@ -51,3 +51,18 @@ map("<leader>lr", function() vim.lsp.buf.rename() end, "Rename Current Symbol")
 map("<leader>ll", "<cmd>Lspsaga show_line_diagnostics<CR>", "Show Line Diagnostics")
 map("<leader>la", "<cmd>Lspsaga code_action<CR>", "View Code Actions")
 map("K", "<cmd>Lspsaga hover_doc<CR>", "Hover Documentation")
+
+-- <leader>c  Claude...
+-- --continue only applies when the terminal starts; with one already running
+-- it just toggles it. The session pickers (stewos/claude_sessions.lua) replace
+-- a running session instead, after asking.
+map("<leader>cc", "<cmd>ClaudeCode<CR>", "Toggle Claude")
+map("<leader>cf", "<cmd>ClaudeCodeFocus<CR>", "Focus Claude")
+map("<leader>cC", "<cmd>ClaudeCode --continue<CR>", "Continue Last Claude Conversation")
+map("<leader>cr", function() require("stewos.claude_sessions").resume() end, "Resume a Claude Session")
+map("<leader>cx", function() require("stewos.claude_sessions").delete() end, "Delete Claude Sessions")
+map("<leader>cm", "<cmd>ClaudeCodeSelectModel<CR>", "Select Claude Model")
+map("<leader>cb", "<cmd>ClaudeCodeAdd %<CR>", "Add Current Buffer to Claude")
+map("<leader>cs", "<cmd>ClaudeCodeSend<CR>", "Send Selection to Claude", "v")
+map("<leader>ca", "<cmd>ClaudeCodeDiffAccept<CR>", "Accept Claude Diff")
+map("<leader>cd", "<cmd>ClaudeCodeDiffDeny<CR>", "Reject Claude Diff")

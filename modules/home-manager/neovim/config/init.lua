@@ -11,6 +11,7 @@
 --   lua/stewos/autocmds.lua   autocommands
 --   lua/stewos/platform.lua   generated.lua with defaults, plus OS checks
 --   lua/stewos/lazy.lua       lazy.nvim bootstrap; plugin specs live in lua/plugins/
+--   lua/stewos/claude_sessions.lua  Telescope pickers to resume/delete Claude sessions
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
