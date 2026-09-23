@@ -53,16 +53,13 @@ map("<leader>la", "<cmd>Lspsaga code_action<CR>", "View Code Actions")
 map("K", "<cmd>Lspsaga hover_doc<CR>", "Hover Documentation")
 
 -- <leader>c  Claude...
--- --continue only applies when the terminal starts; with one already running
--- it just toggles it. The session pickers (stewos/claude_sessions.lua) replace
--- a running session instead, after asking.
-map("<leader>cc", "<cmd>ClaudeCode<CR>", "Toggle Claude")
-map("<leader>cf", "<cmd>ClaudeCodeFocus<CR>", "Focus Claude")
-map("<leader>cC", "<cmd>ClaudeCode --continue<CR>", "Continue Last Claude Conversation")
-map("<leader>cr", function() require("stewos.claude_sessions").resume() end, "Resume a Claude Session")
-map("<leader>cx", function() require("stewos.claude_sessions").delete() end, "Delete Claude Sessions")
-map("<leader>cm", "<cmd>ClaudeCodeSelectModel<CR>", "Select Claude Model")
-map("<leader>cb", "<cmd>ClaudeCodeAdd %<CR>", "Add Current Buffer to Claude")
-map("<leader>cs", "<cmd>ClaudeCodeSend<CR>", "Send Selection to Claude", "v")
-map("<leader>ca", "<cmd>ClaudeCodeDiffAccept<CR>", "Accept Claude Diff")
-map("<leader>cd", "<cmd>ClaudeCodeDiffDeny<CR>", "Reject Claude Diff")
+map("<leader>cc", "<cmd>Claude toggle<CR>", "Toggle Claude Chat")
+map("<leader>co", "<cmd>Claude open<CR>", "Open/Focus Claude Prompt")
+map("<leader>cs", "<cmd>Claude sessions<CR>", "Pick a Claude Session")
+map("<leader>cn", "<cmd>Claude new<CR>", "New Claude Session")
+map("<leader>cR", "<cmd>Claude rename<CR>", "Rename Claude Session")
+map("<leader>cl", "<cmd>Claude next<CR>", "Next Open Claude Session")
+map("<leader>ch", "<cmd>Claude prev<CR>", "Previous Open Claude Session")
+map("<leader>cm", "<cmd>Claude mode<CR>", "Set Claude Permission Mode")
+map("<leader>ci", "<cmd>Claude interrupt<CR>", "Interrupt Claude")
+map("<leader>cx", "<cmd>Claude stop<CR>", "Stop Claude Session")
