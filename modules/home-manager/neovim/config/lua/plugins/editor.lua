@@ -4,7 +4,7 @@ return {
 
   {
     "stevearc/oil.nvim",
-    lazy = false, -- the VimEnter autocmd opens it when nvim starts bare
+    lazy = false, -- replaces netrw, so `nvim <dir>` has to find it loaded
     dependencies = { "nvim-tree/nvim-web-devicons" },
     opts = {},
   },

@@ -8,6 +8,7 @@
 {
   lib,
   config,
+  options,
   pkgs,
   ...
 }:
@@ -42,6 +43,10 @@ let
     "qmlls"
     "gh_actions_ls"
   ];
+
+  # "Vim Claude": a Neovim whose only window is a new Claude session in the
+  # current directory. Single-quoted so zsh and PowerShell read it the same.
+  vaude = "nvim '+Claude here'";
 
   enabledServers = lib.attrNames (lib.filterAttrs (_: on: on) cfg.servers);
 
@@ -96,6 +101,7 @@ in
           "return " + lib.generators.toLua { } generated;
 
         home.sessionVariables.EDITOR = "nvim";
+        home.shellAliases = { inherit vaude; };
       }
 
       (lib.mkIf (!isWindows) {
@@ -127,6 +133,14 @@ in
         ];
         home.sessionPath = [ ''C:\Program Files\LLVM\bin'' ];
       })
+
+      # winpkgs' PowerShell profile does not read home.shellAliases, and
+      # programs.powershell exists only in a winpkgs home.
+      (lib.optionalAttrs (options.programs ? powershell) (
+        lib.mkIf isWindows {
+          programs.powershell.shellAliases = { inherit vaude; };
+        }
+      ))
     ]
   );
 }
