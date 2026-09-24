@@ -6,6 +6,7 @@ return {
     "calebstewart/claude-code.nvim",
     cmd = "Claude",
     opts = {
+      transport = "direct",
       window = { position = "right", size = 0.35 },
     },
   },
