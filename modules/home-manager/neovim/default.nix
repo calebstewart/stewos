@@ -44,6 +44,16 @@ let
     "gh_actions_ls"
   ];
 
+  # mingw-w64 GCC: the C compiler tree-sitter builds parsers with on Windows.
+  # A portable zip, so winget unpacks it whole into its own packages directory
+  # under a name that carries the source rather than the version, and the
+  # archive's one top-level directory is `mingw64` -- the path survives an
+  # update, which is what lets it be written down here.
+  mingw = pkgs.winpkgs.fromWinget {
+    id = "BrechtSanders.WinLibs.POSIX.UCRT";
+    programDir = ''%LOCALAPPDATA%\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin'';
+  };
+
   # "Vim Claude": a Neovim whose only window is a new Claude session in the
   # current directory. Single-quoted so zsh and PowerShell read it the same.
   vaude = "nvim '+Claude here'";
@@ -115,23 +125,36 @@ in
 
       (lib.mkIf isWindows {
         # winget. Servers come through mason. treesitter builds its parsers
-        # with the tree-sitter CLI and clang from LLVM; LLVM's installer is
-        # machine-wide, so the host's system configuration installs it on this
-        # home's behalf (winpkgs.homes), and it leaves PATH alone, so the bin
-        # directory goes on the user PATH here. No make, so
-        # telescope-fzf-native is skipped and telescope uses its Lua sorter.
+        # with the tree-sitter CLI and a C compiler, and the compiler is
+        # mingw-w64's: a user-scope portable install, so this home installs it
+        # itself rather than through the system (winpkgs.homes), and nothing
+        # puts it on PATH for us, so the bin directory goes on the user PATH
+        # here. Still no `make` -- winlibs ships GNU make as mingw32-make -- so
+        # telescope-fzf-native stays skipped and telescope uses its Lua sorter.
+        #
+        # This was LLVM.LLVM, which cannot compile a parser on its own: that
+        # clang targets the MSVC ABI, so it finds no stdlib.h unless Visual
+        # Studio's build tools and the Windows SDK are installed beside it, and
+        # neither is here. mingw-w64 brings its own headers and CRT, and the
+        # parsers it builds load into the MSVC-built neovim fine -- the ABI
+        # between them is plain C.
         home.packages = with pkgs; [
           neovim
           ripgrep
           fd
           nodejs
           (winpkgs.fromWinget "tree-sitter.tree-sitter-cli")
-          (winpkgs.fromWinget {
-            id = "LLVM.LLVM";
-            scope = "machine";
-          })
+          mingw
         ];
-        home.sessionPath = [ ''C:\Program Files\LLVM\bin'' ];
+        home.sessionPath = [ mingw.programDir ];
+
+        # tree-sitter compiles through the cc crate, which on a windows-msvc
+        # host runs cl.exe unless CC names something else -- and cl.exe is the
+        # thing that is not installed. Naming gcc also chooses the gcc-family
+        # command line (-shared, -Wl,--no-undefined), the one mingw
+        # understands; cc reaches for MSVC flags only when the compiler is
+        # MSVC.
+        home.sessionVariables.CC = "gcc";
       })
 
       # winpkgs' PowerShell profile does not read home.shellAliases, and
