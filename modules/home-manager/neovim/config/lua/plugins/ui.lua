@@ -4,7 +4,12 @@ return {
   {
     "nvim-lualine/lualine.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
-    opts = {},
+    opts = {
+      -- One bar for the whole screen rather than one per window. With neo-tree,
+      -- trouble or a Claude sidebar open, per-window bars are mostly noise, and
+      -- they overwrite the blank statusline plugins use to hide their own.
+      options = { globalstatus = true },
+    },
   },
 
   {
