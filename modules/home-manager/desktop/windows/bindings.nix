@@ -206,13 +206,13 @@ let
     reload-window-manager = _: komorebic "reload-configuration";
     # whkd reads its configuration once, at start. As a user service it is
     # steward's to restart (mkHome gives every Windows home steward's home
-    # module, and the system's installs stewctl on the PATH): killing it by
-    # hand would race steward into running two. From the Run key there is no
-    # one else to ask.
+    # module, and the system's installs stewardctl on the PATH): killing it
+    # by hand would race steward into running two. From the Run key there is
+    # no one else to ask.
     reload-hotkeys =
       _:
       if config.programs.whkd.service.enable then
-        "stewctl restart whkd"
+        "stewardctl restart whkd"
       else
         "taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden";
     show-shortcuts = _: komorebic "toggle-shortcuts";

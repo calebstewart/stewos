@@ -2005,11 +2005,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789519065,
-        "narHash": "sha256-5sKI0nR5EKtTpbUA3zz9lEl4czEqlWigFkA2LrGkcCk=",
+        "lastModified": 1790362154,
+        "narHash": "sha256-PXtblElP4Iu9BhMzvVewQ2jasHxyjLcamPfgm/ifYo8=",
         "owner": "calebstewart",
         "repo": "steward",
-        "rev": "43c9e59d8171bd42d9b5782e2832d168e36ae8bb",
+        "rev": "187d5e6ab538dbeb2f0d3b5647b52423217cd66b",
         "type": "github"
       },
       "original": {

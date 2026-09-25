@@ -403,15 +403,16 @@ following) on keys Linux leaves free. Things to know:
   pwsh session, where anything that did not return at once would stall every
   binding after it.
 - **The whkd restart binding (`reload-hotkeys`) follows how whkd is run.**
-  Under `programs.whkd.service.enable` it is `stewctl restart whkd` -- every
-  Windows home gets steward's home module from `mkHome`, and killing whkd by
-  hand would race steward into running two. From the Run key it kills and
-  restarts whkd itself.
+  Under `programs.whkd.service.enable` it is `stewardctl restart whkd` --
+  every Windows home gets steward's home module from `mkHome`, and killing
+  whkd by hand would race steward into running two. From the Run key it kills
+  and restarts whkd itself.
 - **StewOS runs the Windows desktop's daemons under steward by default.**
   `windows/services.nix` sets `programs.{komorebi,whkd,masir,yasb}.service.enable`
-  (`mkDefault`) and groups the first three under a `tiling.target`, so `stewctl
-  stop tiling.target` puts tiling away; YASB stays on `graphical-session.target`,
-  since it is the launcher and clock too. `mkWindowsHost` sets
+  (`mkDefault`) and groups the first three under a `tiling.target`, so
+  `stewardctl stop tiling.target` puts tiling away; YASB stays on
+  `graphical-session.target`, since it is the launcher and clock too.
+  `mkWindowsHost` sets
   `services.steward.enable` (`mkDefault`) so the system installs what the home
   expects. The two halves are separate configurations and cannot see each
   other: a host that turns steward off in `configuration.nix` must also turn

@@ -43,7 +43,7 @@ let
   mkDefaultDeep =
     value: if lib.isAttrs value then lib.mapAttrs (_: mkDefaultDeep) value else lib.mkDefault value;
 
-  komorebic = verb: "stewctl ${verb} komorebi";
+  komorebic = verb: "stewardctl ${verb} komorebi";
 
   # A menu popup in the theme's style.
   popup = {
