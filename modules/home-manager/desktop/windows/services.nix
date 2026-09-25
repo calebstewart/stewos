@@ -7,10 +7,10 @@
 # an apply that changes them. (Flow Launcher, for a host that turns it back
 # on, stays on the Run key: winpkgs has no service mode for it.)
 #
-# komorebi, whkd and masir are one group, tiling.target: `stewctl stop
+# komorebi, whkd and masir are one group, tiling.target: `stewardctl stop
 # tiling.target` puts them all away -- komorebi giving back the windows it hid
-# -- and `stewctl start tiling.target` brings them back. YASB is not in it: it
-# is the launcher and the clock as well as the workspaces, and stays up with
+# -- and `stewardctl start tiling.target` brings them back. YASB is not in it:
+# it is the launcher and the clock as well as the workspaces, and stays up with
 # the session (graphical-session.target) when tiling is put away. Its
 # komorebi widgets show komorebi as offline until it is back.
 #
