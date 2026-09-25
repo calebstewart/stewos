@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   rustPlatform,
 }:
 rustPlatform.buildRustPackage {
@@ -16,6 +17,23 @@ rustPlatform.buildRustPackage {
     ];
   };
   cargoLock.lockFile = ./Cargo.lock;
+
+  # Rust records source paths for panic messages, and the vendored crates live
+  # in the store. winpkgs refuses to install a file that mentions /nix/store/,
+  # so on Windows the paths are rewritten and postInstall proves it -- the
+  # recipe steward's own package uses.
+  preBuild = lib.optionalString stdenv.hostPlatform.isWindows ''
+    export RUSTFLAGS="''${RUSTFLAGS-} --remap-path-prefix=/nix/store=/store --remap-path-prefix=$NIX_BUILD_TOP=/build"
+  '';
+  postInstall = lib.optionalString stdenv.hostPlatform.isWindows ''
+    if grep -l --binary-files=text /nix/store/ $out/bin/*; then
+      echo "the binaries above mention /nix/store/; winpkgs would refuse them" >&2
+      exit 1
+    fi
+  '';
+
+  # A cross build cannot run Windows test binaries; the tests run natively.
+  doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
 
   meta = {
     description = "Build and switch any StewOS host's system or home configuration";

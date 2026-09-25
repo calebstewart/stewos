@@ -334,8 +334,16 @@ command before that was renamed, and home generations from before the rename
 run it on activation, rollbacks included. It is forwarded to `stewardctl`, and
 must never become a rebuild.
 
-Windows is not wired up yet: the home module writes nothing there and nothing
-installs the binary.
+On Windows the *home* installs it -- `modules/home-manager/stewctl.nix`, under
+the `options ? windows` guard, cross-builds `pkgs/stewctl` with the home's
+Windows `pkgs` (which has no StewOS overlay, hence `callPackage` by path) into
+`%LOCALAPPDATA%\stewctl\bin` on the user PATH, and takes the flake from
+`winpkgs.cli.flake`. `mkWindowsHost` writes `%PROGRAMDATA%\stewctl\os.json`
+with only the attribute; `stewctl os` borrows the home's flake, since the
+checkout lives in a user profile. Every verb hands off to the installed winpkgs
+CLI (`pwsh -File %LOCALAPPDATA%\winpkgs\runtime\cli.ps1`). The package
+remaps `/nix/store` out of the binary on Windows, as steward's does, because
+winpkgs refuses files that mention it.
 
 ## Home-Manager Modules
 

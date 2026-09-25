@@ -165,21 +165,20 @@ impl Host {
     /// The flake: `flag`, $STEWCTL_FLAKE, what the configuration recorded
     /// (a home without one borrows the machine's), $NH_FLAKE, ~/git/stewos.
     pub fn flake(&self, kind: Kind, flag: Option<&str>) -> Result<Sourced> {
-        let own = match kind {
-            Kind::Os => self.os.as_ref(),
-            Kind::Home => self.home.as_ref(),
+        let (own, other) = match kind {
+            Kind::Os => (self.os.as_ref(), self.home.as_ref()),
+            Kind::Home => (self.home.as_ref(), self.os.as_ref()),
         };
-        Ok(if let Some(f) = flag {
+        let flake = if let Some(f) = flag {
             Sourced::new(f, "--flake")
         } else if let Some(f) = self.var("STEWCTL_FLAKE") {
             Sourced::new(f, "$STEWCTL_FLAKE")
-        } else if let Some((path, f)) = own.and_then(|(p, id)| Some((p, id.flake.as_ref()?))) {
+        } else if let Some((path, f)) = recorded(own) {
             Sourced::new(f, path.display().to_string())
-        } else if let Some((path, f)) = self
-            .os
-            .as_ref()
-            .and_then(|(p, id)| Some((p, id.flake.as_ref()?)))
-        {
+        } else if let Some((path, f)) = recorded(other) {
+            // Usually a home borrowing the machine's checkout. On Windows it
+            // is the other way round: the checkout is in the user's profile,
+            // and only the home knows where.
             Sourced::new(f, path.display().to_string())
         } else if let Some(f) = self.var("NH_FLAKE") {
             Sourced::new(f, "$NH_FLAKE")
@@ -190,6 +189,14 @@ impl Host {
             )
         } else {
             bail!("no flake: pass --flake or set STEWCTL_FLAKE");
+        };
+        Ok(if self.windows {
+            Sourced {
+                value: expand_windows_vars(&flake.value, &self.vars),
+                ..flake
+            }
+        } else {
+            flake
         })
     }
 
@@ -271,6 +278,32 @@ impl Host {
             attribute,
         })
     }
+}
+
+/// `%USERPROFILE%\git\stewos`, as winpkgs writes a Windows path, with the
+/// variables filled in. Names are matched without regard to case, as Windows
+/// does; an unknown one is left as written.
+fn expand_windows_vars(s: &str, vars: &HashMap<String, String>) -> String {
+    let mut out = String::new();
+    let mut rest = s;
+    while let Some(start) = rest.find('%') {
+        let Some(len) = rest[start + 1..].find('%') else {
+            break;
+        };
+        let name = &rest[start + 1..start + 1 + len];
+        out.push_str(&rest[..start]);
+        match vars.iter().find(|(k, _)| k.eq_ignore_ascii_case(name)) {
+            Some((_, v)) if !name.is_empty() => out.push_str(v),
+            _ => out.push_str(&rest[start..start + len + 2]),
+        }
+        rest = &rest[start + len + 2..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn recorded(file: Option<&(PathBuf, Identity)>) -> Option<(&PathBuf, &String)> {
+    file.and_then(|(p, id)| Some((p, id.flake.as_ref()?)))
 }
 
 fn read_identity(path: PathBuf) -> Result<Option<(PathBuf, Identity)>> {
@@ -413,6 +446,41 @@ mod tests {
         let h = host(&[("WSL_DISTRO_NAME", "NixOS")]);
         let err = h.resolve(Kind::Os, None, None).unwrap_err().to_string();
         assert!(err.contains("Run stewctl from Windows"), "{err}");
+    }
+
+    #[test]
+    fn windows_takes_the_flake_from_the_home_and_expands_it() {
+        let mut h = host(&[("UserProfile", r"C:\Users\Caleb Stewart")]);
+        h.windows = true;
+        h.native = Some(Platform::Windows);
+        h.os = Some((
+            r"C:\ProgramData\stewctl\os.json".into(),
+            id(None, Some(Platform::Windows), Some("gaming-windows")),
+        ));
+        h.home = Some((
+            r"C:\Users\Caleb Stewart\.config\stewctl\home.json".into(),
+            id(
+                Some(r"%USERPROFILE%\git\stewos"),
+                None,
+                Some("Caleb Stewart@gaming-windows"),
+            ),
+        ));
+        let os = h.resolve(Kind::Os, None, None).unwrap();
+        assert_eq!(os.flake.value, r"C:\Users\Caleb Stewart\git\stewos");
+        assert_eq!(os.platform, Platform::Windows);
+        let home = h.resolve(Kind::Home, None, None).unwrap();
+        assert_eq!(home.attribute.value, "Caleb Stewart@gaming-windows");
+        assert_eq!(home.platform, Platform::Windows);
+    }
+
+    #[test]
+    fn windows_variables() {
+        let vars: HashMap<String, String> =
+            [("USERPROFILE".to_string(), r"C:\U".to_string())].into();
+        assert_eq!(expand_windows_vars(r"%userprofile%\x", &vars), r"C:\U\x");
+        assert_eq!(expand_windows_vars(r"%NOPE%\x", &vars), r"%NOPE%\x");
+        assert_eq!(expand_windows_vars("100%", &vars), "100%");
+        assert_eq!(expand_windows_vars("%%", &vars), "%%");
     }
 
     #[test]

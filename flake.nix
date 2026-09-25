@@ -244,6 +244,13 @@
             {
               services.steward.enable = lib.mkDefault true;
               networking.hostName = hostname;
+              # Which configuration this machine is, for stewctl (which the
+              # home installs). The flake is the home's to say: the checkout
+              # lives in a user profile.
+              windows.files."%PROGRAMDATA%\\stewctl\\os.json".text = builtins.toJSON {
+                platform = "windows";
+                attribute = hostname;
+              };
               winpkgs.homes = homes;
               wsl = {
                 enable = true;
@@ -283,6 +290,7 @@
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
                 stewos.user = user;
+                stewos.stewctl.attribute = "${user.username}@${hostname}";
               }
             ]
             ++ modules;
