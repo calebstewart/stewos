@@ -75,11 +75,9 @@ per-host.
 ## Building
 
 ```bash
-# NixOS
-nh os switch ~/git/stewos
-
-# Home-Manager
-nh home switch ~/git/stewos
+# The system (NixOS or nix-darwin), then this user's home
+stewctl os switch
+stewctl home switch
 
 # Boot a host's configuration in a VM
 nix run .#framework-desktop-vm
@@ -146,8 +144,8 @@ the `winpkgs` input's `windowsSystem` -- the machine, plus its slim NixOS-WSL
 distro (extend it with `wsl.modules`) -- and `mkHome` with a
 `*-windows` system and a `hostname` makes the matching
 `windowsHomeConfigurations."<Windows user>@<host>"`, so one builder covers every
-user@host. On the machine, `winpkgs switch` applies the distro, then the system
-half (one UAC prompt), then the home half.
+user@host. On the machine, `winpkgs system switch` applies the distro, then the
+system half (one UAC prompt); `winpkgs home switch` applies the home half.
 
 ## NixOS Modules
 
