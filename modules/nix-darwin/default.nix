@@ -7,6 +7,7 @@
     inputs.stylix.darwinModules.stylix
 
     ./nh.nix
+    ./stewctl.nix
   ];
 
   # Setup Nix configuration

@@ -105,10 +105,11 @@ NixOS + home-manager are:
   `homeConfigurations` on purpose: it is not a home-manager object.
 
 A resource in the wrong tree (an `HKLM` key in `home.nix`) is an evaluation
-error naming the other tree. Both halves are applied from a Windows terminal
-with `winpkgs switch` (WSL distro, then system with one UAC prompt, then home),
-or separately with `winpkgs system ...` / `winpkgs home ...`; each keeps its own
-generations. The docs generator does not yet build host pages for either half.
+error naming the other tree. Each half is applied from a Windows terminal on
+its own -- `winpkgs system switch` (WSL distro, then the system, with one UAC
+prompt) and `winpkgs home switch` -- and each keeps its own generations. There
+is no command that applies both. The docs generator does not yet build host
+pages for either half.
 
 `hosts/common/windows/configuration.nix` turns on Hyper-V and puts each
 machine's home users (read off `winpkgs.homes`) in the built-in `Hyper-V
@@ -203,11 +204,16 @@ Things that are the way they are on purpose:
 ## Build Commands
 
 ```bash
-# Rebuild NixOS system
-nh os switch ~/git/stewos
+# Rebuild the system (NixOS or nix-darwin) and then this user's home
+stewctl os switch
+stewctl home switch
 
-# Rebuild Home-Manager
-nh home switch ~/git/stewos
+# What stewctl resolved -- flake, attribute, and where each came from
+stewctl os status
+
+# Update inputs (all, or one)
+stewctl flake update
+stewctl flake update nixpkgs
 
 # Test in VM
 nix run .#framework-desktop-vm
@@ -304,6 +310,40 @@ The part worth knowing is that it is a **WirePlumber smart filter**
 This module used to set `programs.noisetorch.enable`. It does not any more, and
 should not again: NoiseTorch is the same rnnoise suppressor driven by hand, so
 running it on top of the filter chain processes the signal twice.
+
+### stewctl
+
+`stewctl` (`pkgs/stewctl/`, Rust) is the one command for building and
+switching on every host. It is a **dispatcher**: nh does the work on NixOS and
+macOS, winpkgs on Windows; stewctl only decides which configuration and which
+engine. Every verb is a subcommand of its target, as in nh --
+`stewctl os <verb>` or `stewctl home <verb>` -- and there is deliberately no
+command that applies both; a bare `stewctl switch` is a usage error.
+
+It finds its configuration from files the modules write, not from the
+hostname: `/etc/stewctl/os.json` from the NixOS and darwin trees
+(`modules/{nixos,nix-darwin}/stewctl.nix`) and `~/.config/stewctl/home.json`
+from the home tree, driven by `stewos.stewctl.{flake,attribute}`
+(`modules/common/stewctl.nix`). A system's `flake` defaults to
+`programs.nh.flake`, its `attribute` to the hostname; a home's `attribute` is
+set by `mkHome` from its `hostname`, which is why every `mkHome` call passes
+one. `stewctl <target> status` prints what it resolved and where from.
+
+`stewctl switch --if-running`, exactly, is reserved: it was steward's control
+command before that was renamed, and home generations from before the rename
+run it on activation, rollbacks included. It is forwarded to `stewardctl`, and
+must never become a rebuild.
+
+On Windows the *home* installs it -- `modules/home-manager/stewctl.nix`, under
+the `options ? windows` guard, cross-builds `pkgs/stewctl` with the home's
+Windows `pkgs` (which has no StewOS overlay, hence `callPackage` by path) into
+`%LOCALAPPDATA%\stewctl\bin` on the user PATH, and takes the flake from
+`winpkgs.cli.flake`. `mkWindowsHost` writes `%PROGRAMDATA%\stewctl\os.json`
+with only the attribute; `stewctl os` borrows the home's flake, since the
+checkout lives in a user profile. Every verb hands off to the installed winpkgs
+CLI (`pwsh -File %LOCALAPPDATA%\winpkgs\runtime\cli.ps1`). The package
+remaps `/nix/store` out of the binary on Windows, as steward's does, because
+winpkgs refuses files that mention it.
 
 ## Home-Manager Modules
 

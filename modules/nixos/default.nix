@@ -23,6 +23,7 @@
     ./networking.nix
     ./security.nix
     ./sshd.nix
+    ./stewctl.nix
     ./user.nix
     ./virtualisation.nix
     ./zsa

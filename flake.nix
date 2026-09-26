@@ -244,6 +244,13 @@
             {
               services.steward.enable = lib.mkDefault true;
               networking.hostName = hostname;
+              # Which configuration this machine is, for stewctl (which the
+              # home installs). The flake is the home's to say: the checkout
+              # lives in a user profile.
+              windows.files."%PROGRAMDATA%\\stewctl\\os.json".text = builtins.toJSON {
+                platform = "windows";
+                attribute = hostname;
+              };
               winpkgs.homes = homes;
               wsl = {
                 enable = true;
@@ -257,9 +264,10 @@
       # One user's home configuration. home-manager on Linux and macOS; on a
       # Windows system it is a winpkgs home configuration, which speaks
       # home-manager's names for files, variables and packages and is applied as
-      # the user by "winpkgs home switch". Windows needs the hostname too: the
+      # the user by "winpkgs home switch". Windows needs the hostname: the
       # configuration is named "<Windows user name>@<host>", which is how the
-      # winpkgs command finds it.
+      # winpkgs command finds it. Elsewhere it is optional, and tells the home
+      # which "<user>@<host>" it is declared as, for stewctl.
       mkHome =
         {
           system,
@@ -282,13 +290,19 @@
                 winpkgs.name = "${user.username}@${hostname}";
                 home.username = user.username;
                 stewos.user = user;
+                stewos.stewctl.attribute = "${user.username}@${hostname}";
               }
             ]
             ++ modules;
           }
         else
           mkHomeManager {
-            inherit system user modules;
+            inherit
+              system
+              user
+              modules
+              hostname
+              ;
           };
 
       mkHomeManager =
@@ -296,6 +310,7 @@
           system,
           user,
           modules ? [ ],
+          hostname ? null,
         }:
         let
           isDarwin = lib.hasSuffix "darwin" system;
@@ -312,6 +327,8 @@
               # username cannot disagree if only one of them is written down.
               home.homeDirectory = (if isDarwin then "/Users/" else "/home/") + user.username;
               stewos.user = user;
+              # The attribute this home is declared under, for stewctl.
+              stewos.stewctl.attribute = lib.mkIf (hostname != null) "${user.username}@${hostname}";
             }
           ]
           ++ lib.optional isDarwin inputs.mac-app-util.homeManagerModules.default
@@ -528,18 +545,21 @@
       homeConfigurations = {
         "caleb@framework-desktop" = mkHome {
           system = "x86_64-linux";
+          hostname = "framework-desktop";
           user = caleb;
           modules = [ ./hosts/framework-desktop/home.nix ];
         };
 
         "caleb@framework16" = mkHome {
           system = "x86_64-linux";
+          hostname = "framework16";
           user = caleb;
           modules = [ ./hosts/framework16/home.nix ];
         };
 
         "caleb.stewart@huntress-mbp" = mkHome {
           system = "aarch64-darwin";
+          hostname = "huntress-mbp";
           user = calebWork;
           modules = [ ./hosts/huntress-mbp/home.nix ];
         };
