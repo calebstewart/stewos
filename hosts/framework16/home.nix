@@ -15,7 +15,7 @@
       monitors = [
         {
           description = "BOE NE160QDM-NZ6";
-          scale = 1.2;
+          scale = 1.25;
         }
       ];
 
