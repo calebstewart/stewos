@@ -14,6 +14,10 @@ opt.signcolumn = "yes"
 opt.cursorline = true
 opt.ruler = true
 
+-- lualine already shows the mode; without this "-- INSERT --" is repeated in
+-- the cmdline row underneath it (noice used to swallow it).
+opt.showmode = false
+
 -- Yank and paste through the system clipboard by default. On Linux the
 -- provider is wl-copy (installed alongside Neovim by Nix); macOS and Windows
 -- have theirs built in.
@@ -38,6 +42,17 @@ if require("stewos.platform").windows then
   opt.shellquote = ""
   opt.shellxquote = ""
 end
+
+-- Messages and the cmdline go through Neovim's built-in ui2 (0.12,
+-- experimental) rather than noice. A message longer than 'cmdheight' is
+-- collapsed with a [+N] marker instead of raising a hit-enter prompt, and g<
+-- (or ENTER straight after a : command) opens it in full in a real pager
+-- buffer; :messages opens there too. Deliberately not a notification popup:
+-- long errors were unreadable that way. pcall so an older Neovim, which has
+-- no vim._core.ui2, keeps the legacy message area instead of failing.
+pcall(function()
+  require("vim._core.ui2").enable({})
+end)
 
 -- Diagnostic signs in the gutter.
 vim.diagnostic.config({
