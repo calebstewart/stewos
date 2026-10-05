@@ -6,6 +6,8 @@
   system.primaryUser = "caleb.stewart";
   system.startup.chime = false;
 
+  time.timeZone = "America/New_York";
+
   security.pam.services.sudo_local.touchIdAuth = true;
 
   system.defaults = {

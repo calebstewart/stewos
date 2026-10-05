@@ -48,7 +48,7 @@
   };
 
   time = {
-    timeZone = "America/Chicago";
+    timeZone = "America/New_York";
 
     # The hardware clock is UTC, which is what NixOS assumes. Only matters to
     # a machine that also boots Linux, but costs nothing on one that does not.

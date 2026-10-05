@@ -23,8 +23,8 @@
     AllowHybridSleep = true;
   };
 
-  # Default to CST
-  time.timeZone = "America/Chicago";
+  # Default to Eastern
+  time.timeZone = "America/New_York";
 
   services.ollama = {
     enable = true;
