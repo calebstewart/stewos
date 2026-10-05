@@ -17,8 +17,13 @@
     thide # hides the taskbar; see stewos.desktop.bindings.taskbar
   ];
 
-  # Install packages explicitly from winget
-  winget.packages = [ "Fastfetch-cli.Fastfetch" ];
+  # Install packages explicitly from winget. Windows Terminal is here rather
+  # than in a host because programs.windows-terminal below configures it for
+  # every Windows machine and, until now, none of them installed it.
+  winget.packages = [
+    "Fastfetch-cli.Fastfetch"
+    "Microsoft.WindowsTerminal"
+  ];
 
   # The same palette as every other host; the desktop, stewos.neovim and the
   # terminals below all render it.
@@ -121,6 +126,14 @@
       ensure = true;
       upgrade = true;
     };
+  };
+
+  programs.gsudo = {
+    settings = {
+      PowerShellLoadProfile = true;
+    };
+    enablePowerShellIntegration = true;
+    sudoAlias = true;
   };
 
   # Alacritty's built-in default shell on Windows is Windows PowerShell 5.1;

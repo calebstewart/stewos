@@ -48,7 +48,7 @@
   };
 
   time = {
-    timeZone = "America/Chicago";
+    timeZone = "America/New_York";
 
     # The hardware clock is UTC, which is what NixOS assumes. Only matters to
     # a machine that also boots Linux, but costs nothing on one that does not.
@@ -66,8 +66,14 @@
     };
   };
 
-  security.sudo = {
+  # security.sudo = {
+  #   enable = true;
+  #   mode = "normal";
+  # };
+
+  security.gsudo = {
     enable = true;
-    mode = "normal";
+    cacheMode = "auto";
+    enforceUacIsolation = false;
   };
 }

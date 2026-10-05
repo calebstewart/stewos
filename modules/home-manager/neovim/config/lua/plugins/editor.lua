@@ -4,7 +4,7 @@ return {
 
   {
     "stevearc/oil.nvim",
-    lazy = false, -- the VimEnter autocmd opens it when nvim starts bare
+    lazy = false, -- replaces netrw, so `nvim <dir>` has to find it loaded
     dependencies = { "nvim-tree/nvim-web-devicons" },
     opts = {},
   },
@@ -39,6 +39,9 @@ return {
       enable_refresh_on_write = true,
       close_if_last_window = true,
       popup_border_style = "rounded",
+      -- Setting `sources` replaces the defaults, so they're listed too. The
+      -- last is claude-code.nvim's session tree (`:Neotree claude_sessions`).
+      sources = { "filesystem", "buffers", "git_status", "claude-code.neo-tree" },
       window = { mappings = { ["<space>"] = "none" } },
       filesystem = {
         filtered_items = { always_show = { ".github", ".circleci" } },

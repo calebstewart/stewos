@@ -23,6 +23,7 @@ self: {
   lucas-chess = self.callPackage ./lucas-chess { };
   macfetch = self.callPackage ./macfetch { };
   shortcut-cli = self.callPackage ./shortcut-cli { };
+  stewctl = self.callPackage ./stewctl { };
   wl-gen-uuid = self.callPackage ./wl-gen-uuid { };
 
   # Rofi theme and script modes.

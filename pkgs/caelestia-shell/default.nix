@@ -46,7 +46,29 @@ else
     # The module is referenced by store path. Upstream points fprint and howdy at
     # /run/current-system/sw/lib/security, which does resolve here, but the store
     # path always resolves and gnome-keyring is in the system closure regardless.
+    #
+    # The second hunk makes the sidebar's hover region match what it looks like.
+    # Upstream treats the right edge as one unfolding column: Panels.qml anchors
+    # the sidebar between the notification stack and the utilities panel (quick
+    # settings), and utilities' "attachedToSidebar" state widens it to the
+    # sidebar's width, so the two read as one surface.
+    #
+    # The close path does not agree. inSidebarArea tests the sidebar and the
+    # session wrapper only, and inRightPanel bounds that vertically by the
+    # sidebar's own extent -- which stops at utilities.top. So moving the
+    # pointer down onto quick settings reads as leaving the sidebar and
+    # collapses the notifications, leaving the very panel being pointed at
+    # behind. Adding utilities to the test keeps the column open across the
+    # whole thing it draws.
+    #
+    # replace-fail on purpose -- if a flake update rewrites the line, the build
+    # should stop rather than silently drop the patch.
     postPatch = (old.postPatch or "") + ''
       echo 'auth    optional                    ${gnome-keyring}/lib/security/pam_gnome_keyring.so' >> assets/pam.d/passwd
+
+      substituteInPlace modules/drawers/Interactions.qml \
+        --replace-fail \
+          'const inSidebarArea = inRightPanel(panels.sidebar, x, y) || inRightPanel(panels.sessionWrapper, x, y);' \
+          'const inSidebarArea = inRightPanel(panels.sidebar, x, y) || inRightPanel(panels.sessionWrapper, x, y) || inRightPanel(panels.utilities, x, y);'
     '';
   })

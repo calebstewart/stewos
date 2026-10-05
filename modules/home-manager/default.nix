@@ -23,7 +23,9 @@
     ./neovim
     ./oh-my-posh.nix
     ./rofi.nix
+    ./stewctl.nix
     ./update-manager.nix
+    ./yasb.nix
     ./zoxide.nix
     ./zsh.nix
   ];

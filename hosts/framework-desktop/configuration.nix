@@ -120,7 +120,7 @@
     };
   };
 
-  time.timeZone = "America/Chicago";
+  time.timeZone = "America/New_York";
 
   services = {
     # Enable printing

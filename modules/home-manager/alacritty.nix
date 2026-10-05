@@ -24,25 +24,28 @@ in
           normal.family = lib.mkDefault "JetBrainsMono Nerd Font Mono";
         };
 
-        colors = lib.mkDefault (with config.colorScheme.palette; {
-          transparent_background_colors = true;
+        colors = lib.mkDefault (
+          with config.colorScheme.palette;
+          {
+            transparent_background_colors = true;
 
-          primary = {
-            background = "#${base00}";
-            foreground = "#${base05}";
-          };
+            primary = {
+              background = "#${base00}";
+              foreground = "#${base05}";
+            };
 
-          normal = {
-            black = "#${base00}";
-            red = "#${base08}";
-            green = "#${base0B}";
-            yellow = "#${base0A}";
-            blue = "#${base0D}";
-            magenta = "#${base0E}";
-            cyan = "#${base0C}";
-            white = "#${base05}";
-          };
-        });
+            normal = {
+              black = "#${base00}";
+              red = "#${base08}";
+              green = "#${base0B}";
+              yellow = "#${base0A}";
+              blue = "#${base0D}";
+              magenta = "#${base0E}";
+              cyan = "#${base0C}";
+              white = "#${base05}";
+            };
+          }
+        );
       };
     };
   };

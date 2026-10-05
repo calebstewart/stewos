@@ -11,17 +11,6 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
   end,
 })
 
-vim.api.nvim_create_autocmd("VimEnter", {
-  group = group,
-  pattern = "*",
-  desc = "Open current directory if no argument is given",
-  callback = function()
-    if vim.fn.argc() == 0 then
-      vim.cmd("Oil")
-    end
-  end,
-})
-
 -- Illuminate highlights follow Visual, whatever the colour scheme.
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = group,

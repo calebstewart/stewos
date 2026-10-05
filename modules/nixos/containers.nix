@@ -15,21 +15,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # virtualisation.podman = {
-    #   enable = true;
-    #   dockerCompat = cfg.enableDockerCompatibility;
-    #   dockerSocket.enable = cfg.enableDockerCompatibility;
-
-    #   extraPackages = with pkgs; [
-    #     podman-compose
-    #   ];
-
-    #   autoPrune = {
-    #     enable = true;
-    #     dates = "weekly";
-    #   };
-    # };
-
     virtualisation.docker = {
       enable = true;
 
