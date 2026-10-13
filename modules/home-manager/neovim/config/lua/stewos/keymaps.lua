@@ -64,3 +64,18 @@ map("<leader>ch", "<cmd>Claude prev<CR>", "Previous Open Claude Session")
 map("<leader>cm", "<cmd>Claude mode<CR>", "Set Claude Permission Mode")
 map("<leader>ci", "<cmd>Claude interrupt<CR>", "Interrupt Claude")
 map("<leader>cx", "<cmd>Claude stop<CR>", "Stop Claude Session")
+
+-- <leader>s  Shortcut...
+-- comment/state/browse/yank act on the current story buffer, else the
+-- sc-<id> in the git branch name.
+map("<leader>ss", "<cmd>Shortcut search<CR>", "Search Stories")
+map("<leader>sm", "<cmd>Shortcut mine<CR>", "My Unfinished Stories")
+map("<leader>se", "<cmd>Shortcut epics<CR>", "Search Epics")
+map("<leader>sb", "<cmd>Shortcut story<CR>", "Open Current Branch's Story")
+map("<leader>sn", "<cmd>Shortcut create<CR>", "New Story")
+map("<leader>sc", "<cmd>Shortcut comment<CR>", "Comment on Current Story")
+map("<leader>st", "<cmd>Shortcut state<CR>", "Change Story State")
+map("<leader>so", "<cmd>Shortcut browse<CR>", "Open Story in Browser")
+map("<leader>sy", "<cmd>Shortcut yank<CR>", "Copy Story Link")
+map("<leader>sd", "<cmd>Shortcut diff<CR>", "Diff Story Against Shortcut")
+map("<leader>sr", "<cmd>Shortcut refresh<CR>", "Refresh Shortcut Lookups")
