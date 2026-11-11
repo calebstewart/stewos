@@ -1,5 +1,5 @@
 # Policy shared by the Framework machines: Secure Boot via lanzaboote, a silent
-# boot, the StewOS modules they both run, and plain suspend.
+# boot, the StewOS modules they all run, and plain suspend.
 #
 # Hibernation is *not* shared policy. Whether S4 is viable depends on the
 # machine's swap-to-RAM ratio and on whether its GPU survives the suspend path,

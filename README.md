@@ -55,16 +55,17 @@ normally. `inputs` arrives once, through `specialArgs` set in `flake.nix`.
 | Host | Platform | Notes |
 |------|----------|-------|
 | `framework-desktop` | `x86_64-linux` | AMD Framework Desktop, Secure Boot, ollama, tailscale |
+| `framework13` | `x86_64-linux` | Framework Laptop 13 Pro (Intel Core Ultra Series 3), Secure Boot |
 | `framework16` | `x86_64-linux` | Framework 16 laptop, Secure Boot |
 | `huntress-mbp` | `aarch64-darwin` | Apple Silicon MacBook, work machine |
 | `gaming-windows` | `x86_64-windows` | Windows 11 desktop, through winpkgs, with a NixOS-WSL distro |
 | `framework16-win` | `x86_64-windows` | The Windows side of `framework16`'s dual boot, on its own disk |
 
-The two Framework machines share `hosts/common/workstation.nix`, which holds the
+The Framework machines share `hosts/common/workstation.nix`, which holds the
 Secure Boot setup, silent boot, plain suspend and the StewOS modules they both
 run. Anything genuinely machine-specific stays in that machine's
 `configuration.nix`, including `system.stateVersion`, which must never follow a
-shared default, and whether the machine hibernates -- framework16 does,
+shared default, and whether the machine hibernates -- the laptops do,
 framework-desktop deliberately does not.
 
 The Windows machines share `hosts/common/windows/`, split the same way the

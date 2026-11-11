@@ -26,9 +26,10 @@ stewos/
 │   └── nix-darwin/    # macOS system modules
 ├── hosts/             # Machine-specific configuration only
 │   ├── common/        # Policy shared between machines
-│   │   ├── workstation.nix # the two Framework machines' NixOS side
+│   │   ├── workstation.nix # the Framework machines' NixOS side
 │   │   └── windows/        # every Windows machine: configuration.nix + home.nix
 │   ├── framework-desktop/  # AMD Framework desktop
+│   ├── framework13/        # Framework Laptop 13 Pro (Intel Core Ultra Series 3)
 │   ├── framework16/        # Framework 16 laptop
 │   ├── framework16-win/    # Windows side of framework16's dual boot, via winpkgs
 │   ├── huntress-mbp/       # Apple Silicon MacBook (work)
@@ -121,7 +122,7 @@ fresh `Get-VM` right after the first apply still returns nothing. A VHDX
 outside the user's own profile may also need NTFS access granted by hand;
 VMMS only handles the ACLs on disks it attaches.
 
-`hosts/common/workstation.nix` carries the policy the two Framework machines
+`hosts/common/workstation.nix` carries the policy the Framework machines
 share. `system.stateVersion` deliberately stays per-host and must never move
 into shared configuration.
 
@@ -287,7 +288,7 @@ unconditionally. `security.nix` is what disables `sudo` in favour of `doas`;
 
 `stewos.audio.noiseCancellation` writes one `pipewire.conf.d` drop-in loading
 `libpipewire-module-filter-chain` with `rnnoise-plugin`'s LADSPA suppressor.
-Both Framework machines get it from `hosts/common/workstation.nix`.
+The Framework machines get it from `hosts/common/workstation.nix`.
 
 The part worth knowing is that it is a **WirePlumber smart filter**
 (`filter.smart = true` on the source node, and deliberately *no*
@@ -552,7 +553,7 @@ checking, 0C building, 0E applying), warm when it is the user's turn (0A
 decide, 09 fix the checkout, 08 broke). Those defaults live here rather than
 upstream because upstream may not know about `stewos.desktop`, nix-colors or
 `llm-agents`, and they are `mkDefault` so a host overrides any of them at
-`services.nixos-update-manager.*` directly. Both Framework hosts set only
+`services.nixos-update-manager.*` directly. The Framework hosts set only
 `enable`.
 
 Names to know: the unit is `nixos-update-manager.service`, state lives in
@@ -794,9 +795,9 @@ timeout from `suspend-then-hibernate` to plain `suspend`. Both halves are
 needed: without the second, the shell would still ask for a sleep verb systemd
 now refuses, and the machine would never suspend at all.
 
-Hibernation is therefore **per-host, not shared policy**. framework16 opts in
-from its own `configuration.nix`; `hosts/common/workstation.nix` grants only
-`AllowSuspend`.
+Hibernation is therefore **per-host, not shared policy**. framework16 and
+framework13 opt in from their own `configuration.nix`;
+`hosts/common/workstation.nix` grants only `AllowSuspend`.
 
 Two things to know before touching this:
 

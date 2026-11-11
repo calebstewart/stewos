@@ -498,6 +498,16 @@
           ];
         };
 
+        framework13 = mkNixOSHost {
+          hostname = "framework13";
+          system = "x86_64-linux";
+          user = caleb;
+          modules = [
+            ./hosts/framework13/hardware-configuration.nix
+            ./hosts/framework13/configuration.nix
+          ];
+        };
+
         framework16 = mkNixOSHost {
           hostname = "framework16";
           system = "x86_64-linux";
@@ -548,6 +558,13 @@
           hostname = "framework-desktop";
           user = caleb;
           modules = [ ./hosts/framework-desktop/home.nix ];
+        };
+
+        "caleb@framework13" = mkHome {
+          system = "x86_64-linux";
+          hostname = "framework13";
+          user = caleb;
+          modules = [ ./hosts/framework13/home.nix ];
         };
 
         "caleb@framework16" = mkHome {
