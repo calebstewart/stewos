@@ -8,6 +8,7 @@
 # policy the profile leaves to the host.
 {
   inputs,
+  pkgs,
   ...
 }:
 {
@@ -21,6 +22,8 @@
   # Set it to whatever the installer's generated configuration.nix says the
   # first time, then DO NOT CHANGE.
   system.stateVersion = "26.05";
+
+  environment.systemPackages = [ pkgs.git ];
 
   # The kernel is the workstation profile's linuxPackages_latest, which is what
   # Framework asks for on this board (minimum 6.19, recommended 7.0+, "best

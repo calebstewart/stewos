@@ -20,7 +20,7 @@
           # through to the "preferred mode, automatic scale" fallback and
           # nothing else breaks. The panel is CSOT's MND508ZB1-1, so expect
           # the vendor to read "CSO".
-          description = "CSO MND508ZB1-1";
+          description = "China Star Optoelectronics Technology Co. Ltd MND508ZB1-1";
 
           # 1.6 is Framework's own recommendation in effect (their guides say
           # 200% then a 0.8 font scale) and it divides the panel exactly, to a
