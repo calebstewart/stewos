@@ -1,7 +1,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 let
@@ -31,11 +30,6 @@ in
 
     virtualisation.containers = {
       enable = true;
-
-      containersConf.cniPlugins = with pkgs; [
-        cni-plugins
-        dnsname-cni
-      ];
     };
   };
 }

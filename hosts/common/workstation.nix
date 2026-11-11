@@ -72,7 +72,6 @@ in
 
     # Disable logging
     consoleLogLevel = 0;
-    initrd.verbose = false;
   };
 
   # Plain suspend is all that is shared. A host that wants S4 sets

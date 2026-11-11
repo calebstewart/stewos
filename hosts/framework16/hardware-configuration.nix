@@ -14,7 +14,6 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.verbose = false;
   boot.initrd.availableKernelModules = [
     "nvme"
     "xhci_pci"
