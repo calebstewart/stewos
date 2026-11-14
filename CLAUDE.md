@@ -484,9 +484,17 @@ following) on keys Linux leaves free. Things to know:
 
 The shell UI is `caelestia-shell`, and it owns the pieces a Hyprland setup would
 otherwise wire up individually: the locker, idle handling, notifications, the
-bar and the wallpaper daemon. There are deliberately no hypridle / hyprlock /
-hyprpaper / swaync / waybar modules here -- do not add them back without
-checking whether caelestia already covers it.
+bar and the wallpaper daemon. There are deliberately no hyprlock / hyprpaper /
+swaync / waybar modules here -- do not add them back without checking whether
+caelestia already covers it.
+
+The one exception is hypridle, which runs as a **sleep guard only**
+(`desktop/linux/default.nix`): no listeners, `before_sleep_cmd = "loginctl
+lock-session"`, `inhibit_sleep = 3`. caelestia locks on logind's
+`PrepareForSleep` but takes no delay inhibitor, so logind does not wait for
+it and a resume can briefly show the unlocked desktop. hypridle holds the
+inhibitor until Hyprland reports the session locked. Do not give it idle
+listeners or a `lock_cmd`: idle handling and the locker stay caelestia's.
 
 `stewos.rofi` is still a real module and is enabled per-host; caelestia does not
 replace the launcher.

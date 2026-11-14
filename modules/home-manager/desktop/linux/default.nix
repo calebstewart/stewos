@@ -62,6 +62,35 @@ in
       };
     };
 
+    # Never wake to an unlocked screen. hypridle here is a sleep guard only: no
+    # listeners, because idle handling is caelestia's.
+    #
+    # caelestia does lock before sleep (general.idle.lockBeforeSleep, on by
+    # default), but only by reacting to logind's PrepareForSleep signal. It takes
+    # no delay inhibitor, so logind does not wait for it and the machine can
+    # freeze before the lock surface is up, showing the desktop for a moment on
+    # resume. hypridle holds a sleep delay inhibitor while the session is
+    # unlocked. On PrepareForSleep it runs `loginctl lock-session`, which
+    # caelestia already answers by locking, and with inhibit_sleep = 3 it
+    # releases the inhibitor only once Hyprland reports the session locked
+    # (hyprland-lock-notify-v1). logind caps the wait at InhibitDelayMaxSec
+    # (5 s).
+    #
+    # lock_cmd stays empty: caelestia handles logind's Lock signal itself. Both
+    # inhibit sources are ignored, so hypridle does not claim
+    # org.freedesktop.ScreenSaver for idle inhibits it has no listeners to apply.
+    # With no listeners it logs "Config has errors: No rules configured" at
+    # startup and carries on; that line is expected.
+    services.hypridle = {
+      enable = true;
+      settings.general = {
+        before_sleep_cmd = "loginctl lock-session";
+        inhibit_sleep = 3;
+        ignore_dbus_inhibit = true;
+        ignore_systemd_inhibit = true;
+      };
+    };
+
     # Restarting the shell must not take down what the shell launched.
     #
     # caelestia launches apps with Quickshell.execDetached, which forks but does
