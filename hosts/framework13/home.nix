@@ -95,6 +95,16 @@
         "--ozone-platform-hint=auto"
         "--enable-features=UseOzonePlatform"
         "--ozone-platform=wayland"
+
+        # Fullscreen video corrupts into black/white blocks on this machine
+        # (Panther Lake, xe) when Chromium speaks wp_color_management: going
+        # fullscreen lets Hyprland's `render.cm_auto_hdr` switch eDP-1 to
+        # HDR, and Chromium's colour-managed video is then drawn as garbage.
+        # Tested 2026-11-11: HDR on the plain desktop is clean (8- and
+        # 10-bit), disabling VA-API decode does not help, disabling this
+        # feature does. Turning it off keeps Chromium out of auto-HDR while
+        # leaving HDR for every other client.
+        "--disable-features=WaylandWpColorManagerV1"
       ];
     };
 
