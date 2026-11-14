@@ -21,7 +21,9 @@ checklist to skim.
   power-profile toggle also speaks PPD.
 - **Hibernation is on**, as on framework16 and unlike framework-desktop. It
   needs a swap partition at least the size of RAM. The board offers s2idle
-  only, which suspend-then-hibernate is fine with.
+  only, which suspend-then-hibernate is fine with in principle. In practice
+  long s2idle sleeps are not yet reliable on this board (#274 under "Known
+  open issues").
 - **The kernel is `linuxPackages_latest`** from the workstation profile. That
   meets Framework's "7.0+ recommended, latest is best", and 7.0 is where the
   built-in microphone stopped clipping (`limit-mic-boost` quirk). Do not pin
@@ -68,9 +70,13 @@ one that does not.
    profile enables lanzaboote with `/var/lib/sbctl`, so `sbctl create-keys`,
    then `sbctl enroll-keys --microsoft`, then re-enable Secure Boot in the
    BIOS. Same procedure as the other Framework hosts.
-5. **Update the BIOS to 3.04 or later** with `fwupdmgr refresh && fwupdmgr
-   update`. The shipping 3.02 clamps the iGPU at an 80 W PL4, and most of the
-   open suspend and charger bug reports were filed against it.
+5. **Update the BIOS to 3.04 or later** with `fwupdmgr refresh --force &&
+   fwupdmgr update`. The shipping 3.02 clamps the iGPU at an 80 W PL4 and can
+   pin the cores at 400 MHz, and most of the open suspend and charger bug
+   reports were filed against it. Framework requires a charger attached, and
+   LVFS may skip the update at 100% battery: discharge a few percent, plug back
+   in and run it again. If USB-C ports or a dock are dead afterwards, see
+   "USB-C ports dead after the 3.04 update" below.
 
 ## Verify after the first switch
 
@@ -95,18 +101,47 @@ one that does not.
 Tracked in FrameworkComputer/SoftwareFirmwareIssueTracker, none papered over
 here. Check these before debugging the configuration.
 
+BIOS 3.04 (stable 2026-11-02; EC `ec_304_34ebc93`, PD `1.0.0.B`; CSME,
+microcode, GOP and retimer unchanged) does not claim to fix any of the sleep
+issues below. Its release notes do not mention s2idle, suspend, resume, UCSI, Wi-Fi or the
+fingerprint reader, and list no known issues. Treat everything here as still
+open on 3.04 unless a later BIOS says otherwise.
+
 - **#274** -- system resets instead of resuming from s2idle after longer
-  sleeps (BIOS 3.02). Whether 3.04 fixes it is unknown; its release notes were
-  not retrievable.
+  sleeps. Reported on 3.02, and 3.04 does not claim to fix it. The forum
+  report ("FW13 Pro: Suspend-Then-Hibernate system crash", topic 84960)
+  pins it on suspend-then-hibernate's hourly wake to re-check the battery:
+  the reset came 17 s after that wake, with BERT hardware-error records in the
+  following boot. Every one of those wakes is a chance to hit it, which counts
+  against suspend-then-hibernate on this board. Look for a boot that ends
+  abruptly right after a suspend in `journalctl --list-boots`.
+- **Lid-close freeze on 3.04** -- forum topic 86023 (BIOS 3.04, kernel
+  7.2.15): every lid close or s2idle hangs while suspending or never wakes,
+  needing a hard reset, with `xe` display errors. One report so far, not yet
+  in the issue tracker, and nobody there has tried a newer kernel.
 - **#286 / #295** -- after resume the charger stays "online" when unplugged
   (`ucsi_acpi ... failed to re-enable notifications`), so on-battery idle
-  policies never fire. `modprobe -r ucsi_acpi && modprobe ucsi_acpi` clears it.
+  policies never fire. That includes suspend-then-hibernate's switch to
+  hibernation, which only happens on battery. `modprobe -r ucsi_acpi &&
+  modprobe ucsi_acpi` clears it. 3.04's PD firmware fixes concern DP Alt Mode
+  negotiation and an EC crash on malformed PD payloads, not this.
 - **#296** -- BE211 Wi-Fi firmware crashes (`NMI_INTERRUPT_UMAC_FATAL`) every
   few minutes on Ubuntu 26.04's 7.0 kernel, taking Bluetooth with it and
   blocking suspend. Distro-specific so far; shows the firmware is still young.
 - **#297** -- fingerprint reader unreliable after sleep. Mitigated above; if it
   persists, a `post-resume.target` unit restarting `fprintd` is the next step.
-- **#263** (closed) -- the PL4 clamp, fixed by BIOS 3.04.
+- **USB-C ports dead after the 3.04 update** -- several forum reports
+  (Windows and LVFS): after the update, the left-side USB-C ports or a
+  Thunderbolt dock stop working. The fix in every report is a battery
+  disconnect (disable the internal battery from BIOS setup, then reconnect
+  AC). One Windows user also had to re-run the update after a retimer failed
+  with error 66. On LVFS the retimer version did not change this release.
+- **#263** (closed) -- the PL4 clamp. 3.04 "Updated Power Limit tables and
+  raised Psys Max threshold to 218W"; one user measured the Arc B390 at
+  2050 MHz, up from 1900.
+- **400 MHz core lock** (fixed in 3.04) -- "core frequency remains stuck at
+  LFM (400 MHz)", which one user hit when waking from sleep. If it comes back
+  after a resume on 3.04, it is a regression worth reporting.
 - Panel power: the PSR2 self-refresh matters a lot; one user measured ~40%
   less idle draw at 60 Hz than 120 Hz. `stewos.desktop.monitors` has no
   refresh-rate field today, so this is not configurable here yet.
