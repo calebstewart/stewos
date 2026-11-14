@@ -43,6 +43,14 @@
     AllowHybridSleep = true;
   };
 
+  # Closing the lid suspends, then hibernates once the battery runs low.
+  # HibernateDelaySec is left unset on purpose: systemd then estimates the
+  # discharge rate and hibernates before the battery gets low, and never
+  # hibernates on AC. The external-power variant falls back to this value, and
+  # the docked one stays "ignore". Plain "suspend" is the fallback if s2idle
+  # resets bite (#274 in README.md).
+  services.logind.settings.Login.HandleLidSwitch = "suspend-then-hibernate";
+
   # Power management is power-profiles-daemon, stated explicitly because it is
   # not what we would get by default: nixos-hardware's laptop profile turns TLP
   # on whenever PPD is off, and NixOS only enables PPD implicitly for GNOME and
