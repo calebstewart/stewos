@@ -2378,11 +2378,11 @@
         "winget-pkgs": "winget-pkgs"
       },
       "locked": {
-        "lastModified": 1790394434,
-        "narHash": "sha256-CocZ7+iFy8sNE+jg4JsEDCUpVF3Cz2aJLGM3xEdbsWw=",
+        "lastModified": 1794802386,
+        "narHash": "sha256-uB/jTun8tShGkiO1Bt1zSF+rRwQmJKB4bJLzHS59uds=",
         "owner": "calebstewart",
         "repo": "winpkgs",
-        "rev": "b849221dea4d62552b282cda4fc43cd1b82b3516",
+        "rev": "58ba9f9d0b541458c972972c08baece1d361afab",
         "type": "github"
       },
       "original": {
