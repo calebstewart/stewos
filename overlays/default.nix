@@ -29,6 +29,11 @@ inputs: final: prev: {
       caelestia-shell-upstream =
         inputs.caelestia-shell.packages.${prev.stdenv.hostPlatform.system}.with-cli or null;
 
+      # The caelestia source tree, which pkgs/caelestia-shell/windows.nix stages
+      # as the configuration the Windows hosts run. The same input as the
+      # package above, so both platforms run one revision.
+      caelestia-shell-src = inputs.caelestia-shell;
+
       # The upstream hyprpolkitagent package, which pkgs/hyprpolkitagent
       # patches. The flake only has Linux systems, hence the "or null".
       hyprpolkitagent-upstream =
