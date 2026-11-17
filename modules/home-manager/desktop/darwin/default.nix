@@ -24,6 +24,14 @@ in
   config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     assertions = [
       {
+        assertion = cfg.shell == null;
+        message = ''
+          stewos.desktop.shell = "${toString cfg.shell}" is not supported on
+          macOS, which has no shell backend: the menu bar is the system's and
+          Raycast is the launcher. Leave it unset.
+        '';
+      }
+      {
         assertion = cfg.monitors == [ ];
         message = ''
           stewos.desktop.monitors is not supported on macOS, which arranges

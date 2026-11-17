@@ -55,7 +55,7 @@ in
 {
   config = lib.optionalAttrs (options ? windows) (
     lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isWindows) {
-      programs.yasb.enable = lib.mkDefault true;
+      programs.yasb.enable = lib.mkDefault (cfg.shell == "yasb");
 
       # The cava widget draws what cava.exe hands it, and finds it on PATH.
       home.packages = lib.mkIf config.programs.yasb.enable [

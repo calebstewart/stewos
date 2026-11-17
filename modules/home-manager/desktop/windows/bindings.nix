@@ -15,6 +15,8 @@
 # check below. Unlike whkd's, it is not silenced by the pause combination.
 # A host that turns Flow Launcher back on gets the old arrangement: whkd
 # starts Flow, which is single-instance, so starting it shows the running one.
+# Under the caelestia shell (./caelestia.nix) the launcher is caelestia's, and
+# whkd opens it by asking the running shell over Quickshell's IPC.
 {
   options,
   pkgs,
@@ -138,10 +140,13 @@ let
   index = b: toString (b.workspace - 1);
 
   # Who answers the "launcher" action: Flow Launcher, through whkd, when a
-  # host turns it on; otherwise YASB's Quick Launch, holding the key itself.
+  # host turns it on; then the shell -- caelestia's launcher, through whkd, or
+  # YASB's Quick Launch, holding the key itself.
   launcher =
     if config.programs.flow-launcher.enable then
       "flow"
+    else if cfg.shell == "caelestia" then
+      "caelestia"
     else if config.programs.yasb.enable then
       "yasb"
     else
@@ -219,6 +224,11 @@ let
   }
   // lib.optionalAttrs (launcher == "flow") {
     launcher = _: config.programs.flow-launcher.showCommand;
+  }
+  // lib.optionalAttrs (launcher == "caelestia") {
+    # Asks the running shell, which opens the drawer on the monitor komorebi
+    # has focused. The call returns as soon as the shell has answered.
+    launcher = _: "quickshell ipc --config caelestia call drawers toggle launcher";
   };
 
   # komorebi keeps five workspaces on each monitor here (./komorebi.nix), so
@@ -509,7 +519,7 @@ in
 
             Actions it does support: ${
               lib.concatStringsSep ", " (lib.attrNames (actions // yasbActions))
-            }. "launcher" needs Flow Launcher or YASB enabled.
+            }. "launcher" needs a shell (stewos.desktop.shell) or Flow Launcher.
             Restrict the binding with platforms = [ "linux" "darwin" ] if it is
             not meant for Windows.
           '';

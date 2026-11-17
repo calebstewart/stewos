@@ -45,14 +45,23 @@ in
             border_width = 1;
             border_offset = -1;
 
-            # This number is right for 150% scaling on a 4k monitor. Override in
+            # Room for YASB's bar, which does not reserve any itself. This
+            # number is right for 150% scaling on a 4k monitor. Override in
             # your host's home configuration if it's not right for you.
-            global_work_area_offset = {
-              left = 0;
-              top = 74;
-              right = 0;
-              bottom = 74;
-            };
+            # (`bottom` comes off the height, so the two together move the top
+            # edge down and leave the bottom one where it was.) The caelestia
+            # shell reserves its own space with Windows, which komorebi
+            # already tiles inside, so under it there is nothing to add.
+            global_work_area_offset =
+              let
+                bar = if cfg.shell == "yasb" then 74 else 0;
+              in
+              {
+                left = 0;
+                top = bar;
+                right = 0;
+                bottom = bar;
+              };
           })
 
           {
