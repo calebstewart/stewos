@@ -291,6 +291,13 @@
                 home.username = user.username;
                 stewos.user = user;
                 stewos.stewctl.attribute = "${user.username}@${hostname}";
+                # winpkgs evaluates home-manager with the pkgs it was given
+                # (useNixpkgsModule = false), where defining nixpkgs.overlays
+                # is an assertion failure. stylix defines its overlays whenever
+                # this is on, and it defaults to on even with stylix.enable
+                # off; stylix's own NixOS integration turns it off the same
+                # way under home-manager.useGlobalPkgs.
+                stylix.overlays.enable = false;
               }
             ]
             ++ modules;
