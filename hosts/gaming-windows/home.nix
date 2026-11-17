@@ -56,6 +56,9 @@
     AMDNoiseSuppression = ''"C:\WINDOWS\system32\AMD\ANR\AMDNoiseSuppression.exe"'';
   };
 
+  # The shell the Framework machines run, in place of YASB.
+  stewos.desktop.shell = "caelestia";
+
   # What the desktop leaves to the machine: its two monitors. Five workspaces
   # on each, which the workspace keys reach by position on whichever monitor
   # has focus, and a bar on each (komorebi's monitor indices).
