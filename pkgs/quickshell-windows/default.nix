@@ -19,13 +19,13 @@
   fetchzip,
 }:
 let
-  version = "2026.11.17.2";
+  version = "2026.11.17.3";
   caelestiaRev = "fd630ffedd45eb31817e9a1726a0f567e79f65e2";
 in
 fetchzip {
   name = "quickshell-windows-${version}";
   url = "https://github.com/calebstewart/quickshell/releases/download/windows-${version}/quickshell-windows-x86_64.zip";
-  hash = "sha256-oFVk7She41qunchCAV+KUwq8auwjSFssOqyLhMPRJME=";
+  hash = "sha256-eGupVvOJwfzJpXXdV5vt2JrnGQ/PHirOEeeQb6eQaOE=";
 
   postFetch = ''
     if ! grep -qF '"caelestia": "${caelestiaRev}"' $out/manifest.json; then
