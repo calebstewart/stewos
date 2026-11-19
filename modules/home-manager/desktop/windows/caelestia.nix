@@ -5,7 +5,7 @@
 # Audio behind Quickshell.Services.Pipewire, and so on. It takes YASB's place:
 # the bar, the launcher and the notifications.
 #
-# Three things are installed, and none of them is built here:
+# Four things are installed, and none of them is built here:
 #
 # - Quickshell itself, with Qt and caelestia's C++ plugin, is a prebuilt
 #   bundle (pkgs/quickshell-windows), installed the way winpkgs installs any
@@ -23,6 +23,9 @@
 #   path. Caelestia keeps its settings beside its state on Windows, in
 #   %LOCALAPPDATA%\caelestia, and its own settings page writes the same file,
 #   so a change made there lasts until the next apply.
+# - scheme.json, its colours, generated from config.colorScheme
+#   (lib/caelestia.nix) so the shell matches the terminals, the editor and the
+#   window borders.
 #
 # The plugin in the bundle and the QML have to be one caelestia revision; the
 # assertion below is what notices a flake update that moved one of them.
@@ -48,6 +51,18 @@ let
 
   inherit (config.programs.caelestia) settings;
   settingsFile = pkgs.buildPackages.writeText "caelestia-shell.json" (builtins.toJSON settings);
+
+  # The shell's colours, from the palette the rest of the desktop renders. On
+  # Linux caelestia's CLI writes this file; there is no CLI here, and without
+  # the file the shell falls back to the pink scheme built into it.
+  schemeFile = pkgs.buildPackages.writeText "caelestia-scheme.json" (
+    builtins.toJSON (
+      inputs.self.lib.caelestia.mkScheme {
+        name = config.colorScheme.slug;
+        inherit (config.colorScheme) palette variant;
+      }
+    )
+  );
 in
 {
   config = lib.optionalAttrs (options ? windows) (
@@ -81,6 +96,10 @@ in
         source = settingsFile;
       };
 
+      # Caelestia keeps its scheme with its state, which on Windows is the
+      # same directory as its settings.
+      windows.files."%LOCALAPPDATA%/caelestia/scheme.json".source = schemeFile;
+
       # Run by steward, like the rest of the desktop's daemons (./services.nix).
       #
       # Through cmd, for the one thing it does here: expand %LOCALAPPDATA%.
@@ -105,6 +124,7 @@ in
           X-Restart-Triggers = [
             bundle
             shell
+            schemeFile
           ]
           ++ lib.optional (settings != { }) settingsFile;
         };

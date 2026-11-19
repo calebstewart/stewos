@@ -5,6 +5,7 @@
 # from a REPL without dragging the flake along.
 { lib }:
 {
+  caelestia = import ./caelestia.nix { inherit lib; };
   desktop = import ./desktop.nix { inherit lib; };
   docs = import ./docs { inherit lib; };
   rasi = import ./rasi { inherit lib; };
