@@ -37,8 +37,17 @@ in
             window_hiding_behaviour = "Cloak";
             cross_monitor_move_behaviour = "Insert";
 
-            # The same gaps as Aerospace's.
-            default_workspace_padding = 5;
+            # The same gaps as Aerospace's: every window has 5 around it, and
+            # the workspace another 5 around the lot.
+            #
+            # Under the caelestia shell the windows meet its frame instead, as
+            # they do on Linux (gaps_out, ../linux/style.nix). komorebi has no
+            # outer gap of its own to zero: a window at the edge still has its
+            # container padding, so the workspace padding is negative to
+            # cancel it, which leaves the gaps between windows alone. The
+            # frame is drawn above the windows and its rounded inner corners
+            # cover theirs, so nothing has to round a window to match.
+            default_workspace_padding = if cfg.shell == "caelestia" then -5 else 5;
             default_container_padding = 5;
 
             border = true;

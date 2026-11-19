@@ -14,6 +14,7 @@ stewos/
 ├── pkgs/              # Package definitions; plain callPackage derivations
 │   └── default.nix    # Explicit list of every package in the scope
 ├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
+│   ├── caelestia.nix  # The caelestia shell's colour scheme from a base16 palette
 │   ├── desktop.nix    # Shared desktop helpers (command line construction)
 │   ├── rofi.nix       # Rofi command line construction
 │   ├── rasi/          # RASI DSL for Rofi theme generation
@@ -510,8 +511,20 @@ following) on keys Linux leaves free. Things to know:
     reserves its own space with Windows, which komorebi already tiles inside.
   - **`launcher` goes through whkd** under caelestia, as an IPC call to the
     running shell, so unlike YASB's it is silenced by the pause combination.
-  - Not done: colours from `config.colorScheme`, and no host sets a tray
-    filter (`bar.tray.hiddenIcons`) yet.
+  - **Colours are `config.colorScheme`**, through `lib/caelestia.nix`'s
+    `mkScheme`, written to `%LOCALAPPDATA%\caelestia\scheme.json`. On Linux
+    caelestia's CLI writes that file; there is no CLI on Windows, and without
+    the file the shell uses its built-in pink scheme. Base16 has sixteen
+    colours and caelestia about sixty Material roles, so most are mixtures:
+    adjust the ratios in `mkScheme`, not the generated file.
+  - **The outer gap is closed with a negative `default_workspace_padding`.**
+    komorebi has no outer gap to zero; `-5` cancels the container padding at
+    the screen edge so windows meet caelestia's frame, as `gaps_out` does on
+    Linux. Windows are not rounded to match: the frame is drawn above them
+    and its rounded corners cover theirs.
+  - **The tray filter is a list of what to hide** (`bar.tray.hiddenIcons`);
+    caelestia has no "show only these". An id is the program's name without
+    `.exe`, and `explorer` covers every icon Explorer owns. Hosts set it.
 - **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
   directive, not a binding; it is counted by the duplicate-combination
   assertion all the same.
