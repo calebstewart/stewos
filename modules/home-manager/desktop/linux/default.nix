@@ -35,6 +35,23 @@ in
   ];
 
   config = lib.mkIf (cfg.enable && pkgs.stdenv.hostPlatform.isLinux) {
+    # The only shell this backend runs. The locker, the idle chain and the
+    # lock command below are all caelestia's, so another shell here would be
+    # a second implementation of this file rather than a switch.
+    stewos.desktop.shell = lib.mkDefault "caelestia";
+    assertions = [
+      {
+        assertion = cfg.shell == "caelestia";
+        message = ''
+          stewos.desktop.shell = ${
+            if cfg.shell == null then "null" else ''"${cfg.shell}"''
+          } is not supported on Linux, where the
+          shell is always "caelestia": the session's locker and idle handling
+          are part of it.
+        '';
+      }
+    ];
+
     # caelestia owns the pieces a Hyprland setup would otherwise wire up one at
     # a time: the locker, idle handling, notifications, the bar and the
     # wallpaper daemon.

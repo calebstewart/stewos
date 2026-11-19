@@ -297,6 +297,22 @@ in
 
     terminal = lib.mkPackageOption pkgs "alacritty" { };
 
+    shell = lib.mkOption {
+      description = ''
+        The shell: what draws the bar and, where it has them, the launcher,
+        the notifications and the rest of the desktop's furniture. `null` runs
+        none.
+
+        Each platform's backend sets its own default and runs the shells it
+        can; asking for one it cannot is an error that says which it does.
+        Linux runs "caelestia". Windows runs "yasb", its default, or
+        "caelestia". macOS runs none: the menu bar is the system's.
+      '';
+      type = lib.types.nullOr (lib.types.enum vocabulary.shells);
+      default = null;
+      example = "caelestia";
+    };
+
     modifier = lib.mkOption {
       description = ''
         Modifier held for the global keybinding prefix. Each platform renders

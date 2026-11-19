@@ -4,6 +4,14 @@
 # lists and ./default.nix validates bindings against them, and the two must not
 # be allowed to drift apart.
 {
+  # The shells: what draws the bar and, where it has them, the launcher and the
+  # notifications. As with actions, not every backend runs every shell, and one
+  # that cannot run the shell it was asked for says so at build time.
+  shells = [
+    "caelestia"
+    "yasb"
+  ];
+
   # Modifier names usable in a binding. The global prefix is added separately,
   # see "bindings.<name>.useModifier".
   modifiers = [

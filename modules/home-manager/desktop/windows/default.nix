@@ -5,6 +5,11 @@
 # against home-manager's own modules plus its own -- YASB's module aside, which
 # is StewOS's (../../yasb.nix), written to move there.
 #
+# YASB is the default shell here (stewos.desktop.shell = "yasb"). The other
+# this backend runs is "caelestia" (./caelestia.nix), the shell the Linux hosts
+# use, which takes YASB's place; `null` runs neither, and leaves the "launcher"
+# binding with nothing to open.
+#
 # komorebi-bar and Flow Launcher, which YASB replaces, are off. A host that
 # turns Flow back on (programs.flow-launcher.enable) gets the "launcher"
 # binding back as well; see ./bindings.nix.
@@ -31,6 +36,7 @@ in
   imports = [
     ./komorebi.nix
     ./yasb.nix
+    ./caelestia.nix
     ./bindings.nix
     ./theme.nix
     ./services.nix
@@ -67,6 +73,8 @@ in
           '';
         }
       ];
+
+      stewos.desktop.shell = lib.mkDefault "yasb";
 
       # Focus follows the mouse; masir only focuses windows komorebi manages.
       programs.masir.enable = lib.mkDefault true;

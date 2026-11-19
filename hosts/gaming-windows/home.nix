@@ -56,6 +56,25 @@
     AMDNoiseSuppression = ''"C:\WINDOWS\system32\AMD\ANR\AMDNoiseSuppression.exe"'';
   };
 
+  # The shell the Framework machines run, in place of YASB.
+  stewos.desktop.shell = "caelestia";
+
+  # Windows programs are fond of the tray. Only Steam and Discord are worth
+  # the room in the bar; these are the rest of what this machine runs. An
+  # icon's id is its program's name without ".exe", and the list is of what to
+  # hide, so a newly installed program's icon shows until it is added here.
+  programs.caelestia.settings.bar.tray.hiddenIcons = [
+    "AMDInstallManager"
+    "RadeonSoftware"
+    "SecurityHealthSystray"
+    "SteelSeriesGGEZ"
+    "copilotapp"
+    # Every icon Explorer itself owns: volume, Bluetooth, microphone in use,
+    # safely remove hardware. They share one id.
+    "explorer"
+    "thide"
+  ];
+
   # What the desktop leaves to the machine: its two monitors. Five workspaces
   # on each, which the workspace keys reach by position on whichever monitor
   # has focus, and a bar on each (komorebi's monitor indices).

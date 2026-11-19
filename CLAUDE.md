@@ -14,6 +14,7 @@ stewos/
 ├── pkgs/              # Package definitions; plain callPackage derivations
 │   └── default.nix    # Explicit list of every package in the scope
 ├── lib/               # Pure helpers: takes a nixpkgs lib, returns functions
+│   ├── caelestia.nix  # The caelestia shell's colour scheme from a base16 palette
 │   ├── desktop.nix    # Shared desktop helpers (command line construction)
 │   ├── rofi.nix       # Rofi command line construction
 │   ├── rasi/          # RASI DSL for Rofi theme generation
@@ -373,7 +374,7 @@ desktop/
 ├── default.nix   # imports + cross-platform config + binding shape assertions
 ├── linux/        # hyprland, style, bindings, theme, polkit, xdg
 ├── darwin/       # aerospace, karabiner, autoraise, raycast
-└── windows/      # komorebi, yasb (bar + launcher), bindings (whkd), theme, services; masir
+└── windows/      # komorebi, yasb or caelestia (the shell), bindings (whkd), theme, services; masir
 ```
 
 All three platform directories are imported unconditionally and every file
@@ -396,6 +397,10 @@ Options at `stewos.desktop`:
 - `bindings` - Keybindings, keyed by a name of your choosing
 - `modifier` - Global keybinding modifier prefix, enum `SUPER`/`ALT`/`CTRL`/`SHIFT` (default `SUPER`)
 - `terminal` - Terminal package (default Alacritty)
+- `shell` - The shell: bar, launcher, notifications. `null`, `"caelestia"` or
+  `"yasb"`, from `vocabulary.nix`. Each backend sets its own default with
+  `mkDefault` and asserts on one it cannot run: Linux is always `"caelestia"`,
+  Windows defaults to `"yasb"` and also runs `"caelestia"`, macOS stays `null`
 - `wallpaper` - Path to wallpaper image
 - `fonts.ui`, `fonts.monospace` - `{name, package, size}`, shared by every toolkit.
   `monospace` defaults to `nerd-fonts.jetbrains-mono` on Windows: nixpkgs builds
@@ -458,7 +463,8 @@ following) on keys Linux leaves free. Things to know:
   expects. The two halves are separate configurations and cannot see each
   other: a host that turns steward off in `configuration.nix` must also turn
   the four `service.enable`s off in `home.nix`, or nothing starts them.
-- **The bar and the launcher are YASB** (`windows/yasb.nix`, stylesheet
+- **The bar and the launcher are YASB by default** (`stewos.desktop.shell =
+  "yasb"`; `windows/yasb.nix`, stylesheet
   `windows/yasb.css` set from `windows/theme.nix`), replacing komorebi-bar and
   Flow Launcher, which stay at winpkgs' default of off. Do not leave
   komorebi-bar configured beside it: komorebi reserves a `work_area_offset` for
@@ -473,6 +479,52 @@ following) on keys Linux leaves free. Things to know:
   same way and counted by the duplicate check, but whkd's pause does not
   silence it. A host that turns `programs.flow-launcher.enable` back on gets
   `launcher` routed to Flow through whkd again.
+- **`stewos.desktop.shell = "caelestia"` runs the Linux hosts' shell on
+  Windows** (`windows/caelestia.nix`), in YASB's place; `gaming-windows` sets
+  it. The QML is upstream's, unmodified, run under a Windows build of
+  Quickshell (`github:calebstewart/quickshell`, branch `windows`) whose
+  modules stand in for the ones caelestia imports. Things to know:
+  - **Two packages, neither built here.** `pkgs/quickshell-windows` pins a
+    release zip from the fork's CI: `quickshell.exe`, Qt, and caelestia's C++
+    plugin built against that Qt. `pkgs/caelestia-shell/windows.nix` is the
+    `caelestia-shell` input's QML with the files under `windows/` laid over it
+    -- `Brightness.qml` and `Nmcli.qml`, which upstream implements by running
+    Linux tools, replaced whole rather than patched.
+  - **The plugin and the QML must be one caelestia revision**, and an
+    assertion compares them. A flake update that moves `caelestia-shell`
+    fails evaluation until a new bundle exists: bump
+    `ci/windows/versions.env` in the fork, push a `windows-*` tag, then update
+    `version`, `hash` and `caelestiaRev` in `pkgs/quickshell-windows`.
+  - **Settings are `programs.caelestia.settings`**, the option the Linux
+    hosts set, written to `%LOCALAPPDATA%\caelestia\shell.json`. Only
+    `settings` is read; upstream's module must stay disabled on Windows,
+    where its unit would run a store path. home-manager's own
+    `programs.quickshell` asserts Linux, which is why there is no
+    `programs.quickshell` module here.
+  - **The unit starts Quickshell through `cmd`**, to expand
+    `%LOCALAPPDATA%`. Naming the program and leaving it to `PATH` fails on
+    the first apply: steward gives a unit a fresh environment but looks the
+    program up on its own `PATH` from sign-in.
+  - **The config is `xdg.configFile`, not `home.file`.** winpkgs sets
+    `XDG_CONFIG_HOME` to `AppData\Roaming`, and Quickshell honours it.
+  - **komorebi's 74 px `global_work_area_offset` is YASB's only.** Caelestia
+    reserves its own space with Windows, which komorebi already tiles inside.
+  - **`launcher` goes through whkd** under caelestia, as an IPC call to the
+    running shell, so unlike YASB's it is silenced by the pause combination.
+  - **Colours are `config.colorScheme`**, through `lib/caelestia.nix`'s
+    `mkScheme`, written to `%LOCALAPPDATA%\caelestia\scheme.json`. On Linux
+    caelestia's CLI writes that file; there is no CLI on Windows, and without
+    the file the shell uses its built-in pink scheme. Base16 has sixteen
+    colours and caelestia about sixty Material roles, so most are mixtures:
+    adjust the ratios in `mkScheme`, not the generated file.
+  - **The outer gap is closed with a negative `default_workspace_padding`.**
+    komorebi has no outer gap to zero; `-5` cancels the container padding at
+    the screen edge so windows meet caelestia's frame, as `gaps_out` does on
+    Linux. Windows are not rounded to match: the frame is drawn above them
+    and its rounded corners cover theirs.
+  - **The tray filter is a list of what to hide** (`bar.tray.hiddenIcons`);
+    caelestia has no "show only these". An id is the program's name without
+    `.exe`, and `explorer` covers every icon Explorer owns. Hosts set it.
 - **The pause combination** (`programs.whkd.pause`, game mode) is a whkd
   directive, not a binding; it is counted by the duplicate-combination
   assertion all the same.
